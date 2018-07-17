@@ -24,7 +24,7 @@
 
 namespace PIDL
 {
-	class ErrorCollector
+	class PIDL_CORE__CLASS ErrorCollector
 	{
 		PIDL_COPY_PROTECTOR(ErrorCollector)
 		struct Priv;

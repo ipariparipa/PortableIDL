@@ -26,7 +26,7 @@
 
 namespace PIDL {
 
-	class Exception : public std::exception
+	class PIDL_CORE__CLASS Exception : public std::exception
 	{
 		PIDL_COPY_PROTECTOR(Exception)
 		struct Priv;

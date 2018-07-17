@@ -1,22 +1,22 @@
 /*
-    This file is part of pidlTools.
+    This file is part of pidlBackend.
 
-    pidlTools is free software: you can redistribute it and/or modify
+    pidlBackend is free software: you can redistribute it and/or modify
     it under the terms of the Lesser GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    pidlTools is distributed in the hope that it will be useful,
+    pidlBackend is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with pidlTools.  If not, see <http://www.gnu.org/licenses/>
+    along with pidlBackend.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef pidlTools__cppcodegen_h
-#define pidlTools__cppcodegen_h
+#ifndef pidlBackend__cppcodegen_h
+#define pidlBackend__cppcodegen_h
 
 #include "config.h"
 #include <memory>
@@ -36,7 +36,7 @@ namespace PIDL {
 
 	class ErrorCollector;
 
-	class CPPCodeGenContext
+	class PIDL_BACKEND__CLASS CPPCodeGenContext
 	{
 		PIDL_COPY_PROTECTOR(CPPCodeGenContext)
 		struct Priv;
@@ -67,7 +67,7 @@ namespace PIDL {
 		Role role() const;
 	};
 
-	class CPPCodeGenLogging
+	class PIDL_BACKEND__CLASS CPPCodeGenLogging
 	{
 		PIDL_COPY_PROTECTOR(CPPCodeGenLogging)
 		struct Priv;
@@ -91,7 +91,7 @@ namespace PIDL {
 	};
 
 
-	class CPPVoidLogging : public CPPCodeGenLogging
+	class PIDL_BACKEND__CLASS CPPVoidLogging : public CPPCodeGenLogging
 	{
 		PIDL_COPY_PROTECTOR(CPPVoidLogging)
 		struct Priv;
@@ -112,7 +112,7 @@ namespace PIDL {
 		virtual std::string loggingFatal(const std::string & logger, const std::string & message) const override;
 	};
 
-	class CPPCodeGenHelper
+	class PIDL_BACKEND__CLASS CPPCodeGenHelper
 	{
 		PIDL_COPY_PROTECTOR(CPPCodeGenHelper)
 		struct Priv;
@@ -138,7 +138,7 @@ namespace PIDL {
 		virtual Include coreIncludePath() const;
 	};
 
-	class CPPCodeGen
+	class PIDL_BACKEND__CLASS CPPCodeGen
 	{
 		PIDL_COPY_PROTECTOR(CPPCodeGen)
 		struct Priv;
@@ -170,4 +170,4 @@ namespace PIDL {
 
 }
 
-#endif // pidlTools__cppcodegen_h
+#endif // pidlBackend__cppcodegen_h
