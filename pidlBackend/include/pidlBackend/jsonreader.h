@@ -34,10 +34,10 @@ namespace PIDL {
 		struct Priv;
 		Priv * priv;
 	public:
-		JSONReader();
+		JSONReader(const std::string & json_stream);
 		virtual ~JSONReader();
 
-		bool read(const std::string & json_stream, ErrorCollector & ec);
+		virtual bool read(ErrorCollector & ec) override;
 
 		virtual std::vector<std::shared_ptr<Language::TopLevel>> topLevels() const override;
 

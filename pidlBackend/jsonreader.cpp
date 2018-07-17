@@ -37,6 +37,11 @@ namespace PIDL
 
 	struct JSONReader::Priv 
 	{
+		Priv(const std::string & json_stream_) : json_stream(json_stream_)
+		{ }
+
+		const std::string json_stream;
+
 		std::map<std::string, std::shared_ptr<Language::TopLevel>> topLevels;
 
 		static bool getOptionalBoolean(const rapidjson::Value & v, const char * name, bool & ret)
@@ -541,7 +546,7 @@ namespace PIDL
 		}
 	};
 
-	JSONReader::JSONReader() : priv(new Priv())
+	JSONReader::JSONReader(const std::string & json_stream) : priv(new Priv(json_stream))
 	{ }
 
 	JSONReader::~JSONReader()
@@ -549,9 +554,9 @@ namespace PIDL
 		delete priv;
 	}
 
-	bool JSONReader::read(const std::string & json_stream, ErrorCollector & ec)
+	bool JSONReader::read(ErrorCollector & ec)
 	{
-		return priv->read(json_stream, ec);
+		return priv->read(priv->json_stream, ec);
 	}
 
 	std::vector<std::shared_ptr<Language::TopLevel>> JSONReader::topLevels() const
@@ -565,8 +570,8 @@ namespace PIDL
 
 	bool JSONReader::compile(Writer * writer, const std::string & json_stream, std::string & ret, ErrorCollector & ec)
 	{
-		JSONReader p;
-		if (!p.read(json_stream, ec))
+		JSONReader p(json_stream);
+		if (!p.read(ec))
 			return false;
 
 		return writer->write(&p, ec);

@@ -89,7 +89,15 @@ namespace PIDL
 
 	std::vector<CPPCodeGenHelper::Include> CPPCodeGenHelper::includes() const
 	{
-		return std::vector<CPPCodeGenHelper::Include>();
+		std::vector<CPPCodeGenHelper::Include> ret;
+		auto core_path = coreIncludePath();
+		ret.push_back(std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/errorcollector.h" : "errorcollector.h"));
+		return ret;
+	}
+
+	std::string CPPCodeGenHelper::errorCollector() const
+	{
+		return "PIDL::ErrorCollector";
 	}
 
 	CPPCodeGenHelper::Include CPPCodeGenHelper::coreIncludePath() const
@@ -101,6 +109,11 @@ namespace PIDL
 	{
 		ch = '\t';
 		return 1;
+	}
+
+	std::shared_ptr<CPPCodeGenLogging> CPPCodeGenHelper::logging() const
+	{
+		return std::shared_ptr<CPPCodeGenLogging>();
 	}
 
 	struct CPPCodeGen::Priv 

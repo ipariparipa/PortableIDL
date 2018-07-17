@@ -50,6 +50,11 @@ namespace PIDL
 		priv(new Priv(helper))
 	{ }
 
+	JSON_STL_CodeGen::JSON_STL_CodeGen() :
+		CPPCodeGen(),
+		priv(new Priv(std::make_shared<CPPCodeGenHelper>()))
+	{ }
+
 	JSON_STL_CodeGen::~JSON_STL_CodeGen()
 	{
 		delete priv;

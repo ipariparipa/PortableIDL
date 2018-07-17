@@ -34,7 +34,7 @@ namespace PIDL {
 		enum class Mode {Include, Source, Combo};
 		enum class Role { Server, Client };
 
-		CPPWriter(Mode mode, Role role, const std::shared_ptr<CPPCodeGen> & codegen, std::ostream & o, const std::string & name);
+		CPPWriter(Mode mode, Role role, const std::shared_ptr<CPPCodeGen> & codegen, const std::shared_ptr<std::ostream> & o, const std::string & name);
 		virtual ~CPPWriter();
 		virtual bool write(Reader * reader, ErrorCollector & ec) override;
 	};
