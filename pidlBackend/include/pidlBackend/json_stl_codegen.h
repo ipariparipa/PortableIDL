@@ -1,28 +1,28 @@
 /*
-    This file is part of pidlTools.
+    This file is part of pidlBackend.
 
-    pidlTools is free software: you can redistribute it and/or modify
+    pidlBackend is free software: you can redistribute it and/or modify
     it under the terms of the Lesser GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    pidlTools is distributed in the hope that it will be useful,
+    pidlBackend is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with pidlTools.  If not, see <http://www.gnu.org/licenses/>
+    along with pidlBackend.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef pidlTools__json_stl_codegen_H
-#define pidlTools__json_stl_codegen_H
+#ifndef pidlBackend__json_stl_codegen_H
+#define pidlBackend__json_stl_codegen_H
 
 #include "cppcodegen.h"
 
 namespace PIDL
 {
-	class JSON_STL_CodeGen : public CPPCodeGen
+	class PIDL_BACKEND__CLASS JSON_STL_CodeGen : public CPPCodeGen
 	{
 		PIDL_COPY_PROTECTOR(JSON_STL_CodeGen)
 		struct Priv;
@@ -43,5 +43,5 @@ namespace PIDL
 
 }
 
-#endif // pidlTools__json_stl_codegen_H
+#endif // pidlBackend__json_stl_codegen_H
 

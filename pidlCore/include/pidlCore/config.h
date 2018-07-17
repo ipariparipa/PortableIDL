@@ -18,6 +18,30 @@
 #ifndef pidlCore__config_h
 #define pidlCore__config_h
 
+#include "platform.h"
+
+#define PIDL_OS_LINUX 1
+#define PIDL_OS_WINDOWS 2
+
+#ifdef PIDL_WINDOWS
+#  define PIDL_OS PIDL_OS_WINDOWS
+#else
+#  define PIDL_OS PIDL_OS_LINUX
+#endif
+
+#if PIDL_OS == PIDL_OS_LINUX 
+#  define PIDL_CORE__CLASS 
+#  define PIDL_CORE__FUNCTION 
+#elif PIDL_OS == PIDL_OS_WINDOWS 
+#  ifdef PIDL_CORE__IMPL
+#    define PIDL_CORE__CLASS __declspec(dllexport)
+#    define PIDL_CORE__FUNCTION __declspec(dllexport)
+#  else
+#    define PIDL_CORE__CLASS __declspec(dllimport)
+#    define PIDL_CORE__FUNCTION __declspec(dllimport)
+#  endif
+#endif
+
 
 #define PIDL_COPY_PROTECTOR(class_name) class_name(const class_name &); class_name & operator = (const class_name &);
 

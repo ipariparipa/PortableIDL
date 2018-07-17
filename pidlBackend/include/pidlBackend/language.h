@@ -1,22 +1,22 @@
 /*
-    This file is part of pidlTools.
+    This file is part of pidlBackend.
 
-    pidlTools is free software: you can redistribute it and/or modify
+    pidlBackend is free software: you can redistribute it and/or modify
     it under the terms of the Lesser GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    pidlTools is distributed in the hope that it will be useful,
+    pidlBackend is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with pidlTools.  If not, see <http://www.gnu.org/licenses/>
+    along with pidlBackend.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef pidlTools__language_h
-#define pidlTools__language_h
+#ifndef pidlBackend__language_h
+#define pidlBackend__language_h
 
 #include "config.h"
 
@@ -27,7 +27,7 @@
 
 namespace PIDL { namespace Language {
 
-	class Element
+	class PIDL_BACKEND__CLASS Element
 	{
 		PIDL_COPY_PROTECTOR(Element)
 		struct Priv;
@@ -39,7 +39,7 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const = 0;
 	};
 
-	class Definition : public Element
+	class PIDL_BACKEND__CLASS Definition : public Element
 	{
 		PIDL_COPY_PROTECTOR(Definition)
 		struct Priv;
@@ -49,7 +49,7 @@ namespace PIDL { namespace Language {
 		virtual ~Definition();
 	};
 
-	class Type : public Element
+	class PIDL_BACKEND__CLASS Type : public Element
 	{
 		PIDL_COPY_PROTECTOR(Type)
 		struct Priv;
@@ -59,7 +59,7 @@ namespace PIDL { namespace Language {
 		virtual ~Type();
 	};
 
-	class Variable : public Element
+	class PIDL_BACKEND__CLASS Variable : public Element
 	{
 		PIDL_COPY_PROTECTOR(Variable)
 		struct Priv;
@@ -72,7 +72,7 @@ namespace PIDL { namespace Language {
 		std::shared_ptr<Type> type() const;
 	};
 
-	class TypeDefinition : public Type, public Definition
+	class PIDL_BACKEND__CLASS TypeDefinition : public Type, public Definition
 	{
 		PIDL_COPY_PROTECTOR(TypeDefinition)
 		struct Priv;
@@ -85,7 +85,7 @@ namespace PIDL { namespace Language {
 		virtual std::shared_ptr<Type> type() const;
 	};
 
-	class ComplexType : public Type
+	class PIDL_BACKEND__CLASS ComplexType : public Type
 	{
 		PIDL_COPY_PROTECTOR(ComplexType)
 		struct Priv;
@@ -95,7 +95,7 @@ namespace PIDL { namespace Language {
 		virtual ~ComplexType();
 	};
 
-	class Blob : public ComplexType
+	class PIDL_BACKEND__CLASS Blob : public ComplexType
 	{
 		PIDL_COPY_PROTECTOR(Blob)
 		struct Priv;
@@ -106,7 +106,7 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "blob"; }
 	};
 
-	class Generic : public ComplexType
+	class PIDL_BACKEND__CLASS Generic : public ComplexType
 	{
 		PIDL_COPY_PROTECTOR(Generic)
 		struct Priv;
@@ -117,7 +117,7 @@ namespace PIDL { namespace Language {
 		std::shared_ptr<Type> type() const;
 	};
 
-	class Nullable : public Generic
+	class PIDL_BACKEND__CLASS Nullable : public Generic
 	{
 		PIDL_COPY_PROTECTOR(Nullable)
 		struct Priv;
@@ -128,7 +128,7 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "nullable"; }
 	};
 
-	class Array : public Generic
+	class PIDL_BACKEND__CLASS Array : public Generic
 	{
 		PIDL_COPY_PROTECTOR(Array)
 		struct Priv;
@@ -139,7 +139,7 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "array"; }
 	};
 
-	class Structure : public ComplexType
+	class PIDL_BACKEND__CLASS Structure : public ComplexType
 	{
 		PIDL_COPY_PROTECTOR(Structure)
 		struct Priv;
@@ -163,7 +163,7 @@ namespace PIDL { namespace Language {
 		const std::vector<std::shared_ptr<Member>> & members() const;
 	};
 
-	class NativeType : public Type
+	class PIDL_BACKEND__CLASS NativeType : public Type
 	{
 		PIDL_COPY_PROTECTOR(NativeType)
 		struct Priv;
@@ -173,7 +173,7 @@ namespace PIDL { namespace Language {
 		virtual ~NativeType();
 	};
 
-	class Integer : public NativeType
+	class PIDL_BACKEND__CLASS Integer : public NativeType
 	{
 		PIDL_COPY_PROTECTOR(Integer)
 		struct Priv;
@@ -185,7 +185,7 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "integer"; }
 	};
 
-	class Float : public NativeType
+	class PIDL_BACKEND__CLASS Float : public NativeType
 	{
 		PIDL_COPY_PROTECTOR(Float)
 		struct Priv;
@@ -197,7 +197,7 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "float"; }
 	};
 
-	class Boolean : public NativeType
+	class PIDL_BACKEND__CLASS Boolean : public NativeType
 	{
 		PIDL_COPY_PROTECTOR(Boolean)
 		struct Priv;
@@ -209,7 +209,7 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "boolean"; }
 	};
 
-	class EmbeddedType : public ComplexType
+	class PIDL_BACKEND__CLASS EmbeddedType : public ComplexType
 	{
 		PIDL_COPY_PROTECTOR(EmbeddedType)
 		struct Priv;
@@ -219,7 +219,7 @@ namespace PIDL { namespace Language {
 		virtual ~EmbeddedType();
 	};
 
-	class String : public EmbeddedType
+	class PIDL_BACKEND__CLASS String : public EmbeddedType
 	{
 		PIDL_COPY_PROTECTOR(String)
 		struct Priv;
@@ -231,7 +231,7 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "string"; }
 	};
 
-	class DateTime : public EmbeddedType
+	class PIDL_BACKEND__CLASS DateTime : public EmbeddedType
 	{
 		PIDL_COPY_PROTECTOR(DateTime)
 		struct Priv;
@@ -243,7 +243,7 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "datetime"; }
 	};
 
-	class Void : public Type
+	class PIDL_BACKEND__CLASS Void : public Type
 	{
 		PIDL_COPY_PROTECTOR(Void)
 		struct Priv;
@@ -255,14 +255,14 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "void"; }
 	};
 
-	class Function : public Definition
+	class PIDL_BACKEND__CLASS Function : public Definition
 	{
 		PIDL_COPY_PROTECTOR(Function)
 		struct Priv;
 		Priv * priv;
 	public:
 
-		class Argument : public Variable
+		class PIDL_BACKEND__CLASS Argument : public Variable
 		{
 			PIDL_COPY_PROTECTOR(Argument)
 			struct Priv;
@@ -288,7 +288,7 @@ namespace PIDL { namespace Language {
 		std::shared_ptr<Type> returnType() const;
 	};
 
-	class TopLevel : public Element
+	class PIDL_BACKEND__CLASS TopLevel : public Element
 	{
 		PIDL_COPY_PROTECTOR(TopLevel)
 		struct Priv;
@@ -298,7 +298,7 @@ namespace PIDL { namespace Language {
 		virtual ~TopLevel();
 	};
 
-	class Interface : public TopLevel
+	class PIDL_BACKEND__CLASS Interface : public TopLevel
 	{
 		PIDL_COPY_PROTECTOR(Interface)
 		struct Priv;
@@ -311,7 +311,7 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override;
 	};
 
-	class Module : public TopLevel
+	class PIDL_BACKEND__CLASS Module : public TopLevel
 	{
 		PIDL_COPY_PROTECTOR(Module)
 		struct Priv;
@@ -325,4 +325,4 @@ namespace PIDL { namespace Language {
 
 }}
 
-#endif // pidlTools__language_h
+#endif // pidlBackend__language_h
