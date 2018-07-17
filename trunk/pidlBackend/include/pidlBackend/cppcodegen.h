@@ -117,13 +117,13 @@ namespace PIDL {
 		PIDL_COPY_PROTECTOR(CPPCodeGenHelper)
 		struct Priv;
 		Priv * priv;
-	protected:
+
+	public:
 		CPPCodeGenHelper();
 		virtual ~CPPCodeGenHelper();
 
-	public:
 		virtual short tabDefinition(char & ch) const;
-		virtual std::shared_ptr<CPPCodeGenLogging> logging() const = 0;
+		virtual std::shared_ptr<CPPCodeGenLogging> logging() const;
 
 		enum class IncludeType
 		{
@@ -133,7 +133,7 @@ namespace PIDL {
 
 		virtual std::vector<Include> includes() const;
 
-		virtual std::string errorCollector() const = 0;
+		virtual std::string errorCollector() const;
 
 		virtual Include coreIncludePath() const;
 	};

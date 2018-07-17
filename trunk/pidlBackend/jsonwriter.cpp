@@ -30,7 +30,7 @@ namespace PIDL
 
 	struct JSONWriter::Priv
 	{
-		Priv(std::ostream & s) : o(s) { }
+		Priv(const std::shared_ptr<std::ostream> & s) : o(s) { }
 
 		static void addName(rapidjson::Document & doc, rapidjson::Value & r, const char * str)
 		{
@@ -175,16 +175,16 @@ namespace PIDL
 				rapidjson::PrettyWriter<rapidjson::StringBuffer> w(sb);
 				doc.Accept(w);
 
-				o << sb.GetString() << std::endl;
+				*o << sb.GetString() << std::endl;
 			}
 
 			return true;
 		}
 
-		std::ostream & o;
+		std::shared_ptr<std::ostream> o;
 	};
 
-	JSONWriter::JSONWriter(std::ostream & s) : priv(new Priv(s))
+	JSONWriter::JSONWriter(const std::shared_ptr<std::ostream> & s) : priv(new Priv(s))
 	{ }
 
 	JSONWriter::~JSONWriter() = default;

@@ -35,6 +35,11 @@ namespace PIDL
 
 	struct XMLReader::Priv
 	{
+		Priv(const std::string & xml_stream_) : xml_stream(xml_stream_) 
+		{ }
+
+		std::string xml_stream;
+
 		std::map<std::string, std::shared_ptr<Language::TopLevel>> topLevels;
 
 		static rapidxml::xml_attribute<> * getAttribute(const rapidxml::xml_node<> * v, const char * name)
@@ -533,7 +538,7 @@ namespace PIDL
 		}
 	};
 
-	XMLReader::XMLReader() : priv(new Priv())
+	XMLReader::XMLReader(const std::string & xml_stream) : priv(new Priv(xml_stream))
 	{ }
 
 	XMLReader::~XMLReader()
@@ -541,9 +546,9 @@ namespace PIDL
 		delete priv;
 	}
 
-	bool XMLReader::read(const std::string & json_stream, ErrorCollector & ec)
+	bool XMLReader::read(ErrorCollector & ec)
 	{
-		return priv->read(json_stream, ec);
+		return priv->read(priv->xml_stream, ec);
 	}
 
 	std::vector<std::shared_ptr<Language::TopLevel>> XMLReader::topLevels() const
@@ -557,8 +562,8 @@ namespace PIDL
 
 	bool XMLReader::compile(Writer * writer, const std::string & xml_stream, std::string & ret, ErrorCollector & ec)
 	{
-		XMLReader p;
-		if (!p.read(xml_stream, ec))
+		XMLReader p(xml_stream);
+		if (!p.read(ec))
 			return false;
 
 		return writer->write(&p, ec);

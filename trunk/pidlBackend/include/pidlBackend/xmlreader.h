@@ -34,10 +34,10 @@ namespace PIDL {
 		struct Priv;
 		Priv * priv;
 	public:
-		XMLReader();
+		XMLReader(const std::string & xml_stream);
 		virtual ~XMLReader();
 
-		bool read(const std::string & xml_stream, ErrorCollector & ec);
+		bool read(ErrorCollector & ec) override;
 
 		virtual std::vector<std::shared_ptr<Language::TopLevel>> topLevels() const override;
 

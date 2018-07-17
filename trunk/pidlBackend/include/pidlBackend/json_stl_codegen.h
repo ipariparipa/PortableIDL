@@ -29,6 +29,7 @@ namespace PIDL
 		Priv * priv;
 	public:
 		JSON_STL_CodeGen(const std::shared_ptr<CPPCodeGenHelper> & helper);
+		JSON_STL_CodeGen();
 		virtual ~JSON_STL_CodeGen();
 
 	protected:
