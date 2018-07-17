@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>pidlBackend</name>
+	<name>pidl</name>
 	<comment></comment>
 	<projects>
+		<project>pidlBackend</project>
 		<project>pidlCore</project>
 	</projects>
 	<buildSpec>
