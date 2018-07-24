@@ -119,23 +119,43 @@ namespace PIDL {
 		Priv * priv;
 
 	public:
-		CPPCodeGenHelper();
-		virtual ~CPPCodeGenHelper();
-
-		virtual short tabDefinition(char & ch) const;
-		virtual std::shared_ptr<CPPCodeGenLogging> logging() const;
-
 		enum class IncludeType
 		{
 			GLobal, Local
 		};
 		typedef std::pair<IncludeType, std::string> Include;
 
-		virtual std::vector<Include> includes() const;
+		CPPCodeGenHelper();
+		virtual ~CPPCodeGenHelper();
 
-		virtual std::string errorCollector() const;
+		virtual short tabDefinition(char & ch) const = 0;
+		virtual std::shared_ptr<CPPCodeGenLogging> logging() const = 0;
 
-		virtual Include coreIncludePath() const;
+		virtual std::vector<Include> includes() const = 0;
+
+		virtual Include coreIncludePath() const = 0;
+
+		virtual std::string getName(const Language::TopLevel * t) const = 0;
+	};
+
+	class PIDL_BACKEND__CLASS CPPBasicCodegenHelper : public CPPCodeGenHelper
+	{
+		PIDL_COPY_PROTECTOR(CPPBasicCodegenHelper)
+		struct Priv;
+		Priv * priv;
+	public:
+		CPPBasicCodegenHelper(const std::vector<Include> & customIncludes = std::vector<Include>());
+		virtual ~CPPBasicCodegenHelper();
+
+		virtual short tabDefinition(char & ch) const override;
+		virtual std::shared_ptr<CPPCodeGenLogging> logging() const override;
+
+		virtual std::vector<Include> includes() const override;
+
+		virtual Include coreIncludePath() const override;
+
+		virtual std::string getName(const Language::TopLevel * t) const override;
+
 	};
 
 	class PIDL_BACKEND__CLASS CPPCodeGen
@@ -144,7 +164,6 @@ namespace PIDL {
 		struct Priv;
 		Priv * priv;
 	public:
-
 		CPPCodeGen();
 		virtual ~CPPCodeGen();
 
@@ -152,6 +171,9 @@ namespace PIDL {
 		bool generateCode(Language::TopLevel * topLevel, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec);
 
 	protected:
+		using Role = CPPCodeGenContext::Role;
+		using Nature = CPPCodeGenContext::Nature;
+
 		virtual CPPCodeGenHelper * helper() const = 0;
 
 		virtual bool writeInclude(short code_deepness, CPPCodeGenContext * ctx, const CPPCodeGenHelper::Include & include, ErrorCollector & ec);
