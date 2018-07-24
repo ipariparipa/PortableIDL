@@ -22,6 +22,8 @@
 
 #include <string>
 
+#include <rapidjson/document.h>
+
 namespace PIDL {
 
 	class ErrorCollector;
@@ -37,6 +39,7 @@ namespace PIDL {
 
 		virtual bool run(ErrorCollector & ec) override;
 		bool build(const std::string & json_data, ErrorCollector & ec);
+		bool build(const rapidjson::Value & root, ErrorCollector & ec);
 	};
 
 }

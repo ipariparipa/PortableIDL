@@ -24,7 +24,10 @@
 #include <pidlBackend/jsonwriter.h>
 #include <pidlBackend/xmlreader.h>
 #include <pidlBackend/cppwriter.h>
+#include <pidlBackend/cswriter.h>
 #include <pidlBackend/json_stl_codegen.h>
+#include <pidlBackend/json_cscodegen.h>
+#include <pidlBackend/language.h>
 
 #include <rapidjson/document.h>
 
@@ -72,6 +75,366 @@ namespace PIDL {
 		struct Context
 		{
 			std::map<std::string /*name*/, std::shared_ptr<Reader>> readers;
+			std::map<std::string /*name*/, std::shared_ptr<CPPCodeGenHelper>> cpp_helpers;
+			std::map<std::string /*name*/, std::shared_ptr<CSCodeGenHelper>> cs_helpers;
+
+			static bool getInclude(rapidjson::Value & r, CPPCodeGenHelper::Include & incl, ErrorCollector &ec)
+			{
+				if (!r.IsObject())
+				{
+					ec << "value of include is not object";
+					return false;
+				}
+
+				std::string type_str;
+				if (!JSONTools::getValue(r, "type", type_str))
+				{
+					ec << "value 'type' is not found or invalid";
+					return false;
+				}
+				if (type_str == "global")
+					incl.first = CPPCodeGenHelper::IncludeType::GLobal;
+				else if (type_str == "local")
+					incl.first = CPPCodeGenHelper::IncludeType::Local;
+				else
+				{
+					ec << "invalid type: '" + type_str + "'";
+					return false;
+				}
+				if (!JSONTools::getValue(r, "path", incl.second))
+				{
+					ec << "value 'type' is not found or invalid";
+					return false;
+				}
+
+				return true;
+			}
+
+			struct CustomCPPHelper : public CPPCodeGenHelper
+			{
+				virtual short tabDefinition(char & ch) const override
+				{
+					ch = _tabChar;
+					return _tabLength;
+				}
+
+				virtual std::shared_ptr<CPPCodeGenLogging> logging() const override
+				{
+					return _logging;
+				}
+
+				virtual std::vector<Include> includes() const override
+				{
+					return _includes;
+				}
+
+				virtual Include coreIncludePath() const override 
+				{
+					return _coreIncludePath;
+				}
+
+				virtual std::string getName(const Language::TopLevel * t) const
+				{
+					if (dynamic_cast<const Language::Interface*>(t))
+						return _interfaceSuffix.length() ? (t->name() + _interfaceSuffix) : t->name();
+
+					if (dynamic_cast<const Language::Module*>(t))
+						return _moduleSuffix.length() ? (t->name() + _moduleSuffix) : t->name();
+
+					return t->name();
+				}
+
+				bool build(const rapidjson::Value & r, ErrorCollector & ec)
+				{
+					rapidjson::Value * v;
+					if (JSONTools::getValue(r, "tab", v))
+					{
+						if (!v->IsObject())
+						{
+							ec << "value 'tab' is not object";
+							return false;
+						}
+						std::string tab_str(_tabChar, 1);
+						getStringOptional(*v, "char", tab_str, ec);
+
+						if (tab_str.length() != 1)
+						{
+							ec << "invalid char definition: '" + tab_str + "'";
+							return false;
+						}
+						_tabChar = tab_str[0];
+
+						rapidjson::Value * v_;
+						if (JSONTools::getValue(*v, "length", v_))
+						{
+							if (!v_->IsNumber())
+							{
+								ec << "value 'tab.length' is not number";
+								return false;
+							}
+							_tabLength = (short)v_->GetInt();
+						}
+					}
+
+					if (JSONTools::getValue(r, "logging", v))
+					{
+						ec << "logging settings is not yet supported";
+						return false;
+					}
+					else
+						_logging = std::make_shared<CPPVoidLogging>();
+
+					if (JSONTools::getValue(r, "includes", v))
+					{
+						if (!v->IsArray())
+						{
+							ec << "value 'includes' is not array";
+							return false;
+						}
+
+						_includes.resize(v->Size());
+						for (rapidjson::SizeType i = 0, l = v->Size(); i < l; ++i)
+						{
+							if (!getInclude((*v)[i], _includes[i], ec))
+								return false;
+						}
+					}
+
+					if (JSONTools::getValue(r, "coreIncludePath", v))
+					{
+						if (!v->IsObject())
+						{
+							ec << "value 'coreIncludePath' is not object";
+							return false;
+						}
+						if (!getInclude(*v, _coreIncludePath, ec))
+							return false;
+					}
+
+					if (!getStringOptional(r, "moduleSuffix", _moduleSuffix, ec))
+						return false;
+
+					if (!getStringOptional(r, "interfaceSuffix", _interfaceSuffix, ec))
+						return false;
+
+					return true;
+				}
+
+			private:
+				char _tabChar = '\t';
+				short _tabLength = 1;
+
+				std::shared_ptr<CPPCodeGenLogging> _logging;
+				std::vector<Include> _includes;
+				Include _coreIncludePath = { IncludeType::GLobal, "pidlCore" };
+
+				std::string _moduleSuffix;
+				std::string _interfaceSuffix;
+			};
+
+			struct CustomCSHelper : public CSCodeGenHelper
+			{
+				virtual short tabDefinition(char & ch) const override
+				{
+					ch = _tabChar;
+					return _tabLength;
+				}
+
+				virtual std::shared_ptr<CSCodeGenLogging> logging() const override
+				{
+					return _logging;
+				}
+
+				virtual std::string getName(const Language::TopLevel * t) const
+				{
+					if (dynamic_cast<const Language::Interface*>(t))
+						return _interfaceSuffix.length() ? (t->name() + _interfaceSuffix) : t->name();
+
+					if (dynamic_cast<const Language::Module*>(t))
+						return _moduleSuffix.length() ? (t->name() + _moduleSuffix) : t->name();
+
+					return t->name();
+				}
+
+				bool build(const rapidjson::Value & r, ErrorCollector & ec)
+				{
+					rapidjson::Value * v;
+					if (JSONTools::getValue(r, "tab", v))
+					{
+						if (!v->IsObject())
+						{
+							ec << "value 'tab' is not object";
+							return false;
+						}
+						std::string tab_str(_tabChar, 1);
+						getStringOptional(*v, "char", tab_str, ec);
+
+						if (tab_str.length() != 1)
+						{
+							ec << "invalid char definition: '" + tab_str + "'";
+							return false;
+						}
+						_tabChar = tab_str[0];
+
+						rapidjson::Value * v_;
+						if (JSONTools::getValue(*v, "length", v_))
+						{
+							if (!v_->IsNumber())
+							{
+								ec << "value 'tab.length' is not number";
+								return false;
+							}
+							_tabLength = (short)v_->GetInt();
+						}
+					}
+
+					if (JSONTools::getValue(r, "logging", v))
+					{
+						ec << "logging settings is not yet supported";
+						return false;
+					}
+					else
+						_logging = std::make_shared<CSVoidLogging>();
+
+					if (!getStringOptional(r, "moduleSuffix", _moduleSuffix, ec))
+						return false;
+
+					if (!getStringOptional(r, "interfaceSuffix", _interfaceSuffix, ec))
+						return false;
+
+					return true;
+				}
+
+			private:
+				char _tabChar = '\t';
+				short _tabLength = 1;
+
+				std::shared_ptr<CSCodeGenLogging> _logging;
+
+				std::string _moduleSuffix;
+				std::string _interfaceSuffix;
+			};
+
+			bool build(const rapidjson::Value & r, std::shared_ptr<CPPCodeGenHelper> & h, ErrorCollector & ec)
+			{
+				if (r.IsString())
+				{
+					std::string name;
+					if (!getName(r, name, ec))
+						return false;
+					if (!cpp_helpers.count(name))
+					{
+						ec << "cpp codegen helper '" + name + "' is not defined";
+						return false;
+					}
+					h = cpp_helpers[name];
+					return true;
+				}
+				else if (r.IsObject())
+				{
+					std::string name;
+					if (!getStringOptional(r, "name", name, ec))
+						return false;
+
+					std::string type_str = "basic";
+					if (!getStringOptional(r, "type", type_str, ec))
+						return false;
+
+					if (type_str == "basic")
+					{
+						std::vector<CPPCodeGenHelper::Include> includes;
+						rapidjson::Value * v;
+						if (JSONTools::getValue(r, "includes", v))
+						{
+							if (!v->IsArray())
+							{
+								ec << "value 'includes' is not array";
+								return false;
+							}
+							includes.resize(v->Size());
+							for (rapidjson::SizeType i = 0, l = v->Size(); i < l; ++i)
+								if (!getInclude((*v)[i], includes[i], ec))
+									return false;
+						}
+
+						h = std::make_shared<CPPBasicCodegenHelper>(includes);
+					}
+					else if (type_str == "custom")
+					{
+						auto _h = std::make_shared<CustomCPPHelper>();
+						if (!_h->build(r, ec))
+							return false;
+						h = _h;
+					}
+					else
+					{
+						ec << "type is not supported: '" + type_str + "'";
+						return false;
+					}
+
+					if (name.length())
+						cpp_helpers[name] = h;
+				}
+				else
+				{
+					ec << "value of helper is not string and not object";
+					return false;
+				}
+
+				return true;
+			}
+
+			bool build(const rapidjson::Value & r, std::shared_ptr<CSCodeGenHelper> & h, ErrorCollector & ec)
+			{
+				if (r.IsString())
+				{
+					std::string name;
+					if (!getName(r, name, ec))
+						return false;
+					if (!cs_helpers.count(name))
+					{
+						ec << "c# codegen helper '" + name + "' is not defined";
+						return false;
+					}
+					h = cs_helpers[name];
+					return true;
+				}
+				else if (r.IsObject())
+				{
+					std::string name;
+					if (!getStringOptional(r, "name", name, ec))
+						return false;
+
+					std::string type_str = "basic";
+					if (!getStringOptional(r, "type", type_str, ec))
+						return false;
+
+					if (type_str == "basic")
+						h = std::make_shared<CSBasicCodegenHelper>();
+					else if (type_str == "custom")
+					{
+						auto _h = std::make_shared<CustomCSHelper>();
+						if (!_h->build(r, ec))
+							return false;
+						h = _h;
+					}
+					else
+					{
+						ec << "type is not supported: '" + type_str + "'";
+						return false;
+					}
+
+					if (name.length())
+						cs_helpers[name] = h;
+				}
+				else
+				{
+					ec << "value of helper is not string and not object";
+					return false;
+				}
+
+				return true;
+			}
 
 			bool build(const rapidjson::Value & r, std::shared_ptr<OperationGroup> & op, ErrorCollector & ec)
 			{
@@ -263,9 +626,14 @@ namespace PIDL {
 						return false;
 					}
 
+					rapidjson::Value * v;
+					std::shared_ptr<CPPCodeGenHelper> helper;
+					if (JSONTools::getValue(r, "helper", v) && !build(*v, helper, ec))
+						return false;
+
 					std::shared_ptr<CPPCodeGen> codegen;
 					if (codegen_str == "json_stl")
-						codegen = std::make_shared<JSON_STL_CodeGen>();
+						codegen = helper ? std::make_shared<JSON_STL_CodeGen>(helper) : std::make_shared<JSON_STL_CodeGen>();
 					else
 					{
 						ec << std::string() << "unsupported  C++ code generator '" + codegen_str + "'";
@@ -329,6 +697,56 @@ namespace PIDL {
 
 					op = std::make_shared<Write>(reader, read_op, writer);
 				}
+				else if (type_str == "c#")
+				{
+					std::string codegen_str;
+					if (!JSONTools::getValue(r, "codegen", codegen_str))
+					{
+						ec << "value 'codegen' is not found or invalid";
+						return false;
+					}
+
+					rapidjson::Value * v;
+					std::shared_ptr<CSCodeGenHelper> helper;
+					if (JSONTools::getValue(r, "helper", v) && !build(*v, helper, ec))
+						return false;
+
+					std::shared_ptr<CSCodeGen> codegen;
+					if (codegen_str == "json")
+						codegen = helper ? std::make_shared<JSON_CSCodeGen>(helper) : std::make_shared<JSON_CSCodeGen>();
+					else
+					{
+						ec << std::string() << "unsupported  C# code generator '" + codegen_str + "'";
+						return false;
+					}
+
+					std::string role_str;
+					if (!JSONTools::getValue(r, "role", role_str))
+					{
+						ec << "value 'mode' is not found or invalid";
+						return false;
+					}
+
+					CSWriter::Role role;
+					if (role_str == "server")
+						role = CSWriter::Role::Server;
+					else if (role_str == "client")
+						role = CSWriter::Role::Client;
+					else
+					{
+						ec << std::string() << "unsupported role '" + role_str + "'";
+						return false;
+					}
+
+					std::shared_ptr<std::ostream> o;
+					std::string filename;
+					if (!get_out(o, filename))
+						return false;
+
+					auto writer = std::make_shared<CSWriter>(role, codegen, o);
+
+					op = std::make_shared<Write>(reader, read_op, writer);
+				}
 				else if (type_str == "json")
 				{
 					std::shared_ptr<std::ostream> o;
@@ -383,6 +801,13 @@ namespace PIDL {
 						return false;
 					op = _op;
 				}
+				else if (nat == "cpp_helper")
+				{
+					std::shared_ptr<CPPCodeGenHelper> h;
+					if (!build(r, h, ec))
+						return false;
+					op = nullptr;
+				}
 				else
 				{
 					ec << "unknown nature '" + nat + "'";
@@ -405,6 +830,11 @@ namespace PIDL {
 
 	bool Job::run(ErrorCollector & ec)
 	{
+		if (!priv->op)
+		{
+			ec << "no operation is specified";
+			return false;
+		}
 		return priv->op->run(ec);
 	}
 
@@ -421,8 +851,14 @@ namespace PIDL {
 			return false;
 		}
 
+		return build(doc, ec);
+	}
+
+	bool Job::build(const rapidjson::Value & root, ErrorCollector & ec)
+	{
 		Priv::Context ctx;
-		return ctx.build(doc, priv->op, ec);
+		return ctx.build(root, priv->op, ec);
+
 	}
 
 }
