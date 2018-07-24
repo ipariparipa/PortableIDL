@@ -49,8 +49,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="include\pidlCore\_platform_win.h_">
-      <Filter>Platform Templates</Filter>
-    </None>
+    <CustomBuild Include="include\pidlCore\_platform_win.h_" />
   </ItemGroup>
 </Project>
