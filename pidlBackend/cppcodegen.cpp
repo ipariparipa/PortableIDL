@@ -87,34 +87,52 @@ namespace PIDL
 
 	CPPCodeGenHelper::~CPPCodeGenHelper() = default;
 
-	std::vector<CPPCodeGenHelper::Include> CPPCodeGenHelper::includes() const
+
+	struct CPPBasicCodegenHelper::Priv
 	{
-		std::vector<CPPCodeGenHelper::Include> ret;
-		auto core_path = coreIncludePath();
-		ret.push_back(std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/errorcollector.h" : "errorcollector.h"));
-		return ret;
+		Priv(const std::vector<Include> & customIncludes_) : 
+			customIncludes(customIncludes_), 
+			logging(std::make_shared<CPPVoidLogging>())
+		{ }
+
+		std::vector<Include> customIncludes;
+		std::shared_ptr<CPPCodeGenLogging> logging;
+	};
+
+	CPPBasicCodegenHelper::CPPBasicCodegenHelper(const std::vector<Include> & customIncludes) : CPPCodeGenHelper(), priv(new Priv(customIncludes))
+	{ }
+
+	CPPBasicCodegenHelper::~CPPBasicCodegenHelper()
+	{
+		delete priv;
 	}
 
-	std::string CPPCodeGenHelper::errorCollector() const
+	std::vector<CPPCodeGenHelper::Include> CPPBasicCodegenHelper::includes() const
 	{
-		return "PIDL::ErrorCollector";
+		return priv->customIncludes;
 	}
 
-	CPPCodeGenHelper::Include CPPCodeGenHelper::coreIncludePath() const
+	CPPCodeGenHelper::Include CPPBasicCodegenHelper::coreIncludePath() const
 	{
 		return std::make_pair(IncludeType::GLobal, "pidlCore");
 	}
 
-	short CPPCodeGenHelper::tabDefinition(char & ch) const
+	std::string CPPBasicCodegenHelper::getName(const Language::TopLevel * t) const
+	{
+		return t->name();
+	}
+
+	short CPPBasicCodegenHelper::tabDefinition(char & ch) const
 	{
 		ch = '\t';
 		return 1;
 	}
 
-	std::shared_ptr<CPPCodeGenLogging> CPPCodeGenHelper::logging() const
+	std::shared_ptr<CPPCodeGenLogging> CPPBasicCodegenHelper::logging() const
 	{
-		return std::shared_ptr<CPPCodeGenLogging>();
+		return priv->logging;
 	}
+
 
 	struct CPPCodeGen::Priv 
 	{
@@ -247,8 +265,8 @@ namespace PIDL
 		{
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Declaration:
+			case Nature::AllInOne:
+			case Nature::Declaration:
 				{
 					auto type = type_definition->type().get();
 					if (dynamic_cast<Language::Structure*>(type))
@@ -265,7 +283,7 @@ namespace PIDL
 					}
 				}
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
+			case Nature::Implementatinon:
 				break;
 			}
 
@@ -274,25 +292,25 @@ namespace PIDL
 
 		bool addFunction(short code_deepness, CPPCodeGenContext * ctx, Language::Function * function, ErrorCollector & ec)
 		{
-			if (ctx->role() == CPPCodeGenContext::Role::Server && ctx->nature() == CPPCodeGenContext::Nature::Implementatinon)
+			if (ctx->role() == Role::Server && ctx->nature() == Nature::Implementatinon)
 				return true;
 
 			auto & o = writeTabs(code_deepness, ctx);
 
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Declaration:
+			case Nature::AllInOne:
+			case Nature::Declaration:
 				switch (ctx->role())
 				{
-				case CPPCodeGenContext::Role::Client:
+				case Role::Client:
 					break;
-				case CPPCodeGenContext::Role::Server:
+				case Role::Server:
 					o << "virtual ";
 					break;
 				}
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
+			case Nature::Implementatinon:
 				break;
 			}
 
@@ -301,11 +319,11 @@ namespace PIDL
 
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Declaration:
+			case Nature::AllInOne:
+			case Nature::Declaration:
 				o << " " << function->name() << "(";
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
+			case Nature::Implementatinon:
 				o << " ";
 				for (auto sc : function->scope())
 					o << sc << "::";
@@ -342,11 +360,11 @@ namespace PIDL
 
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Implementatinon:
+			case Nature::AllInOne:
+			case Nature::Implementatinon:
 				switch (ctx->role())
 				{
-				case CPPCodeGenContext::Role::Client:
+				case Role::Client:
 					o << std::endl;
 					writeTabs(code_deepness++, ctx) << "{" << std::endl;
 
@@ -355,18 +373,18 @@ namespace PIDL
 
 					writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
 					break;
-				case CPPCodeGenContext::Role::Server:
+				case Role::Server:
 					o << " = 0;" << std::endl;
 					break;
 				}
 				break;
-			case CPPCodeGenContext::Nature::Declaration:
+			case Nature::Declaration:
 				switch (ctx->role())
 				{
-				case CPPCodeGenContext::Role::Client:
+				case Role::Client:
 					o << ";" << std::endl;
 					break;
-				case CPPCodeGenContext::Role::Server:
+				case Role::Server:
 					o << " = 0;" << std::endl;
 					break;
 				}
@@ -412,15 +430,15 @@ namespace PIDL
 		{
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Declaration:
-				writeTabs(code_deepness, ctx) << "class " << intf->name() << std::endl;
+			case Nature::AllInOne:
+			case Nature::Declaration:
+				writeTabs(code_deepness, ctx) << "class " << obj->helper()->getName(intf) << std::endl;
 				writeTabs(code_deepness++, ctx) << "{" << std::endl;
 				if (!obj->writePrivateSection(code_deepness, ctx, intf, ec))
 					return false;
 				writeTabs(code_deepness - 1, ctx) << "public:" << std::endl;
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
+			case Nature::Implementatinon:
 				if (!obj->writePrivateSection(code_deepness, ctx, intf, ec))
 					return false;
 				break;
@@ -431,11 +449,11 @@ namespace PIDL
 
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Declaration:
+			case Nature::AllInOne:
+			case Nature::Declaration:
 				writeTabs(code_deepness - 1, ctx) << "protected:" << std::endl;
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
+			case Nature::Implementatinon:
 				break;
 			}
 
@@ -444,11 +462,11 @@ namespace PIDL
 
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Declaration:
+			case Nature::AllInOne:
+			case Nature::Declaration:
 				writeTabs(--code_deepness, ctx) << "};" << std::endl << std::endl;
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
+			case Nature::Implementatinon:
 				break;
 			}
 
@@ -459,17 +477,17 @@ namespace PIDL
 		{
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
+			case Nature::AllInOne:
 				writeTabs(code_deepness, ctx) << intf->name() << "()" << std::endl;
 				writeTabs(code_deepness++, ctx) << "{" << std::endl;
 				if (!obj->writeConstructorBody(intf, code_deepness, ctx, ec))
 					return false;
 				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
 				break;
-			case CPPCodeGenContext::Nature::Declaration:
+			case Nature::Declaration:
 				writeTabs(code_deepness, ctx) << intf->name() << "();" << std::endl;
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
+			case Nature::Implementatinon:
 				writeTabs(code_deepness, ctx) << intf->name() << "::" << intf->name() << "() : priv(new Priv(this)) { }" << std::endl << std::endl;
 				break;
 			}
@@ -481,13 +499,13 @@ namespace PIDL
 		{
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
+			case Nature::AllInOne:
 				writeTabs(code_deepness, ctx) << "virtual ~" << intf->name() << "() { }" << std::endl << std::endl;
 				break;
-			case CPPCodeGenContext::Nature::Declaration:
+			case Nature::Declaration:
 				writeTabs(code_deepness, ctx) << "virtual ~" << intf->name() << "();" << std::endl;
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
+			case Nature::Implementatinon:
 				writeTabs(code_deepness, ctx) << intf->name() << "::~" << intf->name() << "() { delete priv; }" << std::endl << std::endl;
 				break;
 			}
@@ -497,7 +515,7 @@ namespace PIDL
 
 		bool addModule(short code_deepness, CPPCodeGenContext * ctx, Language::Module * module, ErrorCollector & ec)
 		{
-			auto & o = writeTabs(code_deepness++, ctx) << "namespace " << module->name() << " {" << std::endl;
+			auto & o = writeTabs(code_deepness++, ctx) << "namespace " << obj->helper()->getName(module) << " {" << std::endl;
 			for (auto & element : module->elements())
 			{
 				o << std::endl;
@@ -564,22 +582,22 @@ namespace PIDL
 	{
 		switch (ctx->nature())
 		{
-		case CPPCodeGenContext::Nature::Implementatinon:
-			priv->writeTabs(code_deepness, ctx) << "struct " << intf->name() << "::Priv" << std::endl;
+		case Nature::Implementatinon:
+			priv->writeTabs(code_deepness, ctx) << "struct " << helper()->getName(intf) << "::Priv" << std::endl;
 			priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Declaration:
+			case Nature::AllInOne:
+			case Nature::Declaration:
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
-				priv->writeTabs(code_deepness, ctx) << "Priv(" << intf->name() << " * that_): that(that_)" << std::endl;
+			case Nature::Implementatinon:
+				priv->writeTabs(code_deepness, ctx) << "Priv(" << helper()->getName(intf) << " * that_): that(that_)" << std::endl;
 				priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 				if (!writeConstructorBody(intf, code_deepness, ctx, ec))
 					return false;
 				priv->writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
-				priv->writeTabs(code_deepness, ctx) << intf->name() << " * that;" << std::endl << std::endl;
+				priv->writeTabs(code_deepness, ctx) << helper()->getName(intf) << " * that;" << std::endl << std::endl;
 				break;
 			}
 
@@ -587,11 +605,11 @@ namespace PIDL
 				return false;
 			priv->writeTabs(--code_deepness, ctx) << "};" << std::endl << std::endl;
 			break;
-		case CPPCodeGenContext::Nature::Declaration:
+		case Nature::Declaration:
 			priv->writeTabs(code_deepness, ctx) << "struct Priv;" << std::endl;
 			priv->writeTabs(code_deepness, ctx) << "Priv * priv;" << std::endl;
 			break;
-		case CPPCodeGenContext::Nature::AllInOne:
+		case Nature::AllInOne:
 			if (!writePrivateMembers(code_deepness, ctx, intf, ec))
 				return false;
 			break;
@@ -607,13 +625,13 @@ namespace PIDL
 
 		switch (ctx->role())
 		{
-		case CPPCodeGenContext::Role::Client:
+		case Role::Client:
 			if (!priv->addConstructor(code_deepness, ctx, intf, ec) ||
 			    !priv->addDestructor(code_deepness, ctx, intf, ec) ||
 				!priv->addDefinitions(code_deepness, ctx, intf, ec))
 				return false;
 			break;
-		case CPPCodeGenContext::Role::Server:
+		case Role::Server:
 			if (!priv->addDestructor(code_deepness, ctx, intf, ec) ||
 			    !writeInvoke(code_deepness, ctx, intf, ec))
 				return false;
@@ -627,11 +645,11 @@ namespace PIDL
 	{
 		switch (ctx->role())
 		{
-		case CPPCodeGenContext::Role::Client:
+		case Role::Client:
 			if (!writeInvoke(code_deepness, ctx, intf, ec))
 				return false;
 			break;
-		case CPPCodeGenContext::Role::Server:
+		case Role::Server:
 			if (!priv->addConstructor(code_deepness, ctx, intf, ec) ||
 				!priv->addDefinitions(code_deepness, ctx, intf, ec))
 				return false;

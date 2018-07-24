@@ -57,6 +57,7 @@ namespace PIDL { namespace Language {
 	public:
 		Type();
 		virtual ~Type();
+		virtual std::shared_ptr<Type> finalType() const;
 	};
 
 	class PIDL_BACKEND__CLASS Variable : public Element
@@ -83,6 +84,7 @@ namespace PIDL { namespace Language {
 
 		virtual const char * name() const override;
 		virtual std::shared_ptr<Type> type() const;
+		virtual std::shared_ptr<Type> finalType() const override;
 	};
 
 	class PIDL_BACKEND__CLASS ComplexType : public Type
@@ -93,17 +95,6 @@ namespace PIDL { namespace Language {
 	public:
 		ComplexType();
 		virtual ~ComplexType();
-	};
-
-	class PIDL_BACKEND__CLASS Blob : public ComplexType
-	{
-		PIDL_COPY_PROTECTOR(Blob)
-		struct Priv;
-		Priv * priv;
-	public:
-		Blob();
-		virtual ~Blob();
-		virtual const char * name() const override { return "blob"; }
 	};
 
 	class PIDL_BACKEND__CLASS Generic : public ComplexType
@@ -243,6 +234,17 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "datetime"; }
 	};
 
+	class PIDL_BACKEND__CLASS Blob : public EmbeddedType
+	{
+		PIDL_COPY_PROTECTOR(Blob)
+		struct Priv;
+		Priv * priv;
+	public:
+		Blob();
+		virtual ~Blob();
+		virtual const char * name() const override { return "blob"; }
+	};
+
 	class PIDL_BACKEND__CLASS Void : public Type
 	{
 		PIDL_COPY_PROTECTOR(Void)
@@ -285,6 +287,8 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override;
 		const std::vector<std::string> & scope() const;
 		const std::vector<std::shared_ptr<Argument>> & arguments() const;
+		const std::vector<std::shared_ptr<Argument>> & in_arguments() const;
+		const std::vector<std::shared_ptr<Argument>> & out_arguments() const;
 		std::shared_ptr<Type> returnType() const;
 	};
 

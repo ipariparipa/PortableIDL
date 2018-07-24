@@ -32,6 +32,10 @@ namespace PIDL {
 		Type::Type() : priv(nullptr) { }
 		Type::~Type() = default;
 
+		std::shared_ptr<Type> Type::finalType() const
+		{
+			return std::shared_ptr<Type>((Type*)this, [](void*){});
+		}
 
 
 		struct Variable::Priv
@@ -92,6 +96,11 @@ namespace PIDL {
 		std::shared_ptr<Type> TypeDefinition::type() const
 		{
 			return priv->type;
+		}
+
+		std::shared_ptr<Type> TypeDefinition::finalType() const
+		{
+			return priv->type->finalType();
 		}
 
 
@@ -241,7 +250,9 @@ namespace PIDL {
 				scope(scope_),
 				name(name_), 
 				arguments(arguments_)
-			{ }
+			{
+				buildArguments();
+			}
 
 			Priv(const std::shared_ptr<Type> & returnType_, const std::vector<std::string> & scope_, const std::string & name_, const std::list<std::shared_ptr<Argument>> & arguments_) :
 				returnType(returnType_),
@@ -250,12 +261,32 @@ namespace PIDL {
 			{
 				arguments.resize(arguments_.size());
 				std::copy(arguments_.begin(), arguments_.end(), arguments.begin());
+				buildArguments();
 			}
 
 			std::shared_ptr<Type> returnType;
 			std::vector<std::string> scope;
 			std::string name;
-			std::vector<std::shared_ptr<Argument>> arguments;
+			std::vector<std::shared_ptr<Argument>> arguments, in_arguments, out_arguments;
+
+		private:
+			void buildArguments()
+			{
+				for (auto & a : arguments)
+					switch (a->direction())
+					{
+					case Argument::Direction::In:
+						in_arguments.push_back(a);
+						break;
+					case Argument::Direction::InOut:
+						in_arguments.push_back(a);
+						out_arguments.push_back(a);
+						break;
+					case Argument::Direction::Out:
+						out_arguments.push_back(a);
+						break;
+					}
+			}
 		};
 
 		Function::Function(const std::shared_ptr<Type> & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<std::shared_ptr<Argument>> & arguments) :
@@ -281,6 +312,16 @@ namespace PIDL {
 		const std::vector<std::shared_ptr<Function::Argument>> & Function::arguments() const
 		{
 			return priv->arguments;
+		}
+
+		const std::vector<std::shared_ptr<Function::Argument>> & Function::in_arguments() const
+		{
+			return priv->in_arguments;
+		}
+
+		const std::vector<std::shared_ptr<Function::Argument>> & Function::out_arguments() const
+		{
+			return priv->out_arguments;
 		}
 
 		std::shared_ptr<Type> Function::returnType() const

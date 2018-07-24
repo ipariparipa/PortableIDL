@@ -42,6 +42,15 @@
     <ClCompile Include="xmlreader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cscodegen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="json_cscodegen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cswriter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\pidlBackend\config.h">
@@ -72,6 +81,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\pidlBackend\xmlreader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\pidlBackend\cscodegen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\pidlBackend\json_cscodegen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\pidlBackend\cswriter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

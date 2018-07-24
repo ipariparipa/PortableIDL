@@ -52,7 +52,7 @@ namespace PIDL
 
 	JSON_STL_CodeGen::JSON_STL_CodeGen() :
 		CPPCodeGen(),
-		priv(new Priv(std::make_shared<CPPCodeGenHelper>()))
+		priv(new Priv(std::make_shared<CPPBasicCodegenHelper>()))
 	{ }
 
 	JSON_STL_CodeGen::~JSON_STL_CodeGen()
@@ -70,12 +70,13 @@ namespace PIDL
 		auto core_path = helper()->coreIncludePath();
 		switch (ctx->nature())
 		{
-		case CPPCodeGenContext::Nature::AllInOne:
-		case CPPCodeGenContext::Nature::Implementatinon:
-			if (!writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "map"), ec))
+		case Nature::AllInOne:
+		case Nature::Implementatinon:
+			if (!writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "map"), ec) ||
+				!writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "functional"), ec))
 				return false;
 			break;
-		case CPPCodeGenContext::Nature::Declaration:
+		case Nature::Declaration:
 			break;
 		}
 		return
@@ -84,7 +85,8 @@ namespace PIDL
 			writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "time.h"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/exception.h" : "exception.h"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/nullable.h" : "nullable.h"), ec) &&
-			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/jsontools.h" : "jsontools.h"), ec);
+			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/jsontools.h" : "jsontools.h"), ec) &&
+			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/errorcollector.h" : "errorcollector.h"), ec);
 	}
 
 	bool JSON_STL_CodeGen::writeAliases(short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
@@ -96,6 +98,7 @@ namespace PIDL
 		priv->writeTabs(code_deepness, ctx) << "using datetime = tm;" << std::endl;
 		priv->writeTabs(code_deepness, ctx) << "using blob = std::vector<char>;" << std::endl;
 		priv->writeTabs(code_deepness, ctx) << "using exception = PIDL::Exception;" << std::endl;
+		priv->writeTabs(code_deepness, ctx) << "using error_collector = PIDL::ErrorCollector;" << std::endl;
 
 		return true;
 	}
@@ -106,10 +109,10 @@ namespace PIDL
 
 		switch (ctx->role())
 		{
-		case CPPCodeGenContext::Role::Server:
-			priv->writeTabs(code_deepness, ctx) << "std::map<std::string, std::function<bool(rapidjson::Value & r, rapidjson::Document & ret, " << helper()->errorCollector() << " & ec)>> _functions;" << std::endl;
+		case Role::Server:
+			priv->writeTabs(code_deepness, ctx) << "std::map<std::string, std::function<bool(rapidjson::Value & r, rapidjson::Document & ret, error_collector & ec)>> _functions;" << std::endl;
 			break;
-		case CPPCodeGenContext::Role::Client:
+		case Role::Client:
 			break;
 		}
 
@@ -195,70 +198,54 @@ namespace PIDL
 			}
 		}
 
-
-		switch (ctx->role())
-		{
-		case CPPCodeGenContext::Role::Client:
-			priv->writeTabs(code_deepness, ctx) << "static void addName(rapidjson::Document & doc, rapidjson::Value & r, const char * str)" << std::endl;
-			priv->writeTabs(code_deepness, ctx) << "{ PIDL::JSONTools::addValue(doc, r, \"name\", str); }" << std::endl;
-			break;
-		case CPPCodeGenContext::Role::Server:
-			priv->writeTabs(code_deepness, ctx) << "static bool getName(rapidjson::Value & r, std::string & ret)" << std::endl;
-			priv->writeTabs(code_deepness, ctx) << "{ return PIDL::JSONTools::getValue(r, \"name\", ret); }" << std::endl << std::endl;
-			break;
-		}
-
 		return true;
 	}
 
 	bool JSON_STL_CodeGen::writeInvoke(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		if (ctx->role() == CPPCodeGenContext::Role::Client && ctx->nature() == CPPCodeGenContext::Nature::Implementatinon)
+		if (ctx->role() == Role::Client && ctx->nature() == Nature::Implementatinon)
 			return true;
 
 		switch (ctx->nature())
 		{
-		case CPPCodeGenContext::Nature::AllInOne:
-		case CPPCodeGenContext::Nature::Declaration:
+		case Nature::AllInOne:
+		case Nature::Declaration:
 			break;
-		case CPPCodeGenContext::Nature::Implementatinon:
+		case Nature::Implementatinon:
 			break;
 		}
 
-		auto & o = priv->writeTabs(code_deepness, ctx);
-
 		switch (ctx->role())
 		{
-		case CPPCodeGenContext::Role::Server:
+		case Role::Server:
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Declaration:
-				o << "bool _invoke(const rapidjson::Value & root, rapidjson::Document & ret, " << helper()->errorCollector() << " & ec)";
+			case Nature::AllInOne:
+			case Nature::Declaration:
+				priv->writeTabs(code_deepness, ctx) << "bool _invoke(const rapidjson::Value & root, rapidjson::Document & ret, error_collector & ec)";
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
-				o << "bool " << intf->name() << "::_invoke(const rapidjson::Value & root, rapidjson::Document & ret, " << helper()->errorCollector() << " & ec)";
+			case Nature::Implementatinon:
+				priv->writeTabs(code_deepness, ctx) << "bool " << intf->name() << "::_invoke(const rapidjson::Value & root, rapidjson::Document & ret, error_collector & ec)";
 				break;
 			}
 
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::Declaration:
-				o << ";" << std::endl;
+			case Nature::Declaration:
+				*ctx << ";" << std::endl;
 				break;
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Implementatinon:
-				o << std::endl;
+			case Nature::AllInOne:
+			case Nature::Implementatinon:
+				ctx->stream() << std::endl;
 				priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				priv->writeTabs(code_deepness, ctx) << "//server implementation" << std::endl << std::endl;
 				switch (ctx->nature())
 				{
-				case CPPCodeGenContext::Nature::Declaration:
+				case Nature::Declaration:
 					break;
-				case CPPCodeGenContext::Nature::AllInOne:
+				case Nature::AllInOne:
 					priv->writeTabs(code_deepness, ctx) << "auto * p = this;" << std::endl << std::endl;
 					break;
-				case CPPCodeGenContext::Nature::Implementatinon:
+				case Nature::Implementatinon:
 					priv->writeTabs(code_deepness, ctx) << "auto * p = priv;" << std::endl << std::endl;
 					break;
 				}
@@ -271,7 +258,7 @@ namespace PIDL
 				priv->writeTabs(code_deepness, ctx) << "return false;" << std::endl;
 				priv->writeTabs(--code_deepness, ctx) << "}" << std::endl;
 				priv->writeTabs(code_deepness, ctx) << "std::string name;" << std::endl;
-				priv->writeTabs(code_deepness, ctx) << "if (!Priv::getName(*v, name))" << std::endl;
+				priv->writeTabs(code_deepness, ctx) << "if (!Priv::getValue(*v, \"name\", name))" << std::endl;
 				priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 				priv->writeTabs(code_deepness, ctx) << "auto err = ec.add(-1, \"name of function is not found or invalid\");" << std::endl;
 				//priv->writeTabs(code_deepness, ctx) << "SAS_LOG_ERROR(p->logger, err);" << std::endl;
@@ -287,17 +274,15 @@ namespace PIDL
 				priv->writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
 				break;
 			}
-
 			break;
-
-		case CPPCodeGenContext::Role::Client:
+		case Role::Client:
 			switch (ctx->nature())
 			{
-			case CPPCodeGenContext::Nature::AllInOne:
-			case CPPCodeGenContext::Nature::Declaration:
-				o << "virtual bool _invoke(const rapidjson::Value & root, rapidjson::Document & ret, " << helper()->errorCollector() << " & ec) = 0;" << std::endl;
+			case Nature::AllInOne:
+			case Nature::Declaration:
+				priv->writeTabs(--code_deepness, ctx) << "virtual bool _invoke(const rapidjson::Value & root, rapidjson::Document & ret, error_collector & ec) = 0;" << std::endl;
 				break;
-			case CPPCodeGenContext::Nature::Implementatinon:
+			case Nature::Implementatinon:
 				break;
 			}
 			break;
@@ -311,32 +296,28 @@ namespace PIDL
 
 		//switch (ctx->nature())
 		//{
-		//case CPPCodeGenContext::Nature::AllInOne:
+		//case Nature::AllInOne:
 		//	priv->writeTabs(code_deepness, ctx) << "auto p = this;" << std::endl << std::endl;
 		//	break;
-		//case CPPCodeGenContext::Nature::Implementatinon:
+		//case Nature::Implementatinon:
 		//	priv->writeTabs(code_deepness, ctx) << "auto p = priv;" << std::endl << std::endl;
 		//	break;
-		//case CPPCodeGenContext::Nature::Declaration:
+		//case Nature::Declaration:
 		//	break;
 		//}
 
 		switch (ctx->role())
 		{
-		case CPPCodeGenContext::Role::Client:
+		case Role::Client:
 			{
-				priv->writeTabs(code_deepness, ctx) << "//client implementation" << std::endl << std::endl;
-
-				priv->writeTabs(code_deepness, ctx) << "PIDL::ExceptionErrorCollector<" << helper()->errorCollector() << "> ec;" << std::endl;
+				priv->writeTabs(code_deepness, ctx) << "PIDL::ExceptionErrorCollector<error_collector> ec;" << std::endl;
 				priv->writeTabs(code_deepness, ctx) << "rapidjson::Document doc;" << std::endl;
 				priv->writeTabs(code_deepness, ctx) << "doc.SetObject();" << std::endl;
 				priv->writeTabs(code_deepness, ctx) << "rapidjson::Value v(rapidjson::kObjectType);" << std::endl;
-				priv->writeTabs(code_deepness, ctx) << "Priv::addName(doc, v, \"" << function->name() << "\");" << std::endl;
+				priv->writeTabs(code_deepness, ctx) << "Priv::addValue(doc, v, \"name\", \"" << function->name() << "\");" << std::endl;
 				priv->writeTabs(code_deepness, ctx) << "rapidjson::Value aa(rapidjson::kObjectType);" << std::endl;
 
-				auto & args = function->arguments();
-
-				for (auto & a : args)
+				for (auto & a : function->in_arguments())
 					priv->writeTabs(code_deepness, ctx) << "Priv::addValue(doc, aa, \"" << a->name() << "\", " << a->name() << ");" << std::endl;
 
 				priv->writeTabs(code_deepness, ctx) << "PIDL::JSONTools::addValue(doc, v, \"arguments\", aa);" << std::endl;
@@ -348,7 +329,10 @@ namespace PIDL
 				auto ret_type = function->returnType().get();
 				if (!dynamic_cast<Language::Void*>(ret_type))
 				{
-					priv->writeTabs(code_deepness, ctx) << "bool __retval;" << std::endl;
+					priv->writeTabs(code_deepness, ctx);
+					if (!writeType(ret_type, code_deepness, ctx, ec))
+						return false;
+					*ctx <<  " __retval;" << std::endl;
 					priv->writeTabs(code_deepness, ctx) << "if (!Priv::getValue(ret, \"retval\", __retval))" << std::endl;
 					priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 					priv->writeTabs(code_deepness, ctx) << "auto err = ec.add(-1, \"'retval' is not found or invalid\");" << std::endl;
@@ -365,26 +349,19 @@ namespace PIDL
 				priv->writeTabs(code_deepness, ctx) << "ec.throwException();" << std::endl;
 				priv->writeTabs(--code_deepness, ctx) << "}" << std::endl;
 
-				if (args.size())
+				const auto & out_args = function->out_arguments();
+				if (out_args.size())
 				{
 					auto & o = priv->writeTabs(code_deepness++, ctx) << "if (" << std::endl;
 
 					bool is_first = true;
-					for (auto & a : args)
+					for (auto & a : out_args)
 					{
-						switch (a->direction())
-						{
-						case Language::Function::Argument::Direction::In:
-							break;
-						case Language::Function::Argument::Direction::Out:
-						case Language::Function::Argument::Direction::InOut:
-							priv->writeTabs(code_deepness, ctx);
-							if (!is_first)
-								o << "|| ";
-							is_first = false;
-							o << "!Priv::getValue(*out_v, \"" << a->name() << "\", " << a->name() << ")" << std::endl;
-							break;
-						}
+						priv->writeTabs(code_deepness, ctx);
+						if (!is_first)
+							o << "|| ";
+						is_first = false;
+						o << "!Priv::getValue(*out_v, \"" << a->name() << "\", " << a->name() << ")" << std::endl;
 					}
 					priv->writeTabs(--code_deepness, ctx) << ")" << std::endl;
 					priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
@@ -393,11 +370,12 @@ namespace PIDL
 					priv->writeTabs(code_deepness, ctx) << "ec.throwException();" << std::endl;
 					priv->writeTabs(--code_deepness, ctx) << "}" << std::endl;
 				}
+
 				if (!dynamic_cast<Language::Void*>(ret_type))
 					priv->writeTabs(code_deepness, ctx) << "return __retval;" << std::endl;
 			}
 			break;
-		case CPPCodeGenContext::Role::Server:
+		case Role::Server:
 			break;
 		}
 
@@ -408,18 +386,26 @@ namespace PIDL
 	{
 		switch (ctx->role())
 		{
-		case CPPCodeGenContext::Role::Client:
+		case Role::Client:
 			break;
-		case CPPCodeGenContext::Role::Server:
+		case Role::Server:
 			for (auto & d : intf->definitions())
 			{
 				auto function = dynamic_cast<Language::Function*>(d.get());
 				if (function)
 				{
-					priv->writeTabs(code_deepness++, ctx) << "_functions[\"" << function->name() << "\"] = [&](rapidjson::Value & r, rapidjson::Document & ret, " << helper()->errorCollector() << " & ec)->bool {" << std::endl;
+					priv->writeTabs(code_deepness++, ctx) << "_functions[\"" << function->name() << "\"] = [&](rapidjson::Value & r, rapidjson::Document & ret, error_collector & ec)->bool {" << std::endl;
 
-					auto args = function->arguments();
-					if (args.size())
+					for (auto & a : function->arguments())
+					{
+						auto & o = priv->writeTabs(code_deepness, ctx);
+						if (!writeType(a->type().get(), code_deepness, ctx, ec))
+							return false;
+						o << " arg__" << a->name() << ";" << std::endl;
+					}
+
+					auto in_args = function->in_arguments();
+					if (in_args.size())
 					{
 						priv->writeTabs(code_deepness, ctx) << "rapidjson::Value * aa;" << std::endl;
 						priv->writeTabs(code_deepness, ctx) << "if (!PIDL::JSONTools::getValue(r, \"arguments\", aa))" << std::endl;
@@ -429,31 +415,15 @@ namespace PIDL
 						priv->writeTabs(code_deepness, ctx) << "return false;" << std::endl;
 						priv->writeTabs(--code_deepness, ctx) << "}" << std::endl;
 
-						for (auto & a : args)
-						{
-							auto & o = priv->writeTabs(code_deepness, ctx);
-							if (!writeType(a->type().get(), code_deepness, ctx, ec))
-								return false;
-							o << " arg__" << a->name() << ";" << std::endl;
-						}
-
 						auto & o = priv->writeTabs(code_deepness++, ctx) << "if (" << std::endl;
 						bool is_first = true;
-						for (auto & a : args)
+						for (auto & a : in_args)
 						{
-							switch (a->direction())
-							{
-							case Language::Function::Argument::Direction::In:
-							case Language::Function::Argument::Direction::InOut:
-								priv->writeTabs(code_deepness, ctx);
-								if (!is_first)
-									o << "|| ";
-								is_first = false;
-								o << "!getValue(*aa, \"" << a->name() << "\", arg__" << a->name() << ")" << std::endl;
-								break;
-							case Language::Function::Argument::Direction::Out:
-								break;
-							}
+							priv->writeTabs(code_deepness, ctx);
+							if (!is_first)
+								o << "|| ";
+							is_first = false;
+							o << "!getValue(*aa, \"" << a->name() << "\", arg__" << a->name() << ")" << std::endl;
 						}
 						priv->writeTabs(--code_deepness, ctx) << ")" << std::endl;
 						priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
@@ -461,7 +431,6 @@ namespace PIDL
 						//priv->writeTabs(code_deepness, ctx) << "SAS_LOG_ERROR(logger, err);" << std::endl;
 						priv->writeTabs(code_deepness, ctx) << "return false;" << std::endl;
 						priv->writeTabs(--code_deepness, ctx) << "}" << std::endl;
-
 					}
 
 					auto ret_type = function->returnType().get();
@@ -481,7 +450,7 @@ namespace PIDL
 						o << "__retval = ";
 					o << "that->" << function->name() << "(";
 					bool is_first = true;
-					for (auto & a : args)
+					for (auto & a : function->arguments())
 					{
 						if (!is_first)
 							o << ", ";
@@ -501,22 +470,15 @@ namespace PIDL
 					if (ret_type)
 						priv->writeTabs(code_deepness, ctx) << "addValue(ret, ret, \"retval\", __retval);" << std::endl;
 
-					priv->writeTabs(code_deepness, ctx) << "rapidjson::Value out_v(rapidjson::kObjectType);" << std::endl;
-
-					for (auto & a : args)
+					const auto & out_args = function->out_arguments();
+					if (out_args.size())
 					{
-						switch (a->direction())
-						{
-						case Language::Function::Argument::Direction::In:
-							break;
-						case Language::Function::Argument::Direction::InOut:
-						case Language::Function::Argument::Direction::Out:
+						priv->writeTabs(code_deepness, ctx) << "rapidjson::Value out_v(rapidjson::kObjectType);" << std::endl;
+						for (auto & a : out_args)
 							priv->writeTabs(code_deepness, ctx) << "addValue(ret, out_v, \"" << a->name() << "\", arg__" << a->name() << ");" << std::endl;
-							break;
-						}
+						priv->writeTabs(code_deepness, ctx) << "PIDL::JSONTools::addValue(ret, ret, \"output\", out_v);" << std::endl;
 					}
 
-					priv->writeTabs(code_deepness, ctx) << "PIDL::JSONTools::addValue(ret, ret, \"output\", out_v);" << std::endl;
 					priv->writeTabs(code_deepness, ctx) << "return true;" << std::endl;
 					priv->writeTabs(--code_deepness, ctx) << "};" << std::endl << std::endl;
 				}
@@ -525,21 +487,5 @@ namespace PIDL
 		}
 		return true;
 	}
-
-
-
-	//bool JSON_STL_CodeGen_server::generate(const std::shared_ptr<Language::TopLevel> & top_level, short code_deepness, std::ostream & o, ErrorCollector & ec)
-	//{
-	//	return priv->addTopLevel(code_deepness, ctx, top_level.get(), ec);
-
-	//	//priv->helper->writeTabs(code_deepness, ctx) << priv->helper->logging()->loggingStart(priv->privLogger()) << std::endl;
-	//	//priv->helper->writeTabs(code_deepness, ctx) << priv->helper->logging()->loggingAssert(priv->privLogger(), "arguments.IsObject()", "\"'arguments' must be object\"") << std::endl;
-
-	//	//TODO
-
-	//	//priv->helper->writeTabs(code_deepness, ctx) << "return true" << std::endl;
-
-	//	//return true;
-	//}
 	
 }

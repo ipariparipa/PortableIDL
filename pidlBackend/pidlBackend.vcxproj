@@ -40,6 +40,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IntDir>obj\$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IntDir>obj\$(Configuration)\</IntDir>
@@ -54,7 +55,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>pidlCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pidlCored.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -79,8 +80,11 @@
   <ItemGroup>
     <ClCompile Include="cppcodegen.cpp" />
     <ClCompile Include="cpppwriter.cpp" />
+    <ClCompile Include="cscodegen.cpp" />
+    <ClCompile Include="cswriter.cpp" />
     <ClCompile Include="jsonreader.cpp" />
     <ClCompile Include="jsonwriter.cpp" />
+    <ClCompile Include="json_cscodegen.cpp" />
     <ClCompile Include="json_stl_codegen.cpp" />
     <ClCompile Include="language.cpp" />
     <ClCompile Include="reader.cpp" />
@@ -91,8 +95,11 @@
     <ClInclude Include="include\pidlBackend\config.h" />
     <ClInclude Include="include\pidlBackend\cppcodegen.h" />
     <ClInclude Include="include\pidlBackend\cppwriter.h" />
+    <ClInclude Include="include\pidlBackend\cscodegen.h" />
+    <ClInclude Include="include\pidlBackend\cswriter.h" />
     <ClInclude Include="include\pidlBackend\jsonreader.h" />
     <ClInclude Include="include\pidlBackend\jsonwriter.h" />
+    <ClInclude Include="include\pidlBackend\json_cscodegen.h" />
     <ClInclude Include="include\pidlBackend\json_stl_codegen.h" />
     <ClInclude Include="include\pidlBackend\language.h" />
     <ClInclude Include="include\pidlBackend\reader.h" />
