@@ -34,12 +34,13 @@ namespace PIDL {
 		Priv * priv;
 
 	public:
-		Job();
+		Job(const std::shared_ptr<Operation> & op);
 		virtual ~Job();
 
 		virtual bool run(ErrorCollector & ec) override;
-		bool build(const std::string & json_data, ErrorCollector & ec);
-		bool build(const rapidjson::Value & root, ErrorCollector & ec);
+		
+		static bool build(const std::string & json_data, std::shared_ptr<Job> & ret, ErrorCollector & ec);
+		static bool build(const rapidjson::Value & root, std::shared_ptr<Job> & ret, ErrorCollector & ec);
 	};
 
 }

@@ -39,6 +39,9 @@ namespace PIDL {
 
 	struct Job::Priv
 	{
+		Priv(const std::shared_ptr<Operation> & op_) : op(op_)
+		{ }
+
 		std::shared_ptr<Operation> op;
 
 		static bool getStringOptional(const rapidjson::Value & r, const char * name, /*in-out*/ std::string & ret, ErrorCollector & ec)
@@ -820,7 +823,7 @@ namespace PIDL {
 
 	};
 
-	Job::Job() : priv(new Priv)
+	Job::Job(const std::shared_ptr<Operation> & op) : priv(new Priv(op))
 	{ }
 
 	Job::~Job()
@@ -838,7 +841,8 @@ namespace PIDL {
 		return priv->op->run(ec);
 	}
 
-	bool Job::build(const std::string & json_data, ErrorCollector & ec)
+	//static
+	bool Job::build(const std::string & json_data, std::shared_ptr<Job> & ret, ErrorCollector & ec)
 	{
 		std::vector<char> buffer(json_data.length() + 1);
 		memcpy(buffer.data(), json_data.c_str(), json_data.length());
@@ -851,14 +855,17 @@ namespace PIDL {
 			return false;
 		}
 
-		return build(doc, ec);
+		return build(doc, ret, ec);
 	}
 
-	bool Job::build(const rapidjson::Value & root, ErrorCollector & ec)
+	//static
+	bool Job::build(const rapidjson::Value & root, std::shared_ptr<Job> & ret, ErrorCollector & ec)
 	{
+		std::shared_ptr<Operation> op;
 		Priv::Context ctx;
-		return ctx.build(root, priv->op, ec);
-
+		if (!ctx.build(root, op, ec))
+			return false;
+		ret = std::make_shared<Job>(op);
 	}
 
 }
