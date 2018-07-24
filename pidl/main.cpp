@@ -94,14 +94,14 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	Job job;
+	std::shared_ptr<Job> job;
 
 	std::stringstream ss;
 	ss << in->rdbuf();
-	if (!job.build(ss.str(), ec))
+	if (!Job::build(ss.str(), job, ec))
 		return 1;
 
-	if (!job.run(ec))
+	if (!job->run(ec))
 		return 1;
 
 	return 0;
