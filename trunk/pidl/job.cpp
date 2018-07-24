@@ -866,6 +866,7 @@ namespace PIDL {
 		if (!ctx.build(root, op, ec))
 			return false;
 		ret = std::make_shared<Job>(op);
+		return true;
 	}
 
 }

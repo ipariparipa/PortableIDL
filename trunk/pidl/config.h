@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with pidl.  If not, see <http://www.gnu.org/licenses/>
  */
- 
+
 #ifndef pidl__config_h
 #define pidl__config_h
 
