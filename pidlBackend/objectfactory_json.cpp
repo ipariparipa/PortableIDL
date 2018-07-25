@@ -87,30 +87,47 @@ namespace PIDL {
 			std::shared_ptr<ObjectFactoryRegistry_JSON> facreg;
 			std::shared_ptr<ObjectRegistry> objreg;
 
-			static bool getStringOptional(const rapidjson::Value & r, const char * name, /*in-out*/ std::string & ret, ErrorCollector & ec)
+			template<typename T>
+			static bool getValueOptional(const rapidjson::Value & r, const char * name, /*in-out*/ T & ret, ErrorCollector & ec)
 			{
 				rapidjson::Value * v;
 				if (!JSONTools::getValue(r, name, v) || v->IsNull())
 					return true;
 
-				if (!v->IsString())
+				if (!JSONTools::getValue(*v, ret))
 				{
-					ec << std::string() + "value '" + name + "' is not string";
+					ec << std::string() + "value '" + name + "' is invalid";
 					return false;
 				}
 
-				ret = v->GetString();
+				return true;
+			}
+
+			template<typename T>
+			static bool getValue(const rapidjson::Value & v, T & ret, ErrorCollector & ec)
+			{
+				if (!JSONTools::getValue(v, ret))
+				{
+					ec << std::string() + "value is invalid";
+					return false;
+				}
+				return true;
+			}
+
+			template<typename T>
+			static bool getValue(const rapidjson::Value & r, const char * name, T & ret, ErrorCollector & ec)
+			{
+				if (!JSONTools::getValue(r, name, ret))
+				{
+					ec << std::string() + "value '" + name + "' is not found or invalid";
+					return false;
+				}
 				return true;
 			}
 
 			static bool getName(const rapidjson::Value & r, std::string & ret, ErrorCollector & ec)
 			{
-				if (!JSONTools::getValue(r, "name", ret))
-				{
-					ec << "value 'name' is not found or invalid";
-					return false;
-				}
-				return true;
+				return getValue(r, "name", ret, ec);
 			}
 
 			template<class Object_T, class Factory_T>
@@ -199,21 +216,20 @@ namespace PIDL {
 				return true;
 			}
 
-			bool get_out(const rapidjson::Value & r, std::shared_ptr<std::ostream> & o, std::string & filename, ErrorCollector & ec)
+			static bool get_out(const rapidjson::Value & r, std::shared_ptr<std::ostream> & o, std::string & filename, ErrorCollector & ec)
 			{
-				std::string out_str = "file";
-				if (!getStringOptional(r, "out", out_str, ec))
+				std::string out_str = r.HasMember("filename") ? "file" : "stdout";
+				if (!getValueOptional(r, "out", out_str, ec))
 					return false;
 
 				if (out_str == "stdout")
 					o = std::shared_ptr<std::ostream>(&std::cout, [](void*) {});
+				else if (out_str == "stderr")
+					o = std::shared_ptr<std::ostream>(&std::cerr, [](void*) {});
 				else if (out_str == "file")
 				{
-					if (!JSONTools::getValue(r, "filename", filename))
-					{
-						ec << "value 'filename' is not found or invalid";
+					if (!getValue(r, "filename", filename, ec))
 						return false;
-					}
 
 					auto file = std::make_shared<std::ofstream>();
 					file->open(filename, std::ios::binary);
@@ -239,20 +255,15 @@ namespace PIDL {
 				rapidjson::Value * v;
 				if (JSONTools::getValue(r, "data", v))
 				{
-					if (!JSONTools::getValue(r, str))
-					{
-						ec << "value 'data' is invalid";
+					if (!getValue(*v, str, ec))
 						return false;
-					}
 				}
 				else if (JSONTools::getValue(r, "filename", v))
 				{
 					std::string filename;
-					if (!JSONTools::getValue(*v, filename))
-					{
-						ec << "value 'filename' is invalid";
+					if (!getValue(*v, filename, ec))
 						return false;
-					}
+
 					if (!Reader::readFromFile(filename, str, ec))
 						return false;
 				}
@@ -274,11 +285,9 @@ namespace PIDL {
 				}
 
 				std::string type_str;
-				if (!JSONTools::getValue(r, "type", type_str))
-				{
-					ec << "value 'type' is not found or invalid";
+				if (!getValue(r, "type", type_str, ec))
 					return false;
-				}
+
 				if (type_str == "global")
 					incl.first = CPPCodeGenHelper::IncludeType::GLobal;
 				else if (type_str == "local")
@@ -288,10 +297,39 @@ namespace PIDL {
 					ec << "invalid type: '" + type_str + "'";
 					return false;
 				}
-				if (!JSONTools::getValue(r, "path", incl.second))
-				{
-					ec << "value 'type' is not found or invalid";
+
+				if (!getValue(r, "path", incl.second, ec))
 					return false;
+
+				return true;
+			}
+
+			template<class Settings_T>
+			static bool get_tab_settings(const rapidjson::Value & r, Settings_T & settings, ErrorCollector & ec)
+			{
+				rapidjson::Value * v;
+				if (JSONTools::getValue(r, "tab", v))
+				{
+					if (!v->IsObject())
+					{
+						ec << "value 'tab' is not object";
+						return false;
+					}
+					std::string tab_str(settings.tabChar, 1);
+					if (!getValueOptional(*v, "char", tab_str, ec))
+						return false;
+
+					if (tab_str.length() != 1)
+					{
+						ec << "invalid char definition: '" + tab_str + "'";
+						return false;
+					}
+					settings.tabChar = tab_str[0];
+
+					long long ll_tmp = settings.tabLength;
+					if (getValue(*v, "length", ll_tmp, ec))
+						return false;
+					settings.tabLength = (short)ll_tmp;
 				}
 
 				return true;
@@ -321,21 +359,15 @@ namespace PIDL {
 
 				std::shared_ptr<CPPCodeGen> codegen;
 				rapidjson::Value * codegen_v;
-				if (!JSONTools::getValue(r, "codegen", codegen_v))
-				{
-					ec << "value 'codegen' is not found or invalid";
+				if (!ctx.getValue(r, "codegen", codegen_v, ec))
 					return false;
-				}
 
 				if(!ctx.get_object(*codegen_v, codegen, ec))
 					return false;
 
 				std::string mode_str;
-				if (!JSONTools::getValue(r, "mode", mode_str))
-				{
-					ec << "value 'mode' is not found or invalid";
+				if (!ctx.getValue(r, "mode", mode_str, ec))
 					return false;
-				}
 
 				CPPWriter::Mode mode;
 				if (mode_str == "include")
@@ -351,11 +383,8 @@ namespace PIDL {
 				}
 
 				std::string role_str;
-				if (!JSONTools::getValue(r, "role", role_str))
-				{
-					ec << "value 'mode' is not found or invalid";
+				if (!ctx.getValue(r, "role", role_str, ec))
 					return false;
-				}
 
 				CPPWriter::Role role;
 				if (role_str == "server")
@@ -377,7 +406,7 @@ namespace PIDL {
 				if (filename.length())
 				{
 					name = filename;
-					if (!ctx.getStringOptional(r, "name", name, ec))
+					if (!ctx.getValueOptional(r, "name", name, ec))
 						return false;
 				}
 				else if (!ctx.getName(r, name, ec))
@@ -420,20 +449,17 @@ namespace PIDL {
 
 				std::shared_ptr<CSCodeGen> codegen;
 				rapidjson::Value * codegen_v;
-				if(!JSONTools::getValue(r, "codegen", codegen_v))
-				{
-					ec << "value 'codegen' is not found or invalid";
+
+				if(!ctx.getValue(r, "codegen", codegen_v, ec))
 					return false;
-				}
+
 				if (!ctx.get_object(*codegen_v, codegen, ec))
 					return false;
 
 				std::string role_str;
-				if (!JSONTools::getValue(r, "role", role_str))
-				{
-					ec << "value 'role' is not found or invalid";
+				if (!ctx.getValue(r, "role", role_str, ec))
 					return false;
-				}
+
 				CSWriter::Role role;
 				if (role_str == "server")
 					role = CSWriter::Role::Server;
@@ -780,35 +806,10 @@ namespace PIDL {
 
 				CustomCPPHelper::Settings settings;
 
+				if (!ctx.get_tab_settings(r, settings, ec))
+					return false;
+
 				rapidjson::Value * v;
-				if (JSONTools::getValue(r, "tab", v))
-				{
-					if (!v->IsObject())
-					{
-						ec << "value 'tab' is not object";
-						return false;
-					}
-					std::string tab_str(settings.tabChar, 1);
-					ctx.getStringOptional(*v, "char", tab_str, ec);
-
-					if (tab_str.length() != 1)
-					{
-						ec << "invalid char definition: '" + tab_str + "'";
-						return false;
-					}
-					settings.tabChar = tab_str[0];
-
-					rapidjson::Value * v_;
-					if (JSONTools::getValue(*v, "length", v_))
-					{
-						if (!v_->IsNumber())
-						{
-							ec << "value 'tab.length' is not number";
-							return false;
-						}
-						settings.tabLength = (short)v_->GetInt();
-					}
-				}
 
 				if (JSONTools::getValue(r, "logging", v))
 				{
@@ -848,10 +849,10 @@ namespace PIDL {
 						return false;
 				}
 
-				if (!ctx.getStringOptional(r, "moduleSuffix", settings.moduleSuffix, ec))
+				if (!ctx.getValueOptional(r, "moduleSuffix", settings.moduleSuffix, ec))
 					return false;
 
-				if (!ctx.getStringOptional(r, "interfaceSuffix", settings.interfaceSuffix, ec))
+				if (!ctx.getValueOptional(r, "interfaceSuffix", settings.interfaceSuffix, ec))
 					return false;
 
 				ret = std::make_shared<CustomCPPHelper>(settings);
@@ -936,35 +937,10 @@ namespace PIDL {
 
 				CustomCSHelper::Settings settings;
 
+				if (!ctx.get_tab_settings(r, settings, ec))
+					return false;
+
 				rapidjson::Value * v;
-				if (JSONTools::getValue(r, "tab", v))
-				{
-					if (!v->IsObject())
-					{
-						ec << "value 'tab' is not object";
-						return false;
-					}
-					std::string tab_str(settings.tabChar, 1);
-					ctx.getStringOptional(*v, "char", tab_str, ec);
-
-					if (tab_str.length() != 1)
-					{
-						ec << "invalid char definition: '" + tab_str + "'";
-						return false;
-					}
-					settings.tabChar = tab_str[0];
-
-					rapidjson::Value * v_;
-					if (JSONTools::getValue(*v, "length", v_))
-					{
-						if (!v_->IsNumber())
-						{
-							ec << "value 'tab.length' is not number";
-							return false;
-						}
-						settings.tabLength = (short)v_->GetInt();
-					}
-				}
 
 				if (JSONTools::getValue(r, "logging", v))
 				{
@@ -974,10 +950,10 @@ namespace PIDL {
 				else
 					settings.logging = std::make_shared<CSVoidLogging>();
 
-				if (!ctx.getStringOptional(r, "moduleSuffix", settings.moduleSuffix, ec))
+				if (!ctx.getValueOptional(r, "moduleSuffix", settings.moduleSuffix, ec))
 					return false;
 
-				if (!ctx.getStringOptional(r, "interfaceSuffix", settings.interfaceSuffix, ec))
+				if (!ctx.getValueOptional(r, "interfaceSuffix", settings.interfaceSuffix, ec))
 					return false;
 
 				ret = std::make_shared<CustomCSHelper>(settings);
@@ -1162,7 +1138,7 @@ namespace PIDL {
 				rapidjson::Value * ops_v;
 				if (!JSONTools::getValue(r, "operations", ops_v))
 				{
-					ec << "value 'reader' is not found";
+					ec << "value 'operations' is not found";
 					return false;
 				}
 				if (!ops_v->IsArray())
@@ -1196,6 +1172,78 @@ namespace PIDL {
 			}
 
 		};
+
+		class MessageFactory : public OperationFactory_JSON
+		{
+			Context ctx;
+
+			class Message : public Operation
+			{
+				std::string text;
+				std::shared_ptr<std::ostream> o;
+			public:
+				Message(std::shared_ptr<std::ostream> & o_, std::string & text_) : 
+					o(o_),
+					text(text_)
+				{ }
+
+				virtual ~Message() = default;
+
+				virtual bool run(ErrorCollector & /*ec*/)
+				{
+					(*o) << text << std::endl;
+					return true;
+				}
+			};
+
+		public:
+			MessageFactory(const Context & ctx_) :
+				OperationFactory_JSON(),
+				ctx(ctx_)
+			{ }
+
+			virtual ~MessageFactory() = default;
+
+			virtual bool build(const rapidjson::Value & r, std::shared_ptr<Operation> & ret, ErrorCollector & ec) override
+			{
+				if (!isValid(r))
+				{
+					ec << "unexpected: json object is invalid";
+					return false;
+				}
+
+				std::string text;
+				if (!JSONTools::getValue(r, "message", text))
+				{
+					if (!ctx.getValue(r, "text", text, ec))
+					{
+						ec << "value 'text' is not found";
+						return false;
+					}
+				}
+
+				std::shared_ptr<std::ostream> o;
+				std::string filename;
+				if (!ctx.get_out(r, o, filename, ec))
+					return false;
+
+				ret = std::make_shared<Message>(o, text);
+
+				return true;
+			}
+
+			virtual bool isValid(const rapidjson::Value & value) const override
+			{
+				if (!value.IsObject())
+					return false;
+
+				std::string nature_str;
+				if (JSONTools::getValue(value, "nature", nature_str) && nature_str == "message")
+					return true;
+
+				return value.HasMember("message");
+			}
+		};
 	}
 
 	//static
@@ -1219,6 +1267,7 @@ namespace PIDL {
 		ret->add(std::make_shared<Factories_JSON::OperationGroupFactory>(ctx));
 		ret->add(std::make_shared<Factories_JSON::ReadFactory>(ctx));
 		ret->add(std::make_shared<Factories_JSON::WriteFactory>(ctx));
+		ret->add(std::make_shared<Factories_JSON::MessageFactory>(ctx));
 
 		return ret;
 	}
