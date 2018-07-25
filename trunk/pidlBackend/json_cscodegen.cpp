@@ -73,8 +73,6 @@ namespace PIDL
 
 	bool JSON_CSCodeGen::writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		priv->writeTabs(code_deepness, ctx) << "//private members" << std::endl << std::endl;
-
 		switch (ctx->role())
 		{
 		case Role::Server:
