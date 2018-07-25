@@ -23,6 +23,8 @@
 #include <ostream>
 #include <memory>
 
+#include "object.h"
+
 namespace PIDL {
 
 	namespace Language {
@@ -60,7 +62,9 @@ namespace PIDL {
 		Role role() const;
 	};
 
-	class PIDL_BACKEND__CLASS CSCodeGenLogging
+#define PIDL_OBJECT_TYPE__CS_CODEGEN_LOGGING "cs_codegen_logging"
+
+	class PIDL_BACKEND__CLASS CSCodeGenLogging : public Object
 	{
 		PIDL_COPY_PROTECTOR(CSCodeGenLogging)
 		struct Priv;
@@ -69,6 +73,8 @@ namespace PIDL {
 	protected:
 		CSCodeGenLogging();
 		virtual ~CSCodeGenLogging();
+
+		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CS_CODEGEN_LOGGING; }
 
 	public:
 		virtual std::string initLogger(const std::string & scope) const = 0;
@@ -105,7 +111,9 @@ namespace PIDL {
 		virtual std::string loggingFatal(const std::string & logger, const std::string & message) const override;
 	};
 
-	class PIDL_BACKEND__CLASS CSCodeGenHelper
+#define PIDL_OBJECT_TYPE__CS_CODEGEN_HELPER "cs_codegen_helper"
+
+	class PIDL_BACKEND__CLASS CSCodeGenHelper : public Object
 	{
 		PIDL_COPY_PROTECTOR(CSCodeGenHelper)
 		struct Priv;
@@ -114,6 +122,8 @@ namespace PIDL {
 	public:
 		CSCodeGenHelper();
 		virtual ~CSCodeGenHelper();
+
+		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CS_CODEGEN_HELPER; }
 
 		virtual short tabDefinition(char & ch) const = 0;
 		virtual std::shared_ptr<CSCodeGenLogging> logging() const = 0;
@@ -136,7 +146,9 @@ namespace PIDL {
 		virtual std::string getName(const Language::TopLevel * t) const override;
 	};
 
-	class PIDL_BACKEND__CLASS CSCodeGen
+#define PIDL_OBJECT_TYPE__CS_CODEGEN "cs_codegen"
+
+	class PIDL_BACKEND__CLASS CSCodeGen : public Object
 	{
 		PIDL_COPY_PROTECTOR(CSCodeGen)
 		struct Priv;
@@ -148,6 +160,8 @@ namespace PIDL {
 
 		bool generateUsings(short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec);
 		bool generateCode(Language::TopLevel * topLevel, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec);
+
+		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CS_CODEGEN; }
 
 	protected:
 		using Role = CSCodeGenContext::Role;

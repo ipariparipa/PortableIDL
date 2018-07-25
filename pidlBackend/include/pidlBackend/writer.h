@@ -21,13 +21,17 @@
 #include "config.h"
 #include <memory>
 
+#include "object.h"
+
 namespace PIDL
 {
 
 	class ErrorCollector;
 	class Reader;
 
-	class PIDL_BACKEND__CLASS Writer
+#define PIDL_OBJECT_TYPE__WRITER "writer"
+
+	class PIDL_BACKEND__CLASS Writer : public Object
 	{
 		PIDL_COPY_PROTECTOR(Writer)
 		struct Priv;
@@ -35,6 +39,9 @@ namespace PIDL
 	public:
 		Writer();
 		virtual ~Writer();
+
+		virtual const char * type() const override { return PIDL_OBJECT_TYPE__WRITER; }
+
 		virtual bool write(Reader * reader, ErrorCollector & ec) = 0;
 	};
 

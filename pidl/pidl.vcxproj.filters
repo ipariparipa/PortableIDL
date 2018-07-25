@@ -21,18 +21,12 @@
     <ClCompile Include="job.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="operation.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="job.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="operation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -24,6 +24,8 @@
 #include <vector>
 #include <string>
 
+#include "object.h"
+
 namespace PIDL {
 	
 	namespace Language {
@@ -67,7 +69,8 @@ namespace PIDL {
 		Role role() const;
 	};
 
-	class PIDL_BACKEND__CLASS CPPCodeGenLogging
+#define PIDL_OBJECT_TYPE__CPP_CODEGEN_LOGGING "cpp_codegen_logging"
+	class PIDL_BACKEND__CLASS CPPCodeGenLogging : public Object
 	{
 		PIDL_COPY_PROTECTOR(CPPCodeGenLogging)
 		struct Priv;
@@ -76,6 +79,8 @@ namespace PIDL {
 	protected:
 		CPPCodeGenLogging();
 		virtual ~CPPCodeGenLogging();
+
+		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CPP_CODEGEN_LOGGING; }
 
 	public:
 		virtual std::string initLogger(const std::string & scope) const = 0;
@@ -112,7 +117,9 @@ namespace PIDL {
 		virtual std::string loggingFatal(const std::string & logger, const std::string & message) const override;
 	};
 
-	class PIDL_BACKEND__CLASS CPPCodeGenHelper
+#define PIDL_OBJECT_TYPE__CPP_CODEGEN_HELPER "cpp_codegen_helper"
+
+	class PIDL_BACKEND__CLASS CPPCodeGenHelper : public Object
 	{
 		PIDL_COPY_PROTECTOR(CPPCodeGenHelper)
 		struct Priv;
@@ -127,6 +134,8 @@ namespace PIDL {
 
 		CPPCodeGenHelper();
 		virtual ~CPPCodeGenHelper();
+
+		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CPP_CODEGEN_HELPER; }
 
 		virtual short tabDefinition(char & ch) const = 0;
 		virtual std::shared_ptr<CPPCodeGenLogging> logging() const = 0;
@@ -158,7 +167,9 @@ namespace PIDL {
 
 	};
 
-	class PIDL_BACKEND__CLASS CPPCodeGen
+#define PIDL_OBJECT_TYPE__CPP_CODEGEN "cpp_codegen"
+
+	class PIDL_BACKEND__CLASS CPPCodeGen : public Object
 	{
 		PIDL_COPY_PROTECTOR(CPPCodeGen)
 		struct Priv;
@@ -166,6 +177,8 @@ namespace PIDL {
 	public:
 		CPPCodeGen();
 		virtual ~CPPCodeGen();
+
+		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CPP_CODEGEN; }
 
 		bool generateIncludes(short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec);
 		bool generateCode(Language::TopLevel * topLevel, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec);
