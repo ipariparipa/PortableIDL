@@ -505,23 +505,25 @@ namespace PIDL
 			return true;
 		}
 
-		bool read(const rapidjson::Document & doc, ErrorCollector & ec)
+		bool read(const rapidjson::Value & root, ErrorCollector & ec)
 		{
-			if (doc.IsNull())
+			if (!root.IsObject())
 			{
-				ec << "toplevel element is null";
+				ec << "toplevel element is not object";
 				return false;
 			}
 
+			topLevels.clear();
+
 			std::string name;
-			if (!getName(doc, name))
+			if (!getName(root, name))
 			{
 				ec << "name of interface is not toplevel element";
 				return false;
 			}
 
 			std::shared_ptr<Language::TopLevel> tmp;
-			if (!readTopLevel(name, doc, tmp, ec))
+			if (!readTopLevel(name, root, tmp, ec))
 				return false;
 
 			topLevels[name] = tmp;

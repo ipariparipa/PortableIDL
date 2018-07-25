@@ -1,24 +1,24 @@
 /*
-    This file is part of pidl.
+    This file is part of pidlBackend.
 
-    pidl is free software: you can redistribute it and/or modify
+    pidlBackend is free software: you can redistribute it and/or modify
     it under the terms of the Lesser GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    pidl is distributed in the hope that it will be useful,
+    pidlBackend is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with pidl.  If not, see <http://www.gnu.org/licenses/>
+    along with pidlBackend.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "operation.h"
+#include "include/pidlBackend/operation.h"
 
-#include <pidlBackend/writer.h>
-#include <pidlBackend/reader.h>
+#include "include/pidlBackend/writer.h"
+#include "include/pidlBackend/reader.h"
 
 namespace PIDL {
 
@@ -71,6 +71,11 @@ namespace PIDL {
 	Read::~Read()
 	{
 		delete priv;
+	}
+
+	std::shared_ptr<Reader> Read::reader() const
+	{
+		return priv->reader;
 	}
 
 	bool Read::run(ErrorCollector & ec)

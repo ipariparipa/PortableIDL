@@ -87,6 +87,9 @@
     <ClCompile Include="json_cscodegen.cpp" />
     <ClCompile Include="json_stl_codegen.cpp" />
     <ClCompile Include="language.cpp" />
+    <ClCompile Include="object.cpp" />
+    <ClCompile Include="objectfactory_json.cpp" />
+    <ClCompile Include="operation.cpp" />
     <ClCompile Include="reader.cpp" />
     <ClCompile Include="writer.cpp" />
     <ClCompile Include="xmlreader.cpp" />
@@ -94,16 +97,24 @@
   <ItemGroup>
     <ClInclude Include="include\pidlBackend\config.h" />
     <ClInclude Include="include\pidlBackend\cppcodegen.h" />
+    <ClInclude Include="include\pidlBackend\cppcodegenfactory_json.h" />
     <ClInclude Include="include\pidlBackend\cppwriter.h" />
     <ClInclude Include="include\pidlBackend\cscodegen.h" />
+    <ClInclude Include="include\pidlBackend\cscodegenfactory_json.h" />
     <ClInclude Include="include\pidlBackend\cswriter.h" />
     <ClInclude Include="include\pidlBackend\jsonreader.h" />
     <ClInclude Include="include\pidlBackend\jsonwriter.h" />
     <ClInclude Include="include\pidlBackend\json_cscodegen.h" />
     <ClInclude Include="include\pidlBackend\json_stl_codegen.h" />
     <ClInclude Include="include\pidlBackend\language.h" />
+    <ClInclude Include="include\pidlBackend\object.h" />
+    <ClInclude Include="include\pidlBackend\objectfactory_json.h" />
+    <ClInclude Include="include\pidlBackend\operation.h" />
+    <ClInclude Include="include\pidlBackend\operationfactory_json.h" />
     <ClInclude Include="include\pidlBackend\reader.h" />
+    <ClInclude Include="include\pidlBackend\readerfactory_json.h" />
     <ClInclude Include="include\pidlBackend\writer.h" />
+    <ClInclude Include="include\pidlBackend\writerfactory_json.h" />
     <ClInclude Include="include\pidlBackend\xmlreader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

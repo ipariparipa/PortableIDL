@@ -27,6 +27,8 @@
 
 namespace PIDL { namespace JSONTools {
 
+	extern PIDL_CORE__FUNCTION std::string getErrorText(rapidjson::ParseErrorCode code);
+
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, rapidjson::Value *& ret);
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, std::string & ret);

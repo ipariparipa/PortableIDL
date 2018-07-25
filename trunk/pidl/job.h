@@ -18,7 +18,9 @@
 #ifndef pidl__job_h
 #define pidl__job_h
 
-#include "operation.h"
+#include "config.h"
+
+#include <pidlBackend/operation.h>
 
 #include <string>
 
@@ -32,6 +34,8 @@ namespace PIDL {
 	{
 		struct Priv;
 		Priv * priv;
+
+		Job();
 
 	public:
 		Job(const std::shared_ptr<Operation> & op);

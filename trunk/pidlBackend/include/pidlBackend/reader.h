@@ -23,6 +23,8 @@
 #include <vector>
 #include <string>
 
+#include "object.h"
+
 namespace PIDL
 {
 
@@ -32,7 +34,9 @@ namespace PIDL
 
 	class ErrorCollector;
 
-	class PIDL_BACKEND__CLASS Reader
+#define PIDL_OBJECT_TYPE__READER "reader"
+
+	class PIDL_BACKEND__CLASS Reader : public Object
 	{
 		PIDL_COPY_PROTECTOR(Reader)
 		struct Priv;
@@ -40,6 +44,8 @@ namespace PIDL
 	public:
 		Reader();
 		virtual ~Reader();
+
+		virtual const char * type() const override { return PIDL_OBJECT_TYPE__READER; }
 
 		virtual bool read(ErrorCollector & ec) = 0;
 
