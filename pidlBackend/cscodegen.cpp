@@ -185,28 +185,28 @@ namespace PIDL {
 
 		bool addGeneric(short code_deepness, CSCodeGenContext * ctx, Language::Generic * generic, ErrorCollector & ec)
 		{
-			auto type = generic->type()->finalType().get();
+			auto fn_type = generic->type()->finalType().get();
 			if (dynamic_cast<Language::Nullable*>(generic))
 			{
-				if (dynamic_cast<Language::NativeType*>(type) ||
-					dynamic_cast<Language::DateTime*>(type) ||
-					dynamic_cast<Language::Structure*>(type))
+				if (dynamic_cast<Language::NativeType*>(fn_type) ||
+					dynamic_cast<Language::DateTime*>(fn_type) ||
+					dynamic_cast<Language::Structure*>(fn_type))
 				{
 					*ctx << "Nullable<";
-					if (!addType(code_deepness, ctx, type, ec))
+					if (!addType(code_deepness, ctx, generic->type().get(), ec))
 						return false;
 					*ctx << ">";
 				}
 				else
 				{
 					*ctx << "/*nullable*/ ";
-					if (!addType(code_deepness, ctx, type, ec))
+					if (!addType(code_deepness, ctx, generic->type().get(), ec))
 						return false;
 				}
 			}
 			else if (dynamic_cast<Language::Array*>(generic))
 			{
-				if (!addType(code_deepness, ctx, type, ec))
+				if (!addType(code_deepness, ctx, generic->type().get(), ec))
 					return false;
 				*ctx << "[]";
 			}
@@ -240,14 +240,11 @@ namespace PIDL {
 
 		bool addType(short code_deepness, CSCodeGenContext * ctx, Language::Type * type_, ErrorCollector & ec)
 		{
-			Language::Type * type = dynamic_cast<Language::Structure*>(type_->finalType().get()) ? type_ : type_->finalType().get();
+			if (dynamic_cast<Language::Generic*>(type_))
+				return addGeneric(code_deepness, ctx, dynamic_cast<Language::Generic*>(type_), ec);
 
-			if (dynamic_cast<Language::Generic*>(type))
-			{
-				if (!addGeneric(code_deepness, ctx, dynamic_cast<Language::Generic*>(type), ec))
-					return false;
-			}
-			else if (dynamic_cast<Language::NativeType*>(type))
+			Language::Type * type = dynamic_cast<Language::Structure*>(type_->finalType().get()) ? type_ : type_->finalType().get();
+			if (dynamic_cast<Language::NativeType*>(type))
 			{
 				if (!addNative(ctx, dynamic_cast<Language::NativeType*>(type), ec))
 					return false;
