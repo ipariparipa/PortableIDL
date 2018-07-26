@@ -44,7 +44,7 @@ namespace PIDL {
 		struct Priv;
 		Priv * priv;
 	public:
-		enum class Nature
+		enum class Mode
 		{
 			Declaration, Implementatinon, AllInOne
 		};
@@ -54,7 +54,7 @@ namespace PIDL {
 			Server, Client
 		};
 
-		CPPCodeGenContext(std::ostream & o, Nature nature, Role role);
+		CPPCodeGenContext(std::ostream & o, Mode mode, Role role);
 		~CPPCodeGenContext();
 
 		template<typename T>
@@ -65,7 +65,7 @@ namespace PIDL {
 		}
 
 		std::ostream & stream() const;
-		Nature nature() const;
+		Mode mode() const;
 		Role role() const;
 	};
 
@@ -185,7 +185,7 @@ namespace PIDL {
 
 	protected:
 		using Role = CPPCodeGenContext::Role;
-		using Nature = CPPCodeGenContext::Nature;
+		using Mode = CPPCodeGenContext::Mode;
 
 		virtual CPPCodeGenHelper * helper() const = 0;
 

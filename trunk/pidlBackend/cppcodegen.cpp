@@ -25,18 +25,18 @@ namespace PIDL
 
 	struct CPPCodeGenContext::Priv
 	{
-		Priv(std::ostream & o_, Nature nature_, Role role_) : 
+		Priv(std::ostream & o_, Mode mode_, Role role_) : 
 			o(o_), 
-			nature(nature_), 
+			mode(mode_), 
 			role(role_)
 		{ }
 
 		std::ostream & o;
-		Nature nature; 
+		Mode mode; 
 		Role role;
 	};
 
-	CPPCodeGenContext::CPPCodeGenContext(std::ostream & o, Nature nature, Role role) : priv(new Priv(o, nature, role))
+	CPPCodeGenContext::CPPCodeGenContext(std::ostream & o, Mode mode, Role role) : priv(new Priv(o, mode, role))
 	{ }
 
 	CPPCodeGenContext::~CPPCodeGenContext()
@@ -49,9 +49,9 @@ namespace PIDL
 		return priv->o;
 	}
 
-	CPPCodeGenContext::Nature CPPCodeGenContext::nature() const
+	CPPCodeGenContext::Mode CPPCodeGenContext::mode() const
 	{
-		return priv->nature;
+		return priv->mode;
 	}
 
 	CPPCodeGenContext::Role CPPCodeGenContext::role() const
@@ -263,10 +263,10 @@ namespace PIDL
 
 		bool addTypeDefinition(short code_deepness, CPPCodeGenContext * ctx, Language::TypeDefinition * type_definition, ErrorCollector & ec)
 		{
-			switch (ctx->nature())
+			switch (ctx->mode())
 			{
-			case Nature::AllInOne:
-			case Nature::Declaration:
+			case Mode::AllInOne:
+			case Mode::Declaration:
 				{
 					auto type = type_definition->type().get();
 					if (dynamic_cast<Language::Structure*>(type))
@@ -283,7 +283,7 @@ namespace PIDL
 					}
 				}
 				break;
-			case Nature::Implementatinon:
+			case Mode::Implementatinon:
 				break;
 			}
 
@@ -292,15 +292,15 @@ namespace PIDL
 
 		bool addFunction(short code_deepness, CPPCodeGenContext * ctx, Language::Function * function, ErrorCollector & ec)
 		{
-			if (ctx->role() == Role::Server && ctx->nature() == Nature::Implementatinon)
+			if (ctx->role() == Role::Server && ctx->mode() == Mode::Implementatinon)
 				return true;
 
 			auto & o = writeTabs(code_deepness, ctx);
 
-			switch (ctx->nature())
+			switch (ctx->mode())
 			{
-			case Nature::AllInOne:
-			case Nature::Declaration:
+			case Mode::AllInOne:
+			case Mode::Declaration:
 				switch (ctx->role())
 				{
 				case Role::Client:
@@ -310,20 +310,20 @@ namespace PIDL
 					break;
 				}
 				break;
-			case Nature::Implementatinon:
+			case Mode::Implementatinon:
 				break;
 			}
 
 			if (!addType(code_deepness, ctx, function->returnType().get(), ec))
 				return false;
 
-			switch (ctx->nature())
+			switch (ctx->mode())
 			{
-			case Nature::AllInOne:
-			case Nature::Declaration:
+			case Mode::AllInOne:
+			case Mode::Declaration:
 				o << " " << function->name() << "(";
 				break;
-			case Nature::Implementatinon:
+			case Mode::Implementatinon:
 				o << " ";
 				for (auto sc : function->scope())
 					o << sc << "::";
@@ -358,10 +358,10 @@ namespace PIDL
 			}
 			o << ")";
 
-			switch (ctx->nature())
+			switch (ctx->mode())
 			{
-			case Nature::AllInOne:
-			case Nature::Implementatinon:
+			case Mode::AllInOne:
+			case Mode::Implementatinon:
 				switch (ctx->role())
 				{
 				case Role::Client:
@@ -378,7 +378,7 @@ namespace PIDL
 					break;
 				}
 				break;
-			case Nature::Declaration:
+			case Mode::Declaration:
 				switch (ctx->role())
 				{
 				case Role::Client:
@@ -428,17 +428,17 @@ namespace PIDL
 
 		bool addInterface(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 		{
-			switch (ctx->nature())
+			switch (ctx->mode())
 			{
-			case Nature::AllInOne:
-			case Nature::Declaration:
+			case Mode::AllInOne:
+			case Mode::Declaration:
 				writeTabs(code_deepness, ctx) << "class " << obj->helper()->getName(intf) << std::endl;
 				writeTabs(code_deepness++, ctx) << "{" << std::endl;
 				if (!obj->writePrivateSection(code_deepness, ctx, intf, ec))
 					return false;
 				writeTabs(code_deepness - 1, ctx) << "public:" << std::endl;
 				break;
-			case Nature::Implementatinon:
+			case Mode::Implementatinon:
 				if (!obj->writePrivateSection(code_deepness, ctx, intf, ec))
 					return false;
 				break;
@@ -447,26 +447,26 @@ namespace PIDL
 			if (!obj->writePublicSection(code_deepness, ctx, intf, ec))
 				return false;
 
-			switch (ctx->nature())
+			switch (ctx->mode())
 			{
-			case Nature::AllInOne:
-			case Nature::Declaration:
+			case Mode::AllInOne:
+			case Mode::Declaration:
 				writeTabs(code_deepness - 1, ctx) << "protected:" << std::endl;
 				break;
-			case Nature::Implementatinon:
+			case Mode::Implementatinon:
 				break;
 			}
 
 			if (!obj->writeProtectedSection(code_deepness, ctx, intf, ec))
 				return false;
 
-			switch (ctx->nature())
+			switch (ctx->mode())
 			{
-			case Nature::AllInOne:
-			case Nature::Declaration:
+			case Mode::AllInOne:
+			case Mode::Declaration:
 				writeTabs(--code_deepness, ctx) << "};" << std::endl << std::endl;
 				break;
-			case Nature::Implementatinon:
+			case Mode::Implementatinon:
 				break;
 			}
 
@@ -475,19 +475,19 @@ namespace PIDL
 
 		bool addConstructor(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 		{
-			switch (ctx->nature())
+			switch (ctx->mode())
 			{
-			case Nature::AllInOne:
+			case Mode::AllInOne:
 				writeTabs(code_deepness, ctx) << intf->name() << "()" << std::endl;
 				writeTabs(code_deepness++, ctx) << "{" << std::endl;
 				if (!obj->writeConstructorBody(intf, code_deepness, ctx, ec))
 					return false;
 				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
 				break;
-			case Nature::Declaration:
+			case Mode::Declaration:
 				writeTabs(code_deepness, ctx) << intf->name() << "();" << std::endl;
 				break;
-			case Nature::Implementatinon:
+			case Mode::Implementatinon:
 				writeTabs(code_deepness, ctx) << intf->name() << "::" << intf->name() << "() : priv(new Priv(this)) { }" << std::endl << std::endl;
 				break;
 			}
@@ -497,15 +497,15 @@ namespace PIDL
 
 		bool addDestructor(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 		{
-			switch (ctx->nature())
+			switch (ctx->mode())
 			{
-			case Nature::AllInOne:
+			case Mode::AllInOne:
 				writeTabs(code_deepness, ctx) << "virtual ~" << intf->name() << "() { }" << std::endl << std::endl;
 				break;
-			case Nature::Declaration:
+			case Mode::Declaration:
 				writeTabs(code_deepness, ctx) << "virtual ~" << intf->name() << "();" << std::endl;
 				break;
-			case Nature::Implementatinon:
+			case Mode::Implementatinon:
 				writeTabs(code_deepness, ctx) << intf->name() << "::~" << intf->name() << "() { delete priv; }" << std::endl << std::endl;
 				break;
 			}
@@ -580,18 +580,18 @@ namespace PIDL
 
 	bool CPPCodeGen::writePrivateSection(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		switch (ctx->nature())
+		switch (ctx->mode())
 		{
-		case Nature::Implementatinon:
+		case Mode::Implementatinon:
 			priv->writeTabs(code_deepness, ctx) << "struct " << helper()->getName(intf) << "::Priv" << std::endl;
 			priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 
-			switch (ctx->nature())
+			switch (ctx->mode())
 			{
-			case Nature::AllInOne:
-			case Nature::Declaration:
+			case Mode::AllInOne:
+			case Mode::Declaration:
 				break;
-			case Nature::Implementatinon:
+			case Mode::Implementatinon:
 				priv->writeTabs(code_deepness, ctx) << "Priv(" << helper()->getName(intf) << " * that_): that(that_)" << std::endl;
 				priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 				if (!writeConstructorBody(intf, code_deepness, ctx, ec))
@@ -605,11 +605,11 @@ namespace PIDL
 				return false;
 			priv->writeTabs(--code_deepness, ctx) << "};" << std::endl << std::endl;
 			break;
-		case Nature::Declaration:
+		case Mode::Declaration:
 			priv->writeTabs(code_deepness, ctx) << "struct Priv;" << std::endl;
 			priv->writeTabs(code_deepness, ctx) << "Priv * priv;" << std::endl;
 			break;
-		case Nature::AllInOne:
+		case Mode::AllInOne:
 			if (!writePrivateMembers(code_deepness, ctx, intf, ec))
 				return false;
 			break;
@@ -620,8 +620,16 @@ namespace PIDL
 
 	bool CPPCodeGen::writePublicSection(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		if (!writeAliases(code_deepness, ctx, ec))
-			return false;
+		switch (ctx->mode())
+		{
+		case Mode::AllInOne:
+		case Mode::Declaration:
+			if (!writeAliases(code_deepness, ctx, ec))
+				return false;
+			break;
+		case Mode::Implementatinon:
+			break;
+		}
 
 		switch (ctx->role())
 		{

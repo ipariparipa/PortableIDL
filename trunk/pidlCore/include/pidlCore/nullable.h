@@ -49,6 +49,9 @@ namespace PIDL {
 	class Nullable : public AbstractNullable<T>
 	{
 	public:
+		inline Nullable(const T * o) : val(o ? new T(*o) : nullptr)
+		{ }
+
 		inline Nullable(const Nullable<T> & o) : val(o.val ? new T(*o.val) : nullptr)
 		{ }
 
