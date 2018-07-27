@@ -77,8 +77,8 @@ namespace PIDL
 		{
 		case Role::Server:
 			priv->writeTabs(code_deepness, ctx) << "struct __FunctionRet { public _InvokeStatus status; public XElement ret; };" << std::endl;
-			priv->writeTabs(code_deepness, ctx) << "Dictionary<string, Func<XElement, PIDL.IErrorCollector, __FunctionRet>> __functions = new Dictionary<string, Func<XElement, PIDL.IErrorCollector, __FunctionRet>>();" << std::endl;
-			priv->writeTabs(code_deepness, ctx) << "_InvokeStatus __callFunction(string name, XElement root, out XElement ret, PIDL.IErrorCollector ec)" << std::endl;
+			priv->writeTabs(code_deepness, ctx) << "Dictionary<string, Func<XElement, PIDL.IPIDLErrorCollector, __FunctionRet>> __functions = new Dictionary<string, Func<XElement, PIDL.IPIDLErrorCollector, __FunctionRet>>();" << std::endl;
+			priv->writeTabs(code_deepness, ctx) << "_InvokeStatus __callFunction(string name, XElement root, out XElement ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 			priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 			priv->writeTabs(code_deepness, ctx) << "if (!__functions.ContainsKey(name))" << std::endl;
 			priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
@@ -92,7 +92,7 @@ namespace PIDL
 			priv->writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
 			break;
 		case Role::Client:
-			priv->writeTabs(code_deepness, ctx) << "bool __invokeCall(XElement root, out XElement ret, PIDL.IErrorCollector ec)" << std::endl;
+			priv->writeTabs(code_deepness, ctx) << "bool __invokeCall(XElement root, out XElement ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 			priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 			priv->writeTabs(code_deepness, ctx) << "var status = _invoke(root, out ret, ec);" << std::endl;
 			priv->writeTabs(code_deepness, ctx) << "switch(status)" << std::endl;
@@ -128,7 +128,7 @@ namespace PIDL
 				auto s = dynamic_cast<Language::Structure*>(td->finalType().get());
 				if (s)
 				{
-					priv->writeTabs(code_deepness, ctx) << "static " << td->name() << " __getValue__" << td->name() << "(XElement v, out bool isOk, PIDL.IErrorCollector ec)" << std::endl;
+					priv->writeTabs(code_deepness, ctx) << "static " << td->name() << " __getValue__" << td->name() << "(XElement v, out bool isOk, PIDL.IPIDLErrorCollector ec)" << std::endl;
 					priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 					priv->writeTabs(code_deepness, ctx) << "var ret = new " << td->name() << "();" << std::endl;
 					priv->writeTabs(code_deepness, ctx) << "if(!PIDL.JSONTools.checkType(v, PIDL.JSONTools.Type.Object))" << std::endl;
@@ -159,7 +159,7 @@ namespace PIDL
 					priv->writeTabs(code_deepness, ctx) << "return ret;" << std::endl;
 					priv->writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
 
-					priv->writeTabs(code_deepness, ctx) << "static " << td->name() << " __getValue__" << td->name() << "(XElement r, string name, out bool isOk, PIDL.IErrorCollector ec)" << std::endl;
+					priv->writeTabs(code_deepness, ctx) << "static " << td->name() << " __getValue__" << td->name() << "(XElement r, string name, out bool isOk, PIDL.IPIDLErrorCollector ec)" << std::endl;
 					priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 					priv->writeTabs(code_deepness, ctx) << "var ret = new " << td->name() << "();" << std::endl;
 					priv->writeTabs(code_deepness, ctx) << "XElement v;" << std::endl;
@@ -174,7 +174,7 @@ namespace PIDL
 			}
 		}
 
-		priv->writeTabs(code_deepness, ctx) << "static bool __getValue(XElement r, string name, PIDL.JSONTools.Type type, out XElement ret, PIDL.IErrorCollector ec)" << std::endl;
+		priv->writeTabs(code_deepness, ctx) << "static bool __getValue(XElement r, string name, PIDL.JSONTools.Type type, out XElement ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 		priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 		priv->writeTabs(code_deepness, ctx) << "if(!PIDL.JSONTools.getValue(r, name, type, out ret))" << std::endl;
 		priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
@@ -185,7 +185,7 @@ namespace PIDL
 		priv->writeTabs(--code_deepness, ctx) << "}" << std::endl;
 
 
-		priv->writeTabs(code_deepness, ctx) << "static bool __getValue<T>(XElement r, string name, out T ret, PIDL.IErrorCollector ec)" << std::endl;
+		priv->writeTabs(code_deepness, ctx) << "static bool __getValue<T>(XElement r, string name, out T ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 		priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 		priv->writeTabs(code_deepness, ctx) << "bool isOk = false;" << std::endl;
 		bool is_first = true;
@@ -222,7 +222,7 @@ namespace PIDL
 		priv->writeTabs(code_deepness, ctx) << "return isOk;" << std::endl;
 		priv->writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
 
-		priv->writeTabs(code_deepness, ctx) << "static bool __getValue<T>(XElement v, out T ret, PIDL.IErrorCollector ec)" << std::endl;
+		priv->writeTabs(code_deepness, ctx) << "static bool __getValue<T>(XElement v, out T ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 		priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 		for (auto & d : intf->definitions())
 		{
@@ -250,7 +250,7 @@ namespace PIDL
 		priv->writeTabs(code_deepness, ctx) << "return true;" << std::endl;
 		priv->writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
 
-		priv->writeTabs(code_deepness, ctx) << "static bool __getValue<T>(XElement r, string name, out Nullable<T> ret, PIDL.IErrorCollector ec)" << std::endl;
+		priv->writeTabs(code_deepness, ctx) << "static bool __getValue<T>(XElement r, string name, out Nullable<T> ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 		priv->writeTabs(code_deepness + 1, ctx) << "where T : struct" << std::endl;
 		priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 		priv->writeTabs(code_deepness, ctx) << "XElement v;" << std::endl;
@@ -276,7 +276,7 @@ namespace PIDL
 		priv->writeTabs(code_deepness, ctx) << "return true;" << std::endl;
 		priv->writeTabs(code_deepness, ctx) << "}" << std::endl << std::endl;
 
-		priv->writeTabs(code_deepness, ctx) << "static bool __getValue<T>(XElement r, string name, out T[] ret, PIDL.IErrorCollector ec)" << std::endl;
+		priv->writeTabs(code_deepness, ctx) << "static bool __getValue<T>(XElement r, string name, out T[] ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 		priv->writeTabs(code_deepness + 1, ctx) << "where T : struct" << std::endl;
 		priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 		priv->writeTabs(code_deepness, ctx) << "XElement v;" << std::endl;
@@ -393,7 +393,7 @@ namespace PIDL
 		{
 		case Role::Server:
 			priv->writeTabs(code_deepness, ctx) << "public enum _InvokeStatus {Ok, NotImplemented, Error, MarshallingError, FatalError};" << std::endl;
-			priv->writeTabs(code_deepness, ctx) << "public _InvokeStatus _invoke(XElement root, out XElement ret, PIDL.IErrorCollector ec)" << std::endl;
+			priv->writeTabs(code_deepness, ctx) << "public _InvokeStatus _invoke(XElement root, out XElement ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 			priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
 			priv->writeTabs(code_deepness, ctx) << "XElement v;" << std::endl;
 			priv->writeTabs(code_deepness, ctx) << "if (!__getValue(root, \"function\", PIDL.JSONTools.Type.Object, out v, ec))" << std::endl;
@@ -412,7 +412,7 @@ namespace PIDL
 			break;
 		case Role::Client:
 			priv->writeTabs(code_deepness, ctx) << "protected enum _InvokeStatus {Ok, NotImplemented, Error, MarshallingError, FatalError};" << std::endl;
-			priv->writeTabs(code_deepness, ctx) << "protected abstract _InvokeStatus _invoke(XElement root, out XElement ret, PIDL.IErrorCollector ec);" << std::endl << std::endl;
+			priv->writeTabs(code_deepness, ctx) << "protected abstract _InvokeStatus _invoke(XElement root, out XElement ret, PIDL.IPIDLErrorCollector ec);" << std::endl << std::endl;
 			break;
 		}
 
@@ -425,7 +425,7 @@ namespace PIDL
 		{
 		case Role::Client:
 			{
-				priv->writeTabs(code_deepness, ctx) << "var __ec = new PIDL.ExceptionErrorCollector();" << std::endl;
+				priv->writeTabs(code_deepness, ctx) << "var __ec = new PIDL.PIDLExceptionErrorCollector();" << std::endl;
 				priv->writeTabs(code_deepness, ctx) << "var __root = PIDL.JSONTools.createValue(\"root\", PIDL.JSONTools.Type.Object);" << std::endl;
 				priv->writeTabs(code_deepness, ctx) << "var __v = PIDL.JSONTools.addValue(__root, \"function\", PIDL.JSONTools.Type.Object);" << std::endl;
 				priv->writeTabs(code_deepness, ctx) << "__addValue(__v, \"name\", \"" << function->name() << "\");" << std::endl;

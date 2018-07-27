@@ -27,6 +27,9 @@
     <ClCompile Include="jsontools.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="datetime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\pidlCore\config.h">
@@ -45,6 +48,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\pidlCore\platform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\pidlCore\datetime.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

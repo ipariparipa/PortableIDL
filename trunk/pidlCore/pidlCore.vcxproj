@@ -74,12 +74,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="datetime.cpp" />
     <ClCompile Include="errorcollector.cpp" />
     <ClCompile Include="exception.cpp" />
     <ClCompile Include="jsontools.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\pidlCore\config.h" />
+    <ClInclude Include="include\pidlCore\datetime.h" />
     <ClInclude Include="include\pidlCore\errorcollector.h" />
     <ClInclude Include="include\pidlCore\exception.h" />
     <ClInclude Include="include\pidlCore\jsontools.h" />
