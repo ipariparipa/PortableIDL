@@ -33,10 +33,9 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<Element> Ptr;
 		Element();
 		virtual ~Element();
-
-		virtual const char * name() const = 0;
 	};
 
 	class PIDL_BACKEND__CLASS Definition : public Element
@@ -45,6 +44,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<Definition> Ptr;
 		Definition();
 		virtual ~Definition();
 	};
@@ -55,9 +55,12 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<Type> Ptr;
 		Type();
 		virtual ~Type();
-		virtual std::shared_ptr<Type> finalType() const;
+		virtual Type::Ptr finalType() const;
+		virtual const char * name() const = 0;
+		virtual const std::vector<std::string> & scope() const;
 	};
 
 	class PIDL_BACKEND__CLASS Variable : public Element
@@ -69,8 +72,8 @@ namespace PIDL { namespace Language {
 		Variable(const std::shared_ptr<Type> & type, const std::string & name);
 		virtual ~Variable();
 
-		virtual const char * name() const override;
-		std::shared_ptr<Type> type() const;
+		virtual const char * name() const;
+		Type::Ptr type() const;
 	};
 
 	class PIDL_BACKEND__CLASS TypeDefinition : public Type, public Definition
@@ -79,12 +82,14 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
-		TypeDefinition(const std::string & name, const std::shared_ptr<Type> & type);
+		typedef std::shared_ptr<TypeDefinition> Ptr;
+		TypeDefinition(const std::string & name, const std::shared_ptr<Type> & type, const std::vector<std::string> & scope);
 		virtual ~TypeDefinition();
 
 		virtual const char * name() const override;
-		virtual std::shared_ptr<Type> type() const;
-		virtual std::shared_ptr<Type> finalType() const override;
+		virtual Type::Ptr type() const;
+		virtual Type::Ptr finalType() const override;
+		virtual const std::vector<std::string> & scope() const override;
 	};
 
 	class PIDL_BACKEND__CLASS ComplexType : public Type
@@ -93,6 +98,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<ComplexType> Ptr;
 		ComplexType();
 		virtual ~ComplexType();
 	};
@@ -103,7 +109,8 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
-		Generic(const std::shared_ptr<Type> & type);
+		typedef std::shared_ptr<Generic> Ptr;
+		Generic(const Type::Ptr & type);
 		virtual ~Generic();
 		std::shared_ptr<Type> type() const;
 	};
@@ -114,7 +121,8 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
-		Nullable(const std::shared_ptr<Type> & type);
+		typedef std::shared_ptr<Nullable> Ptr;
+		Nullable(const Type::Ptr & type);
 		virtual ~Nullable();
 		virtual const char * name() const override { return "nullable"; }
 	};
@@ -125,7 +133,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
-		Array(const std::shared_ptr<Type> & type);
+		Array(const Type::Ptr & type);
 		virtual ~Array();
 		virtual const char * name() const override { return "array"; }
 	};
@@ -136,22 +144,24 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<Structure> Ptr;
 		class Member : public Variable
 		{
 			PIDL_COPY_PROTECTOR(Member)
 			struct Priv;
 			Priv * priv;
 		public:
-			Member(const std::shared_ptr<Type> & type, const std::string & name);
+			typedef std::shared_ptr<Member> Ptr;
+			Member(const Type::Ptr & type, const std::string & name);
 			virtual ~Member();
 		};
 
-		Structure(const std::vector<std::shared_ptr<Member>> & members);
-		Structure(const std::list<std::shared_ptr<Member>> & members);
+		Structure(const std::vector<Member::Ptr> & members);
+		Structure(const std::list<Member::Ptr> & members);
 		virtual ~Structure();
 
 		virtual const char * name() const override { return "structure"; }
-		const std::vector<std::shared_ptr<Member>> & members() const;
+		const std::vector<Member::Ptr> & members() const;
 	};
 
 	class PIDL_BACKEND__CLASS NativeType : public Type
@@ -160,6 +170,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<NativeType> Ptr;
 		NativeType();
 		virtual ~NativeType();
 	};
@@ -182,6 +193,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<Float> Ptr;
 		Float();
 		virtual ~Float();
 
@@ -194,6 +206,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<Boolean> Ptr;
 		Boolean();
 		virtual ~Boolean();
 
@@ -206,6 +219,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<EmbeddedType> Ptr;
 		EmbeddedType();
 		virtual ~EmbeddedType();
 	};
@@ -216,6 +230,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<String> Ptr;
 		String();
 		virtual ~String();
 
@@ -228,6 +243,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<DateTime> Ptr;
 		DateTime();
 		virtual ~DateTime();
 
@@ -240,6 +256,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<Blob> Ptr;
 		Blob();
 		virtual ~Blob();
 		virtual const char * name() const override { return "blob"; }
@@ -251,9 +268,9 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<Void> Ptr;
 		Void();
 		virtual ~Void();
-
 		virtual const char * name() const override { return "void"; }
 	};
 
@@ -263,6 +280,7 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<Function> Ptr;
 
 		class PIDL_BACKEND__CLASS Argument : public Variable
 		{
@@ -270,26 +288,27 @@ namespace PIDL { namespace Language {
 			struct Priv;
 			Priv * priv;
 		public:
+			typedef std::shared_ptr<Argument> Ptr;
 			enum class Direction {
 				In, Out, InOut
 			};
 
-			Argument(const std::shared_ptr<Type> & type, const std::string & name, Direction direction);
+			Argument(const Type::Ptr & type, const std::string & name, Direction direction);
 			virtual ~Argument();
 
 			Direction direction() const;
 		};
 
-		Function(const std::shared_ptr<Type> & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<std::shared_ptr<Argument>> & arguments);
-		Function(const std::shared_ptr<Type> & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<std::shared_ptr<Argument>> & arguments);
+		Function(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<Argument::Ptr> & arguments);
+		Function(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<Argument::Ptr> & arguments);
 		virtual ~Function();
 
-		virtual const char * name() const override;
+		virtual const char * name() const;
 		const std::vector<std::string> & scope() const;
-		const std::vector<std::shared_ptr<Argument>> & arguments() const;
-		const std::vector<std::shared_ptr<Argument>> & in_arguments() const;
-		const std::vector<std::shared_ptr<Argument>> & out_arguments() const;
-		std::shared_ptr<Type> returnType() const;
+		const std::vector<Argument::Ptr> & arguments() const;
+		const std::vector<Argument::Ptr> & in_arguments() const;
+		const std::vector<Argument::Ptr> & out_arguments() const;
+		Type::Ptr returnType() const;
 	};
 
 	class PIDL_BACKEND__CLASS TopLevel : public Element
@@ -298,21 +317,71 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef std::shared_ptr<TopLevel> Ptr;
 		TopLevel();
 		virtual ~TopLevel();
+		virtual const char * name() const = 0;
+		virtual const std::vector<std::string> & scope() const;
 	};
 
+	
 	class PIDL_BACKEND__CLASS Interface : public TopLevel
 	{
 		PIDL_COPY_PROTECTOR(Interface)
 		struct Priv;
 		Priv * priv;
 	public:
-		Interface(const std::string & name, const std::vector<std::shared_ptr<Definition>> & definitions);
-		Interface(const std::string & name, const std::list<std::shared_ptr<Definition>> & definitions);
+		typedef std::shared_ptr<Interface> Ptr;
+		Interface(const std::string & name, const std::vector<std::shared_ptr<Definition>> & definitions, const std::vector<std::string> & scope);
+		Interface(const std::string & name, const std::list<std::shared_ptr<Definition>> & definitions, const std::vector<std::string> & scope);
 		virtual ~Interface();
 		const std::vector<std::shared_ptr<Definition>> & definitions() const;
 		virtual const char * name() const override;
+		virtual const std::vector<std::string> & scope() const override;
+	};
+
+	class PIDL_BACKEND__CLASS Method : public Function
+	{
+		PIDL_COPY_PROTECTOR(Method)
+		struct Priv;
+		Priv * priv;
+	public:
+		typedef std::shared_ptr<Method> Ptr;
+		Method(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<Argument::Ptr> & arguments);
+		Method(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<Argument::Ptr> & arguments);
+		virtual ~Method();
+
+	};
+
+	class PIDL_BACKEND__CLASS Property : public Definition
+	{
+		PIDL_COPY_PROTECTOR(Property)
+		struct Priv;
+		Priv * priv;
+	public:
+		typedef std::shared_ptr<Property> Ptr;
+		Property(const Type::Ptr & type, const std::vector<std::string> & scope, const std::string & name, bool readOnly);
+		virtual ~Property();
+		Type::Ptr type() const;
+		const std::vector<std::string> & scope() const;
+		bool readOnly() const;
+		virtual const char * name() const;
+	};
+
+	class PIDL_BACKEND__CLASS Object : public Type, public Definition
+	{
+		PIDL_COPY_PROTECTOR(Object)
+		struct Priv;
+		Priv * priv;
+	public:
+		typedef std::shared_ptr<Object> Ptr;
+
+		Object(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope);
+		Object(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope);
+		virtual ~Object();
+		const std::vector<std::shared_ptr<Definition>> & definitions() const;
+		virtual const char * name() const override;
+		virtual const std::vector<std::string> & scope() const override;
 	};
 
 	class PIDL_BACKEND__CLASS Module : public TopLevel
@@ -321,10 +390,11 @@ namespace PIDL { namespace Language {
 		struct Priv;
 		Priv * priv;
 	public:
-		Module(const std::string &name, const std::vector<std::shared_ptr<TopLevel>> & elements);
+		typedef std::shared_ptr<Module> Ptr;
+		Module(const std::string & name, const std::vector<TopLevel::Ptr> & elements);
 		virtual ~Module();
 		virtual const char * name() const override;
-		const std::vector<std::shared_ptr<TopLevel>> & elements() const;
+		const std::vector<TopLevel::Ptr> & elements() const;
 	};
 
 }}

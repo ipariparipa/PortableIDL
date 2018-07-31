@@ -773,7 +773,7 @@ namespace PIDL {
 					return settings.coreIncludePath;
 				}
 
-				virtual std::string getName(const Language::TopLevel * t) const
+				virtual std::string getName(const Language::TopLevel * t) const override
 				{
 					if (dynamic_cast<const Language::Interface*>(t))
 						return settings.interfaceSuffix.length() ? (t->name() + settings.interfaceSuffix) : t->name();
@@ -1183,8 +1183,8 @@ namespace PIDL {
 				std::shared_ptr<std::ostream> o;
 			public:
 				Message(std::shared_ptr<std::ostream> & o_, std::string & text_) : 
-					o(o_),
-					text(text_)
+					text(text_),
+					o(o_)
 				{ }
 
 				virtual ~Message() = default;

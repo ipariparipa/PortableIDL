@@ -13,7 +13,7 @@ namespace PIDL {
 		ret.tm_hour = dt.hour;
 		ret.tm_min = dt.minute;
 		ret.tm_sec = dt.second;
-		return ret.tm_year >= 0 && ret.tm_mon >= 0 && dt.millisecond == 0, dt.kind != DateTime::UTC;
+		return ret.tm_year >= 0 && ret.tm_mon >= 0 && dt.millisecond == 0 && dt.kind != DateTime::UTC;
 	}
 
 	extern PIDL_CORE__FUNCTION tm fromDateTime(const DateTime & dt)

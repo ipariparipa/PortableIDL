@@ -119,9 +119,9 @@ namespace PIDL
 			return (ret = getNode(v, "type")) || (ret = getAttribute(v, "type"));
 		}
 
-		struct ElementRegistry
+		struct InterfaceElementRegistry
 		{
-			ElementRegistry()
+			InterfaceElementRegistry()
 			{
 				embedded_types["integer"].reset(new Language::Integer());
 				embedded_types["float"].reset(new Language::Float());
@@ -134,15 +134,22 @@ namespace PIDL
 
 			std::string path;
 			std::map<std::string, std::shared_ptr<Language::Type>> embedded_types;
-			std::map<std::string, std::shared_ptr<Language::TypeDefinition>> types;
+			std::map<std::string, std::shared_ptr<Language::Type>> types;
 			std::map<std::string, std::shared_ptr<Language::Function>> functions;
 
 			std::map<std::string, std::shared_ptr<Language::Definition>> definitions;
 			std::list<std::shared_ptr<Language::Definition>> definitions_list;
 		};
 
+		struct ObjectElementRegistry
+		{
+			std::string path;
 
-		bool readType(ElementRegistry & registry, const rapidxml::xml_base<> * v, std::shared_ptr<Language::Type> & ret, const std::string & error_path, ErrorCollector & ec)
+			std::map<std::string, std::shared_ptr<Language::Definition>> definitions;
+			std::list<std::shared_ptr<Language::Definition>> definitions_list;
+		};
+
+		bool readType(InterfaceElementRegistry & registry, const rapidxml::xml_base<> * v, std::shared_ptr<Language::Type> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (dynamic_cast<const rapidxml::xml_attribute<>*>(v))
 			{
@@ -178,7 +185,7 @@ namespace PIDL
 			return false;
 		}
 
-		bool readType(ElementRegistry & registry, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Type> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readType(InterfaceElementRegistry & registry, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Type> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (name == "nullable")
 			{
@@ -249,7 +256,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool readTypeDefinition(ElementRegistry & registry, std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::TypeDefinition> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readTypeDefinition(InterfaceElementRegistry & registry, const std::vector<std::string> & scope, std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::TypeDefinition> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidxml::xml_base<> * t;
 			if (!getTypeElem(v, t))
@@ -266,13 +273,194 @@ namespace PIDL
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
 			}
-			registry.types[name] = ret = std::make_shared<Language::TypeDefinition>(name, tmp);
+			registry.types[name] = ret = std::make_shared<Language::TypeDefinition>(name, tmp, scope);
 			registry.definitions[name] = ret;
 			registry.definitions_list.push_back(ret);
 			return true;
 		}
 
-		bool readFunction(ElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Function> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readMethod(InterfaceElementRegistry & registry, ObjectElementRegistry & objectRegistry, const std::vector<std::string> & scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Method> & ret, const std::string & error_path, ErrorCollector & ec)
+		{
+			rapidxml::xml_base<> * r;
+			if (!getTypeElem(v, r))
+			{
+				ec << (error_path + ": type is not specified");
+				return false;
+			}
+			std::shared_ptr<Language::Type> ret_type;
+			if (!readType(registry, r, ret_type, error_path, ec))
+				return false;
+
+			rapidxml::xml_node<> * as;
+			std::list<std::shared_ptr<Language::Function::Argument>> arguments;
+			if (getNode(v, "arguments", as))
+			{
+				size_t i(0);
+				for (auto a = as->first_node(); a; a = a->next_sibling())
+				{
+					if (std::string(a->name()) != "argument" && std::string(a->name()) != "arg")
+					{
+						ec << (error_path + ": invalid node #" + std::to_string(i + 1) + ": '" + a->name() + "'");
+						return false;
+					}
+					std::string a_name;
+					if (!getName(a, a_name))
+					{
+						ec << (error_path + ": name of argument #" + std::to_string(i + 1) + " is not specified");
+						return false;
+					}
+					rapidxml::xml_base<> * t;
+					if (!getTypeElem(a, t))
+					{
+						ec << (error_path + ": type of '" + a_name + "' is not specified");
+						return false;
+					}
+					std::shared_ptr<Language::Type> tmp;
+					if (!readType(registry, t, tmp, error_path + "." + "a_name", ec))
+						return false;
+					Language::Function::Argument::Direction direction;
+					{
+						std::string direction_str;
+						if (!getOptionalStringAttr(a, "direction", direction_str))
+						{
+							ec << (error_path + ": 'direction' of '" + a_name + "' is invalid");
+							return false;
+						}
+						if (direction_str.length())
+						{
+							if (direction_str == "in")
+								direction = Language::Function::Argument::Direction::In;
+							else if (direction_str == "out")
+								direction = Language::Function::Argument::Direction::Out;
+							else if (direction_str == "in-out")
+								direction = Language::Function::Argument::Direction::InOut;
+							else
+							{
+								ec << (error_path + ": 'direction' of '" + a_name + "' is invalid: " + direction_str);
+								return false;
+							}
+						}
+						else
+						{
+							bool is_out;
+							if (!getOptionalBooleanAttr(a, "out", is_out))
+							{
+								ec << (error_path + ": 'out' of '" + a_name + "' is invalid");
+								return false;
+							}
+							direction = is_out ? Language::Function::Argument::Direction::Out : Language::Function::Argument::Direction::In;
+						}
+					}
+
+
+					arguments.push_back(std::make_shared<Language::Function::Argument>(tmp, a_name, direction));
+					++i;
+				}
+			}
+
+			if (objectRegistry.definitions.count(name))
+			{
+				ec << (error_path + ": name '" + name + "' is already registered");
+				return false;
+			}
+			objectRegistry.definitions[name] = ret = std::make_shared<Language::Method>(ret_type, scope, name, arguments);
+			objectRegistry.definitions_list.push_back(ret);
+			return true;
+		}
+
+		bool readProperty(InterfaceElementRegistry & registry, ObjectElementRegistry & objectRegistry,
+				const std::vector<std::string> & scope, const std::string & name,
+				const rapidxml::xml_node<> * v, std::shared_ptr<Language::Property> & ret,
+				const std::string & error_path, ErrorCollector & ec)
+		{
+			rapidxml::xml_base<> * r;
+			if (!getTypeElem(v, r))
+			{
+				ec << (error_path + ": type is not specified");
+				return false;
+			}
+			std::shared_ptr<Language::Type> type;
+			if (!readType(registry, r, type, error_path, ec))
+				return false;
+
+			if (objectRegistry.definitions.count(name))
+			{
+				ec << (error_path + ": name '" + name + "' is already registered");
+				return false;
+			}
+
+			bool readonly;
+			if (!getOptionalBooleanAttr(v, "readonly", readonly))
+			{
+				ec << (error_path + ": unexpected: could not get optional attribute 'readonly'");
+				return false;
+			}
+
+			objectRegistry.definitions[name] = ret = std::make_shared<Language::Property>(type, scope, name, readonly);
+			objectRegistry.definitions_list.push_back(ret);
+			return true;
+		}
+
+		bool readObject(InterfaceElementRegistry & interfaceRegistry, std::vector<std::string> scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Object> & ret, const std::string & error_path, ErrorCollector & ec)
+		{
+			rapidxml::xml_node<> * b;
+
+			ObjectElementRegistry registry;
+			registry.path = name;
+
+			if (getNode(v, "body", b))
+			{
+				size_t i(0);
+				for (auto e = b->first_node(); e; e = e->next_sibling())
+				{
+					++i;
+					std::string e_name;
+					if (!getName(e, e_name))
+					{
+						ec << ("name of element #" + std::to_string(i) + " of object '" + error_path + "' is not specified");
+						return false;
+					}
+
+					std::string e_nature;
+					if (!getNature(e, e_nature))
+					{
+						ec << ("nature of element '" + error_path + "." + e_name + "' is not specified");
+						return false;
+					}
+
+					if (e_nature == "property")
+					{
+						std::shared_ptr<Language::Property> tmp;
+						auto _scope = scope;
+						_scope.push_back(name);
+						if (!readProperty(interfaceRegistry, registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
+							return false;
+					}
+					else if (e_nature == "method")
+					{
+						std::shared_ptr<Language::Method> tmp;
+						auto _scope = scope;
+						_scope.push_back(name);
+						if (!readMethod(interfaceRegistry, registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
+							return false;
+					}
+					else
+					{
+						ec << ("nature '" + e_nature + "' of element '" + name + "." + e_name + "' is invalid");
+						return false;
+					}
+				}
+			}
+
+			ret = std::make_shared<Language::Object>(name, registry.definitions_list, scope);
+			interfaceRegistry.types[name] = ret;
+			interfaceRegistry.definitions[name] = ret;
+			interfaceRegistry.definitions_list.push_back(ret);
+
+			return true;
+		}
+
+		bool readFunction(InterfaceElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Function> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidxml::xml_base<> * r;
 			if (!getTypeElem(v, r))
@@ -366,10 +554,7 @@ namespace PIDL
 		{
 			rapidxml::xml_node<> * b;
 
-			ElementRegistry registry;
-			registry.path = name;
-
-			scope.push_back(name);
+			InterfaceElementRegistry registry;
 
 			if (getNode(v, "body", b))
 			{
@@ -393,14 +578,26 @@ namespace PIDL
 
 					if (e_nature == "typedef")
 					{
+						auto _scope = scope;
+						_scope.push_back(name);
 						std::shared_ptr<Language::TypeDefinition> tmp;
-						if (!readTypeDefinition(registry, e_name, e, tmp, name + "." + e_name, ec))
+						if (!readTypeDefinition(registry, _scope, e_name, e, tmp, name + "." + e_name, ec))
+							return false;
+					}
+					else if (e_nature == "object")
+					{
+						auto _scope = scope;
+						_scope.push_back(name);
+						std::shared_ptr<Language::Object> tmp;
+						if (!readObject(registry, _scope, e_name, e, tmp, name + "." + e_name, ec))
 							return false;
 					}
 					else if (e_nature == "function")
 					{
+						auto _scope = scope;
+						_scope.push_back(name);
 						std::shared_ptr<Language::Function> tmp;
-						if (!readFunction(registry, scope, e_name, e, tmp, name + "." + e_name, ec))
+						if (!readFunction(registry, _scope, e_name, e, tmp, name + "." + e_name, ec))
 							return false;
 					}
 					else
@@ -411,7 +608,7 @@ namespace PIDL
 				}
 			}
 
-			ret = std::make_shared<Language::Interface>(name, registry.definitions_list);
+			ret = std::make_shared<Language::Interface>(name, registry.definitions_list, scope);
 
 			return true;
 		}
@@ -419,9 +616,6 @@ namespace PIDL
 		bool readModule(const std::string name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Module> & ret, ErrorCollector & ec)
 		{
 			rapidxml::xml_node<> * b;
-
-			ElementRegistry registry;
-			registry.path = name;
 
 			std::map<std::string, std::shared_ptr<Language::TopLevel>> elements;
 

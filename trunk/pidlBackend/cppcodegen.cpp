@@ -117,9 +117,9 @@ namespace PIDL
 		return std::make_pair(IncludeType::GLobal, "pidlCore");
 	}
 
-	std::string CPPBasicCodegenHelper::getName(const Language::TopLevel * t) const
+	std::string CPPBasicCodegenHelper::getName(const Language::TopLevel * e) const
 	{
-		return t->name();
+		return e->name();
 	}
 
 	short CPPBasicCodegenHelper::tabDefinition(char & ch) const
@@ -136,18 +136,41 @@ namespace PIDL
 
 	struct CPPCodeGen::Priv 
 	{
-		Priv(CPPCodeGen * obj_) : 
-			obj(obj_)
+		Priv(CPPCodeGen * that_) :
+			that(that_)
 		{ }
 
-		CPPCodeGen * obj;
+		CPPCodeGen * that;
 		
+		std::string getName(Language::TopLevel * t)
+		{
+			return that->helper()->getName(t);
+		}
+
 		std::ostream & writeTabs(short code_deepness, CPPCodeGenContext * ctx) const
 		{
 			char ch;
-			for (short i = 0, l = code_deepness * obj->helper()->tabDefinition(ch); i < l; ++i)
+			for (short i = 0, l = code_deepness * that->helper()->tabDefinition(ch); i < l; ++i)
 				*ctx << ch;
 			return ctx->stream();
+		}
+
+		template<class T>
+		std::string getScope(const T * t, bool isComplete = true)
+		{
+			std::string ret;
+			bool is_first = true;
+			for (auto & sc : t->scope())
+			{
+				if (is_first)
+					is_first = false;
+				else
+					ret += "::";
+				ret += sc;
+			}
+			if (isComplete && !is_first)
+				ret += "::";
+			return ret;
 		}
 
 		bool addStructureBudy(short code_deepness, CPPCodeGenContext * ctx, Language::Structure * structure, ErrorCollector & ec)
@@ -231,6 +254,12 @@ namespace PIDL
 			return true;
 		}
 
+		bool addObject(CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
+		{
+			*ctx << getScope(obj) << obj->name() << "::Ptr";
+			return true;
+		}
+
 		bool addType(short code_deepness, CPPCodeGenContext * ctx, Language::Type * type, ErrorCollector & ec)
 		{
 			if (dynamic_cast<Language::Generic*>(type))
@@ -253,15 +282,20 @@ namespace PIDL
 				if (!addStructure(code_deepness, ctx, dynamic_cast<Language::Structure*>(type), ec))
 					return false;
 			}
+			else if (dynamic_cast<Language::Object*>(type))
+			{
+				if (!addObject(ctx, dynamic_cast<Language::Object*>(type), ec))
+					return false;
+			}
 			else
 			{
-				*ctx << type->name();
+				*ctx << getScope(type) << type->name();
 			}
 
 			return true;
 		}
 
-		bool addTypeDefinition(short code_deepness, CPPCodeGenContext * ctx, Language::TypeDefinition * type_definition, ErrorCollector & ec)
+		bool writeTypeDefinition(short code_deepness, CPPCodeGenContext * ctx, Language::TypeDefinition * type_definition, ErrorCollector & ec)
 		{
 			switch (ctx->mode())
 			{
@@ -290,7 +324,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool addFunction(short code_deepness, CPPCodeGenContext * ctx, Language::Function * function, ErrorCollector & ec)
+		bool writeFunction(short code_deepness, CPPCodeGenContext * ctx, Language::Function * function, ErrorCollector & ec)
 		{
 			if (ctx->role() == Role::Server && ctx->mode() == Mode::Implementatinon)
 				return true;
@@ -324,10 +358,7 @@ namespace PIDL
 				o << " " << function->name() << "(";
 				break;
 			case Mode::Implementatinon:
-				o << " ";
-				for (auto sc : function->scope())
-					o << sc << "::";
-				o << function->name() << "(";
+				o << " " << getScope(function) << function->name() << "(";
 				break;
 			}
 
@@ -368,7 +399,7 @@ namespace PIDL
 					o << std::endl;
 					writeTabs(code_deepness++, ctx) << "{" << std::endl;
 
-					if (!obj->writeFunctionBody(function, code_deepness, ctx, ec))
+					if (!that->writeFunctionBody(function, code_deepness, ctx, ec))
 						return false;
 
 					writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
@@ -394,57 +425,173 @@ namespace PIDL
 			return true;
 		}
 
-		bool addDefinition(short code_deepness, CPPCodeGenContext * ctx, Language::Definition * definition, ErrorCollector & ec)
+		bool writeProperty(short code_deepness, CPPCodeGenContext * ctx, Language::Property * property, ErrorCollector & ec)
 		{
-			if (dynamic_cast<Language::TypeDefinition*>(definition))
+			if (ctx->role() == Role::Server && ctx->mode() == Mode::Implementatinon)
+				return true;
+
+		//getter
+			auto & o = writeTabs(code_deepness, ctx);
+
+			switch (ctx->mode())
 			{
-				if (!addTypeDefinition(code_deepness, ctx, dynamic_cast<Language::TypeDefinition*>(definition), ec))
-					return false;
+			case Mode::AllInOne:
+			case Mode::Declaration:
+				switch (ctx->role())
+				{
+				case Role::Client:
+					break;
+				case Role::Server:
+					o << "virtual ";
+					break;
+				}
+				break;
+			case Mode::Implementatinon:
+				break;
 			}
-			else if (dynamic_cast<Language::Function*>(definition))
+
+			if (!addType(code_deepness, ctx, property->type().get(), ec))
+				return false;
+
+			switch (ctx->mode())
 			{
-				if (!addFunction(code_deepness, ctx, dynamic_cast<Language::Function*>(definition), ec))
-					return false;
+			case Mode::AllInOne:
+			case Mode::Declaration:
+				o << " get_" << property->name() << "()";
+				break;
+			case Mode::Implementatinon:
+				o << " " << getScope(property) << "get_" << property->name() << "()";
+				break;
 			}
+
+			switch (ctx->mode())
+			{
+			case Mode::AllInOne:
+			case Mode::Implementatinon:
+				switch (ctx->role())
+				{
+				case Role::Client:
+					o << std::endl;
+					writeTabs(code_deepness++, ctx) << "{" << std::endl;
+
+					if (!that->writePropertyGetterBody(property, code_deepness, ctx, ec))
+						return false;
+
+					writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+					break;
+				case Role::Server:
+					o << " = 0;" << std::endl;
+					break;
+				}
+				break;
+			case Mode::Declaration:
+				switch (ctx->role())
+				{
+				case Role::Client:
+					o << ";" << std::endl;
+					break;
+				case Role::Server:
+					o << " = 0;" << std::endl;
+					break;
+				}
+				break;
+			}
+
+			//setter
+			if(!property->readOnly())
+			{
+				auto & o = writeTabs(code_deepness, ctx);
+
+				switch (ctx->mode())
+				{
+				case Mode::AllInOne:
+				case Mode::Declaration:
+					switch (ctx->role())
+					{
+					case Role::Client:
+						break;
+					case Role::Server:
+						o << "virtual ";
+						break;
+					}
+					break;
+				case Mode::Implementatinon:
+					break;
+				}
+
+				switch (ctx->mode())
+				{
+				case Mode::AllInOne:
+				case Mode::Declaration:
+					o << "void set_" << property->name() << "(const ";
+					break;
+				case Mode::Implementatinon:
+					o << "void " << getScope(property) << "set_" << property->name() << "(const ";
+					break;
+				}
+
+				if (!addType(code_deepness, ctx, property->type().get(), ec))
+					return false;
+
+				o << " & value)";
+
+				switch (ctx->role())
+				{
+				case Role::Client:
+					switch (ctx->mode())
+					{
+					case Mode::AllInOne:
+					case Mode::Implementatinon:
+						o << std::endl;
+						writeTabs(code_deepness++, ctx) << "{" << std::endl;
+
+						if (!that->writePropertySetterBody(property, code_deepness, ctx, ec))
+							return false;
+
+						writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+						break;
+					case Mode::Declaration:
+						switch (ctx->role())
+						{
+						case Role::Client:
+							o << ";" << std::endl;
+							break;
+						case Role::Server:
+							o << " = 0;" << std::endl;
+							break;
+						}
+						break;
+					}
+					break;
+				case Role::Server:
+					o << " = 0;" << std::endl;
+					break;
+				}
+			}
+
 			return true;
 		}
 
-		bool addDefinitions(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
-		{
-			for (auto & definition : intf->definitions())
-				if (dynamic_cast<Language::TypeDefinition*>(definition.get()))
-				{
-					if (!addTypeDefinition(code_deepness, ctx, dynamic_cast<Language::TypeDefinition*>(definition.get()), ec))
-						return false;
-				}
-				else if (dynamic_cast<Language::Function*>(definition.get()))
-				{
-					if (!addFunction(code_deepness, ctx, dynamic_cast<Language::Function*>(definition.get()), ec))
-						return false;
-				}
-
-			return true;
-		}
-
-		bool addInterface(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
+		bool writeObject(short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
 		{
 			switch (ctx->mode())
 			{
 			case Mode::AllInOne:
 			case Mode::Declaration:
-				writeTabs(code_deepness, ctx) << "class " << obj->helper()->getName(intf) << std::endl;
+				writeTabs(code_deepness, ctx) << "class " << obj->name() << " : public _Object" << std::endl;
 				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				if (!obj->writePrivateSection(code_deepness, ctx, intf, ec))
+				if (!that->writePrivateSection(code_deepness, ctx, obj, ec))
 					return false;
 				writeTabs(code_deepness - 1, ctx) << "public:" << std::endl;
+				writeTabs(code_deepness, ctx) << "typedef std::shared_ptr<" << obj->name() << "> Ptr;" << std::endl;
 				break;
 			case Mode::Implementatinon:
-				if (!obj->writePrivateSection(code_deepness, ctx, intf, ec))
+				if (!that->writePrivateSection(code_deepness, ctx, obj, ec))
 					return false;
 				break;
 			}
 
-			if (!obj->writePublicSection(code_deepness, ctx, intf, ec))
+			if (!that->writePublicSection(code_deepness, ctx, obj, ec))
 				return false;
 
 			switch (ctx->mode())
@@ -457,7 +604,7 @@ namespace PIDL
 				break;
 			}
 
-			if (!obj->writeProtectedSection(code_deepness, ctx, intf, ec))
+			if (!that->writeProtectedSection(code_deepness, ctx, obj, ec))
 				return false;
 
 			switch (ctx->mode())
@@ -473,68 +620,371 @@ namespace PIDL
 			return true;
 		}
 
-		bool addConstructor(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
+		bool writeConstructor(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * cl, ErrorCollector & ec)
 		{
 			switch (ctx->mode())
 			{
 			case Mode::AllInOne:
-				writeTabs(code_deepness, ctx) << intf->name() << "()" << std::endl;
+				writeTabs(code_deepness, ctx) << cl->name() << "()" << std::endl;
 				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				if (!obj->writeConstructorBody(intf, code_deepness, ctx, ec))
+				if (!that->writeConstructorBody(cl, code_deepness, ctx, ec))
 					return false;
 				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
 				break;
 			case Mode::Declaration:
-				writeTabs(code_deepness, ctx) << intf->name() << "();" << std::endl;
+				writeTabs(code_deepness, ctx) << cl->name() << "();" << std::endl;
 				break;
 			case Mode::Implementatinon:
-				writeTabs(code_deepness, ctx) << intf->name() << "::" << intf->name() << "() : priv(new Priv(this)) { }" << std::endl << std::endl;
+				writeTabs(code_deepness, ctx) << getScope(cl) << cl->name() << "::" << cl->name() << "() : _priv(new _Priv(this))" << std::endl;
+				writeTabs(code_deepness, ctx) << "{ }" << std::endl << std::endl;
 				break;
 			}
 
 			return true;
 		}
 
-		bool addDestructor(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
+		bool writeConstructor(short code_deepness, CPPCodeGenContext * ctx, Language::Object * cl, ErrorCollector & ec)
 		{
 			switch (ctx->mode())
 			{
 			case Mode::AllInOne:
-				writeTabs(code_deepness, ctx) << "virtual ~" << intf->name() << "() { }" << std::endl << std::endl;
+				writeTabs(code_deepness, ctx) << cl->name() << "(" << getScope(cl, false) << " * intf, const std::string & id)" << std::endl;
+				writeTabs(code_deepness++, ctx) << "{" << std::endl;
+				if (!that->writeConstructorBody(cl, code_deepness, ctx, ec))
+					return false;
+				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
 				break;
 			case Mode::Declaration:
-				writeTabs(code_deepness, ctx) << "virtual ~" << intf->name() << "();" << std::endl;
+				writeTabs(code_deepness, ctx) << cl->name() << "(" << getScope(cl, false) << " * intf, const std::string & id);" << std::endl;
 				break;
 			case Mode::Implementatinon:
-				writeTabs(code_deepness, ctx) << intf->name() << "::~" << intf->name() << "() { delete priv; }" << std::endl << std::endl;
+				writeTabs(code_deepness, ctx) << getScope(cl) << cl->name() << "::" << cl->name() << "(" << getScope(cl, false) << " * intf, const std::string & id) : _priv(new _Priv(this, intf, id))" << std::endl;
+				writeTabs(code_deepness, ctx) << "{ }" << std::endl << std::endl;
 				break;
 			}
 
 			return true;
 		}
 
-		bool addModule(short code_deepness, CPPCodeGenContext * ctx, Language::Module * module, ErrorCollector & ec)
+		template<class Class_T>
+		bool writeDestructor(short code_deepness, CPPCodeGenContext * ctx, Class_T * cl, ErrorCollector & ec)
 		{
-			auto & o = writeTabs(code_deepness++, ctx) << "namespace " << obj->helper()->getName(module) << " {" << std::endl;
+			switch (ctx->mode())
+			{
+			case Mode::AllInOne:
+				writeTabs(code_deepness, ctx) << "virtual ~" << cl->name() << "()" << std::endl;
+				writeTabs(code_deepness++, ctx) << "{" << std::endl;
+				if (!that->writeDestructorBody(cl, code_deepness, ctx, ec))
+					return false;
+				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+				break;
+			case Mode::Declaration:
+				writeTabs(code_deepness, ctx) << "virtual ~" << cl->name() << "();" << std::endl;
+				break;
+			case Mode::Implementatinon:
+				writeTabs(code_deepness, ctx) << getScope(cl) << cl->name() << "::~" << cl->name() << "()" << std::endl;
+				writeTabs(code_deepness, ctx) << "{ delete _priv; }" << std::endl << std::endl;
+				break;
+			}
+
+			return true;
+		}
+		
+		bool writeObjectDefinition(short code_deepness, CPPCodeGenContext * ctx, Language::Definition * definition, ErrorCollector & ec)
+		{
+			if (dynamic_cast<Language::Property*>(definition))
+			{
+				if (!writeProperty(code_deepness, ctx, dynamic_cast<Language::Property*>(definition), ec))
+					return false;
+			}
+			else if (dynamic_cast<Language::Method*>(definition))
+			{
+				if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::Method*>(definition), ec))
+					return false;
+			}
+			return true;
+		}
+
+		bool writeDefinition(short code_deepness, CPPCodeGenContext * ctx, Language::Definition * definition, ErrorCollector & ec)
+		{
+			if (dynamic_cast<Language::TypeDefinition*>(definition))
+			{
+				if (!writeTypeDefinition(code_deepness, ctx, dynamic_cast<Language::TypeDefinition*>(definition), ec))
+					return false;
+			}
+			else if (dynamic_cast<Language::Function*>(definition))
+			{
+				if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::Function*>(definition), ec))
+					return false;
+			}
+			else if (dynamic_cast<Language::Object*>(definition))
+			{
+				if (!writeObject(code_deepness, ctx, dynamic_cast<Language::Object*>(definition), ec))
+					return false;
+			}
+			return true;
+		}
+
+		bool writeDefinitions(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
+		{
+			switch (ctx->mode())
+			{
+			case Mode::AllInOne:
+			case Mode::Declaration:
+				if (!that->writeObjectBase(intf, code_deepness, ctx, ec))
+					return false;
+				break;
+			case Mode::Implementatinon:
+				break;
+			}
+
+			for (auto & definition : intf->definitions())
+				if (dynamic_cast<Language::TypeDefinition*>(definition.get()))
+				{
+					if (!writeTypeDefinition(code_deepness, ctx, dynamic_cast<Language::TypeDefinition*>(definition.get()), ec))
+						return false;
+				}
+				else if (dynamic_cast<Language::Function*>(definition.get()))
+				{
+					if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::Function*>(definition.get()), ec))
+						return false;
+				}
+				else if (dynamic_cast<Language::Object*>(definition.get()))
+				{
+					if (!writeObject(code_deepness, ctx, dynamic_cast<Language::Object*>(definition.get()), ec))
+						return false;
+				}
+
+			return true;
+		}
+
+		bool writeDefinitions(short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
+		{
+			for (auto & definition : obj->definitions())
+				if (dynamic_cast<Language::Property*>(definition.get()))
+				{
+					if (!writeProperty(code_deepness, ctx, dynamic_cast<Language::Property*>(definition.get()), ec))
+						return false;
+				}
+				else if (dynamic_cast<Language::Method*>(definition.get()))
+				{
+					if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::Method*>(definition.get()), ec))
+						return false;
+				}
+
+			return true;
+		}
+
+		bool writeInterface(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
+		{
+			switch (ctx->mode())
+			{
+			case Mode::AllInOne:
+			case Mode::Declaration:
+				writeTabs(code_deepness, ctx) << "class " << that->helper()->getName(intf) << std::endl;
+				writeTabs(code_deepness++, ctx) << "{" << std::endl;
+				if (!that->writePrivateSection(code_deepness, ctx, intf, ec))
+					return false;
+				writeTabs(code_deepness - 1, ctx) << "public:" << std::endl;
+				break;
+			case Mode::Implementatinon:
+				if (!that->writePrivateSection(code_deepness, ctx, intf, ec))
+					return false;
+				break;
+			}
+
+			if (!that->writePublicSection(code_deepness, ctx, intf, ec))
+				return false;
+
+			switch (ctx->mode())
+			{
+			case Mode::AllInOne:
+			case Mode::Declaration:
+				writeTabs(code_deepness - 1, ctx) << "protected:" << std::endl;
+				break;
+			case Mode::Implementatinon:
+				break;
+			}
+
+			if (!that->writeProtectedSection(code_deepness, ctx, intf, ec))
+				return false;
+
+			switch (ctx->mode())
+			{
+			case Mode::AllInOne:
+			case Mode::Declaration:
+				writeTabs(--code_deepness, ctx) << "};" << std::endl << std::endl;
+				break;
+			case Mode::Implementatinon:
+				break;
+			}
+
+			return true;
+		}
+
+		bool writeModule(short code_deepness, CPPCodeGenContext * ctx, Language::Module * module, ErrorCollector & ec)
+		{
+			auto & o = writeTabs(code_deepness++, ctx) << "namespace " << that->helper()->getName(module) << " {" << std::endl;
 			for (auto & element : module->elements())
 			{
 				o << std::endl;
-				if (!addTopLevel(code_deepness, ctx, element.get(), ec))
+				if (!writeTopLevel(code_deepness, ctx, element.get(), ec))
 					return false;
 			}
 			writeTabs(--code_deepness, ctx) << "}" << std::endl;
 			return true;
 		}
 
-		bool addTopLevel(short code_deepness, CPPCodeGenContext * ctx, Language::TopLevel * top_level, ErrorCollector & ec)
+		bool writeTopLevel(short code_deepness, CPPCodeGenContext * ctx, Language::TopLevel * top_level, ErrorCollector & ec)
 		{
 			if (dynamic_cast<Language::Interface*>(top_level))
-				return addInterface(code_deepness, ctx, dynamic_cast<Language::Interface*>(top_level), ec);
+				return writeInterface(code_deepness, ctx, dynamic_cast<Language::Interface*>(top_level), ec);
 			if (dynamic_cast<Language::Module*>(top_level))
-				return addModule(code_deepness, ctx, dynamic_cast<Language::Module*>(top_level), ec);
+				return writeModule(code_deepness, ctx, dynamic_cast<Language::Module*>(top_level), ec);
 
 			return true;
 		}
+
+		bool writePriv(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * cl, ErrorCollector & ec)
+		{
+			writeTabs(code_deepness, ctx) << "_Priv(" << cl->name() << " * _that_): _that(_that_)" << std::endl;
+			writeTabs(code_deepness++, ctx) << "{" << std::endl;
+			if (!that->writeConstructorBody(cl, code_deepness, ctx, ec))
+				return false;
+			writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+
+			writeTabs(code_deepness, ctx) << "~_Priv()" << std::endl;
+			writeTabs(code_deepness++, ctx) << "{" << std::endl;
+			if (!that->writeDestructorBody(cl, code_deepness, ctx, ec))
+				return false;
+			writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+
+			writeTabs(code_deepness, ctx) << cl->name() << " * _that;" << std::endl << std::endl;
+
+			return true;
+		}
+
+		bool writePriv(short code_deepness, CPPCodeGenContext * ctx, Language::Object * cl, ErrorCollector & ec)
+		{
+			writeTabs(code_deepness, ctx) << "_Priv(" << cl->name() << " * _that_, " << getScope(cl, false) << " * _intf_, const std::string & _id_): _that(_that_), _intf(_intf_), __id(_id_)" << std::endl;
+			writeTabs(code_deepness++, ctx) << "{" << std::endl;
+			if (!that->writeConstructorBody(cl, code_deepness, ctx, ec))
+				return false;
+			writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+
+			writeTabs(code_deepness, ctx) << "~_Priv()" << std::endl;
+			writeTabs(code_deepness++, ctx) << "{" << std::endl;
+			if (!that->writeDestructorBody(cl, code_deepness, ctx, ec))
+				return false;
+			writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+			writeTabs(code_deepness, ctx) << cl->name() << " * _that;" << std::endl;
+			writeTabs(code_deepness, ctx) << getScope(cl, false) << " *  _intf;" << std::endl;
+			writeTabs(code_deepness, ctx) << "std::string __id;" << std::endl;
+			return true;
+		}
+
+		template<class Class_T>
+		bool writePrivateSection(short code_deepness, CPPCodeGenContext * ctx, Class_T * cl, ErrorCollector & ec)
+		{
+			switch (ctx->mode())
+			{
+			case Mode::Implementatinon:
+				writeTabs(code_deepness, ctx) << "struct " << getScope(cl) << cl->name() << "::_Priv" << std::endl;
+				writeTabs(code_deepness++, ctx) << "{" << std::endl;
+
+				switch (ctx->mode())
+				{
+				case Mode::AllInOne:
+				case Mode::Declaration:
+					break;
+				case Mode::Implementatinon:
+					if (!writePriv(code_deepness, ctx, cl, ec))
+						return false;
+					break;
+				}
+
+				if (!that->writePrivateMembers(code_deepness, ctx, cl, ec))
+					return false;
+				writeTabs(--code_deepness, ctx) << "};" << std::endl << std::endl;
+				break;
+			case Mode::Declaration:
+				writeTabs(code_deepness, ctx) << "struct _Priv;" << std::endl;
+				writeTabs(code_deepness, ctx) << "_Priv * _priv;" << std::endl;
+				break;
+			case Mode::AllInOne:
+				if (!that->writePrivateMembers(code_deepness, ctx, cl, ec))
+					return false;
+				break;
+			}
+
+			return true;
+		}
+
+		template<class Class_T>
+		bool writePublicSection(short code_deepness, CPPCodeGenContext * ctx, Class_T * cl, ErrorCollector & ec)
+		{
+			switch (ctx->mode())
+			{
+			case Mode::AllInOne:
+			case Mode::Declaration:
+				if (dynamic_cast<Language::Interface*>(cl) && !that->writeAliases(code_deepness, ctx, ec))
+					return false;
+				break;
+			case Mode::Implementatinon:
+				break;
+			}
+
+			switch (ctx->role())
+			{
+			case Role::Client:
+				if (!writeConstructor(code_deepness, ctx, cl, ec) ||
+				    !writeDestructor(code_deepness, ctx, cl, ec) ||
+					!writeDefinitions(code_deepness, ctx, cl, ec))
+					return false;
+				break;
+			case Role::Server:
+				if (!that->writeInvoke(code_deepness, ctx, cl, ec) ||
+				    !writeDestructor(code_deepness, ctx, cl, ec))
+					return false;
+				break;
+			}
+
+			return true;
+		}
+
+		template<class Class_T>
+		bool writeProtectedSection(short code_deepness, CPPCodeGenContext * ctx, Class_T * cl, ErrorCollector & ec)
+		{
+			switch (ctx->role())
+			{
+			case Role::Client:
+				if (!that->writeInvoke(code_deepness, ctx, cl, ec))
+					return false;
+				break;
+			case Role::Server:
+				if (!writeConstructor(code_deepness, ctx, cl, ec) ||
+				    !writeDefinitions(code_deepness, ctx, cl, ec))
+					return false;
+				break;
+			}
+
+			return true;
+		}
+
+		template<class Class_T>
+		bool writeDestructorBody(Class_T * cl, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
+		{
+			switch (ctx->mode())
+			{
+			case Mode::AllInOne:
+			case Mode::Declaration:
+			case Mode::Implementatinon:
+				break;
+			}
+			return true;
+		}
+
+
 	};
 
 	CPPCodeGen::CPPCodeGen() : priv(new Priv(this))
@@ -547,7 +997,7 @@ namespace PIDL
 
 	bool CPPCodeGen::generateCode(Language::TopLevel * topLevel, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		return priv->addTopLevel(code_deepness, ctx, topLevel, ec);
+		return priv->writeTopLevel(code_deepness, ctx, topLevel, ec);
 	}
 
 	bool CPPCodeGen::generateIncludes(short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
@@ -580,93 +1030,59 @@ namespace PIDL
 
 	bool CPPCodeGen::writePrivateSection(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		switch (ctx->mode())
-		{
-		case Mode::Implementatinon:
-			priv->writeTabs(code_deepness, ctx) << "struct " << helper()->getName(intf) << "::Priv" << std::endl;
-			priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
-
-			switch (ctx->mode())
-			{
-			case Mode::AllInOne:
-			case Mode::Declaration:
-				break;
-			case Mode::Implementatinon:
-				priv->writeTabs(code_deepness, ctx) << "Priv(" << helper()->getName(intf) << " * that_): that(that_)" << std::endl;
-				priv->writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				if (!writeConstructorBody(intf, code_deepness, ctx, ec))
-					return false;
-				priv->writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
-				priv->writeTabs(code_deepness, ctx) << helper()->getName(intf) << " * that;" << std::endl << std::endl;
-				break;
-			}
-
-			if (!writePrivateMembers(code_deepness, ctx, intf, ec))
-				return false;
-			priv->writeTabs(--code_deepness, ctx) << "};" << std::endl << std::endl;
-			break;
-		case Mode::Declaration:
-			priv->writeTabs(code_deepness, ctx) << "struct Priv;" << std::endl;
-			priv->writeTabs(code_deepness, ctx) << "Priv * priv;" << std::endl;
-			break;
-		case Mode::AllInOne:
-			if (!writePrivateMembers(code_deepness, ctx, intf, ec))
-				return false;
-			break;
-		}
-
-		return true;
+		return priv->writePrivateSection(code_deepness, ctx, intf, ec);
 	}
 
 	bool CPPCodeGen::writePublicSection(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		switch (ctx->mode())
-		{
-		case Mode::AllInOne:
-		case Mode::Declaration:
-			if (!writeAliases(code_deepness, ctx, ec))
-				return false;
-			break;
-		case Mode::Implementatinon:
-			break;
-		}
-
-		switch (ctx->role())
-		{
-		case Role::Client:
-			if (!priv->addConstructor(code_deepness, ctx, intf, ec) ||
-			    !priv->addDestructor(code_deepness, ctx, intf, ec) ||
-				!priv->addDefinitions(code_deepness, ctx, intf, ec))
-				return false;
-			break;
-		case Role::Server:
-			if (!priv->addDestructor(code_deepness, ctx, intf, ec) ||
-			    !writeInvoke(code_deepness, ctx, intf, ec))
-				return false;
-			break;
-		}
-
-		return true;
+		return priv->writePublicSection(code_deepness, ctx, intf, ec);
 	}
 
 	bool CPPCodeGen::writeProtectedSection(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		switch (ctx->role())
-		{
-		case Role::Client:
-			if (!writeInvoke(code_deepness, ctx, intf, ec))
-				return false;
-			break;
-		case Role::Server:
-			if (!priv->addConstructor(code_deepness, ctx, intf, ec) ||
-				!priv->addDefinitions(code_deepness, ctx, intf, ec))
-				return false;
-			break;
-		}
+		return priv->writeProtectedSection(code_deepness, ctx, intf, ec);
+	}
 
+	bool CPPCodeGen::writePrivateSection(short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
+	{
+		return priv->writePrivateSection(code_deepness, ctx, obj, ec);
+	}
+
+	bool CPPCodeGen::writePublicSection(short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
+	{
+		if (!priv->writePublicSection(code_deepness, ctx, obj, ec))
+			return false;
+		switch (ctx->mode())	
+		{
+			case Mode::AllInOne:
+				priv->writeTabs(code_deepness, ctx) << "virtual std::string _id() const override" << std::endl;
+				priv->writeTabs(code_deepness, ctx) << "{ return __id; }" << std::endl << std::endl;
+				break;
+			case Mode::Declaration:
+				priv->writeTabs(code_deepness, ctx) << "virtual std::string _id() const override;" << std::endl;
+				break;
+			case Mode::Implementatinon:
+				priv->writeTabs(code_deepness, ctx) << "std::string " << priv->getScope(obj) << obj->name() << "::_id() const" << std::endl;
+				priv->writeTabs(code_deepness, ctx) << "{ return _priv->__id; }" << std::endl << std::endl;
+				break;
+		}
 		return true;
 	}
 
+	bool CPPCodeGen::writeProtectedSection(short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
+	{
+		return priv->writeProtectedSection(code_deepness, ctx, obj, ec);
+	}
+
+	bool CPPCodeGen::writeDestructorBody(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
+	{
+		return priv->writeDestructorBody(intf, code_deepness, ctx, ec);
+	}
+
+	bool CPPCodeGen::writeDestructorBody(Language::Object * obj, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
+	{
+		return priv->writeDestructorBody(obj, code_deepness, ctx, ec);
+	}
 
 	bool CPPCodeGen::writeType(Language::Type * type, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
