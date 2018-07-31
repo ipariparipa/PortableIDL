@@ -431,18 +431,18 @@ namespace PIDL { namespace JSONTools {
 	//	addValue(doc, r, name, v);
 	//}
 
-	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const tm & t, int millisecond)
+	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const tm & t, short millisecond)
 	{
 		rapidjson::Value v(rapidjson::kObjectType);
 
-		addValue(doc, v, "year", t.tm_year + 1900);
-		addValue(doc, v, "month", t.tm_mon + 1);
-		addValue(doc, v, "day", t.tm_mday);
-		addValue(doc, v, "hour", t.tm_hour);
-		addValue(doc, v, "minute", t.tm_min);
-		addValue(doc, v, "second", t.tm_sec);
+		addValue(doc, v, "year", (long long)(t.tm_year + 1900));
+		addValue(doc, v, "month", (long long)(t.tm_mon + 1));
+		addValue(doc, v, "day", (long long)t.tm_mday);
+		addValue(doc, v, "hour", (long long)t.tm_hour);
+		addValue(doc, v, "minute", (long long)t.tm_min);
+		addValue(doc, v, "second", (long long)t.tm_sec);
 		if (millisecond > 0)
-			addValue(doc, v, "millisecond", millisecond);
+			addValue(doc, v, "millisecond", (long long)millisecond);
 
 		addValue(doc, v, "kind", "local");
 
@@ -464,14 +464,14 @@ namespace PIDL { namespace JSONTools {
 	{
 		rapidjson::Value v(rapidjson::kObjectType);
 
-		addValue(doc, v, "year", dt.year);
-		addValue(doc, v, "month", dt.month);
-		addValue(doc, v, "day", dt.day);
-		addValue(doc, v, "hour", dt.hour);
-		addValue(doc, v, "minute", dt.minute);
-		addValue(doc, v, "second", dt.second);
+		addValue(doc, v, "year", (long long)dt.year);
+		addValue(doc, v, "month", (long long)dt.month);
+		addValue(doc, v, "day", (long long)dt.day);
+		addValue(doc, v, "hour", (long long)dt.hour);
+		addValue(doc, v, "minute", (long long)dt.minute);
+		addValue(doc, v, "second", (long long)dt.second);
 		if (dt.millisecond > 0)
-			addValue(doc, v, "millisecond", dt.millisecond);
+			addValue(doc, v, "millisecond", (long long)dt.millisecond);
 
 		switch (dt.kind)
 		{

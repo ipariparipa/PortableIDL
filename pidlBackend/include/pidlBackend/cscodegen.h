@@ -33,6 +33,9 @@ namespace PIDL {
 		class Interface;
 		class Function;
 		class Type;
+		class Object;
+		class Method;
+		class Property;
 	}
 
 	class ErrorCollector;
@@ -173,6 +176,14 @@ namespace PIDL {
 		virtual bool writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) = 0;
 		virtual bool writeFunctionBody(Language::Function * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
 		virtual bool writeConstructorBody(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+
+		virtual bool writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec) = 0;
+		virtual bool writeFunctionBody(Language::Method * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeConstructorBody(Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeDestructorBody(Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeInvoke(short code_deepness, CSCodeGenContext * ctx, Language::Object * intf, ErrorCollector & ec) = 0;
+		virtual bool writePropertyGetterBody(Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writePropertySetterBody(Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
 
 		bool writeType(Language::Type * type, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec);
 	};
