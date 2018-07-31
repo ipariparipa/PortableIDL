@@ -341,7 +341,6 @@ namespace PIDL
 						for (auto & a : out_args)
 						{
 							auto & o = writeTabs(code_deepness, ctx);
-							(code_deepness, ctx);
 							if (is_first)
 							{
 								o << "  ";
