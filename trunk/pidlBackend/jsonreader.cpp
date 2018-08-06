@@ -127,6 +127,40 @@ namespace PIDL
 			std::list<std::shared_ptr<Language::Definition>> definitions_list;
 		};
 
+		bool readDocumentation(const rapidjson::Value & v, Language::DocumentationProvider::Documentation & ret, const std::string & error_path, ErrorCollector & ec)
+		{
+			if (v.IsObject())
+			{
+				rapidjson::Value * doc_v;
+				if (JSONTools::getValue(v, "documentation", doc_v))
+				{
+					if (doc_v->IsString())
+						ret.brief = doc_v->GetString();
+					else if (doc_v->IsObject())
+					{
+						if (!JSONTools::getValue(*doc_v, "brief", ret.brief))
+						{
+							ec << (error_path + ": 'brief' is not defined for documentation");
+							return false;
+						}
+
+						std::string tmp;
+
+						if (JSONTools::getValue(*doc_v, "description", tmp))
+							ret.details[Language::DocumentationProvider::Documentation::Description] = tmp;
+
+						if (JSONTools::getValue(*doc_v, "return", tmp))
+							ret.details[Language::DocumentationProvider::Documentation::Return] = tmp;
+
+						if (JSONTools::getValue(*doc_v, "direction", tmp))
+							ret.details[Language::DocumentationProvider::Documentation::ArgDirection] = tmp;
+					}
+				}
+			}
+
+			return true;
+		}
+
 		bool readType(ElementRegistry & registry, const rapidjson::Value & v, std::shared_ptr<Language::Type> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (v.IsNull())
@@ -222,7 +256,12 @@ namespace PIDL
 						std::shared_ptr<Language::Type> tmp;
 						if (!readType(registry, *t, tmp, error_path, ec))
 							return false;
-						members[i] = std::make_shared<Language::Structure::Member>(tmp, m_name);
+
+						Language::DocumentationProvider::Documentation doc;
+						if (!readDocumentation(m, doc, error_path, ec))
+							return false;
+
+						members[i] = std::make_shared<Language::Structure::Member>(tmp, m_name, doc);
 					}
 				}
 				ret = std::make_shared<Language::Structure>(members);
@@ -270,7 +309,12 @@ namespace PIDL
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
 			}
-			registry.types[name] = ret = std::make_shared<Language::TypeDefinition>(name, tmp, scope);
+
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			registry.types[name] = ret = std::make_shared<Language::TypeDefinition>(name, tmp, scope, doc);
 			registry.definitions[name] = ret;
 			registry.definitions_list.push_back(ret);
 			return true;
@@ -356,8 +400,11 @@ namespace PIDL
 						}
 					}
 
+					Language::DocumentationProvider::Documentation doc;
+					if (!readDocumentation(a, doc, error_path, ec))
+						return false;
 
-					arguments[i] = std::make_shared<Language::Function::Argument>(tmp, a_name, direction);
+					arguments[i] = std::make_shared<Language::Function::Argument>(tmp, a_name, direction, doc);
 				}
 			}
 
@@ -366,7 +413,12 @@ namespace PIDL
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
 			}
-			registry.functions[name] = ret = std::make_shared<Language::Function>(ret_type, scope, name, arguments);
+
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			registry.functions[name] = ret = std::make_shared<Language::Function>(ret_type, scope, name, arguments, doc);
 			registry.definitions[name] = ret;
 			registry.definitions_list.push_back(ret);
 			return true;
@@ -452,8 +504,11 @@ namespace PIDL
 						}
 					}
 
+					Language::DocumentationProvider::Documentation doc;
+					if (!readDocumentation(a, doc, error_path, ec))
+						return false;
 
-					arguments[i] = std::make_shared<Language::Function::Argument>(tmp, a_name, direction);
+					arguments[i] = std::make_shared<Language::Function::Argument>(tmp, a_name, direction, doc);
 				}
 			}
 
@@ -462,7 +517,12 @@ namespace PIDL
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
 			}
-			obj_registry.definitions[name] = ret = std::make_shared<Language::Method>(ret_type, scope, name, arguments);
+
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			obj_registry.definitions[name] = ret = std::make_shared<Language::Method>(ret_type, scope, name, arguments, doc);
 			obj_registry.definitions_list.push_back(ret);
 			return true;
 		}
@@ -487,7 +547,12 @@ namespace PIDL
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
 			}
-			obj_registry.definitions[name] = ret = std::make_shared<Language::Property>(type, scope, name, read_only);
+
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			obj_registry.definitions[name] = ret = std::make_shared<Language::Property>(type, scope, name, read_only, doc);
 			obj_registry.definitions_list.push_back(ret);
 			return true;
 		}
@@ -549,7 +614,11 @@ namespace PIDL
 				}
 			}
 
-			ret = std::make_shared<Language::Object>(name, obj_registry.definitions_list, scope);
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			ret = std::make_shared<Language::Object>(name, obj_registry.definitions_list, scope, doc);
 			registry.types[name] = ret;
 			registry.definitions[name] = ret;
 			registry.definitions_list.push_back(ret);
@@ -622,7 +691,11 @@ namespace PIDL
 				}
 			}
 
-			ret = std::make_shared<Language::Interface>(name, registry.definitions_list, scope);
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, name, ec))
+				return false;
+
+			ret = std::make_shared<Language::Interface>(name, registry.definitions_list, scope, doc);
 
 			return true;
 		}
@@ -669,7 +742,11 @@ namespace PIDL
 					_elements[i++] = d.second;
 			}
 
-			ret = std::make_shared<Language::Module>(name, _elements);
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, name, ec))
+				return false;
+
+			ret = std::make_shared<Language::Module>(name, _elements, doc);
 
 			return true;
 		}

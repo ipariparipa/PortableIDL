@@ -77,18 +77,19 @@ namespace PIDL {
 
 		struct TypeDefinition::Priv
 		{
-			Priv(const std::string & n, const Type::Ptr & t, const std::vector<std::string> & s) : 
-				name(n), type(t), scope(s)
+			Priv(const std::string & n, const Type::Ptr & t, const std::vector<std::string> & s, const Documentation & d) :
+				name(n), type(t), scope(s), doc(d)
 			{ }
 
 			std::string name;
 			Type::Ptr type;
 			std::vector<std::string> scope;
+			Documentation doc;
 		};
 
-		TypeDefinition::TypeDefinition(const std::string & name, const Type::Ptr & type, const std::vector<std::string> & scope) :
+		TypeDefinition::TypeDefinition(const std::string & name, const Type::Ptr & type, const std::vector<std::string> & scope, const Documentation & doc) :
 			Type(),
-			priv(new Priv(name, type, scope))
+			priv(new Priv(name, type, scope, doc))
 		{ }
 
 		TypeDefinition::~TypeDefinition()
@@ -114,6 +115,11 @@ namespace PIDL {
 		const std::vector<std::string> & TypeDefinition::scope() const
 		{
 			return priv->scope;
+		}
+
+		const TypeDefinition::Documentation & TypeDefinition::documentation() const
+		{
+			return priv->doc;
 		}
 
 
@@ -159,9 +165,29 @@ namespace PIDL {
 		Array::Array(const Type::Ptr & type) : Generic(type), priv(nullptr) { }
 		Array::~Array() = default;
 
-		//struct Structure::Member::Priv { };
-		Structure::Member::Member(const Type::Ptr & type, const std::string & name) : Variable(type, name), priv(nullptr) { }
-		Structure::Member:: ~Member() = default;
+
+		struct Structure::Member::Priv 
+		{
+			Priv(const Documentation & doc_) : doc(doc_)
+			{ }
+
+			Documentation doc;
+		};
+
+		Structure::Member::Member(const Type::Ptr & type, const std::string & name, const Documentation & doc) : 
+			Variable(type, name), 
+			priv(new Priv(doc)) 
+		{ }
+
+		Structure::Member::~Member()
+		{
+			delete priv;
+		}
+
+		const Structure::Member::Documentation & Structure::Member::documentation() const
+		{
+			return priv->doc;
+		}
 
 
 		struct Structure::Priv
@@ -235,15 +261,32 @@ namespace PIDL {
 
 		struct Function::Argument::Priv
 		{
-			Priv(Direction direction_) : direction(direction_)
-			{ }
+			Priv(Direction direction_, const Documentation & doc_) : direction(direction_), doc(doc_)
+			{
+				if (!doc.details.count(Documentation::ArgDirection) && doc.brief.length())
+				{
+					switch (direction)
+					{
+					case Direction::In:
+						doc.details[Documentation::ArgDirection] = "in";
+						break;
+					case Direction::Out:
+						doc.details[Documentation::ArgDirection] = "out";
+						break;
+					case Direction::InOut:
+						doc.details[Documentation::ArgDirection] = "in,out";
+						break;
+					}
+				}
+			}
 
 			Direction direction;
+			Documentation doc;
 		};
 
-		Function::Argument::Argument(const Type::Ptr & type, const std::string & name, Direction direction) :
+		Function::Argument::Argument(const Type::Ptr & type, const std::string & name, Direction direction, const Documentation & doc) :
 			Variable(type, name),
-			priv(new Priv(direction))
+			priv(new Priv(direction, doc))
 		{ }
 
 		Function::Argument::~Argument()
@@ -256,23 +299,30 @@ namespace PIDL {
 			return priv->direction;
 		}
 
+		const Function::Argument::Documentation & Function::Argument::documentation() const
+		{
+			return priv->doc;
+		}
+
 
 
 		struct Function::Priv
 		{
-			Priv(const Type::Ptr & returnType_, const std::vector<std::string> & scope_, const std::string & name_, const std::vector<Argument::Ptr> & arguments_) :
+			Priv(const Type::Ptr & returnType_, const std::vector<std::string> & scope_, const std::string & name_, const std::vector<Argument::Ptr> & arguments_, const Documentation & doc_) :
 				returnType(returnType_), 
 				scope(scope_),
 				name(name_), 
-				arguments(arguments_)
+				arguments(arguments_),
+				doc(doc_)
 			{
 				buildArguments();
 			}
 
-			Priv(const Type::Ptr & returnType_, const std::vector<std::string> & scope_, const std::string & name_, const std::list<Argument::Ptr> & arguments_) :
+			Priv(const Type::Ptr & returnType_, const std::vector<std::string> & scope_, const std::string & name_, const std::list<Argument::Ptr> & arguments_, const Documentation & doc_) :
 				returnType(returnType_),
 				scope(scope_),
-				name(name_)
+				name(name_),
+				doc(doc_)
 			{
 				arguments.resize(arguments_.size());
 				std::copy(arguments_.begin(), arguments_.end(), arguments.begin());
@@ -283,6 +333,7 @@ namespace PIDL {
 			std::vector<std::string> scope;
 			std::string name;
 			std::vector<std::shared_ptr<Argument>> arguments, in_arguments, out_arguments;
+			Documentation doc;
 
 		private:
 			void buildArguments()
@@ -304,14 +355,14 @@ namespace PIDL {
 			}
 		};
 
-		Function::Function(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<Argument::Ptr> & arguments) :
+		Function::Function(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<Argument::Ptr> & arguments, const Documentation & doc) :
 			Definition(),
-			priv(new Priv(returnType, scope, name, arguments))
+			priv(new Priv(returnType, scope, name, arguments, doc))
 		{ }
 
-		Function::Function(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<Argument::Ptr> & arguments) :
+		Function::Function(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<Argument::Ptr> & arguments, const Documentation & doc) :
 			Definition(),
-			priv(new Priv(returnType, scope, name, arguments))
+			priv(new Priv(returnType, scope, name, arguments, doc))
 		{ }
 
 		Function::~Function()
@@ -349,6 +400,12 @@ namespace PIDL {
 			return priv->scope;
 		}
 
+		const Function::Documentation & Function::documentation() const
+		{
+			return priv->doc;
+		}
+
+
 
 		//struct TopLevel::Priv { };
 		TopLevel::TopLevel() : priv(nullptr) { }
@@ -362,14 +419,14 @@ namespace PIDL {
 
 		struct Interface::Priv
 		{
-			Priv(const std::string & name_, const std::vector<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_) :
-				name(name_), scope(scope_), definitions(definitions_)
+			Priv(const std::string & name_, const std::vector<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_) :
+				name(name_), scope(scope_), definitions(definitions_), doc(doc_)
 			{
 				scope.push_back(name);
 			}
 
-			Priv(const std::string & name_, const std::list<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_) :
-				name(name_), scope(scope_)
+			Priv(const std::string & name_, const std::list<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_) :
+				name(name_), scope(scope_), doc(doc_)
 			{ 
 				definitions.resize(definitions_.size());
 				std::copy(definitions_.begin(), definitions_.end(), definitions.begin());
@@ -378,16 +435,17 @@ namespace PIDL {
 			std::string name;
 			std::vector<std::string> scope;
 			std::vector<std::shared_ptr<Definition>> definitions;
+			Documentation doc;
 		};
 
-		Interface::Interface(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope) :
+		Interface::Interface(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
 			TopLevel(),
-			priv(new Priv(name, definitions, scope))
+			priv(new Priv(name, definitions, scope, doc))
 		{ }
 
-		Interface::Interface(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope) :
+		Interface::Interface(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
 			TopLevel(),
-			priv(new Priv(name, definitions, scope))
+			priv(new Priv(name, definitions, scope, doc))
 		{ }
 
 		Interface::~Interface()
@@ -410,15 +468,20 @@ namespace PIDL {
 			return priv->scope;
 		}
 
+		const Interface::Documentation & Interface::documentation() const
+		{
+			return priv->doc;
+		}
+
 
 		//struct Method::Priv { };
 
-		Method::Method(const std::shared_ptr<Type> & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<Argument::Ptr> & arguments) :
-				Function(returnType, scope, name, arguments), priv(nullptr)
+		Method::Method(const std::shared_ptr<Type> & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<Argument::Ptr> & arguments, const Documentation & doc) :
+				Function(returnType, scope, name, arguments, doc), priv(nullptr)
 		{ }
 
-		Method::Method(const std::shared_ptr<Type> & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<Argument::Ptr> & arguments) :
-						Function(returnType, scope, name, arguments), priv(nullptr)
+		Method::Method(const std::shared_ptr<Type> & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<Argument::Ptr> & arguments, const Documentation & doc) :
+						Function(returnType, scope, name, arguments, doc), priv(nullptr)
 		{ }
 
 		Method::~Method() = default;
@@ -426,18 +489,19 @@ namespace PIDL {
 
 		struct Property::Priv
 		{
-			Priv(const Type::Ptr & type_, const std::vector<std::string> & scope_, const std::string & name_, bool readOnly_) :
-				type(type_), scope(scope_), name(name_), readOnly(readOnly_)
+			Priv(const Type::Ptr & type_, const std::vector<std::string> & scope_, const std::string & name_, bool readOnly_, const Documentation & doc_) :
+				type(type_), scope(scope_), name(name_), readOnly(readOnly_), doc(doc_)
 			{ }
 
 			Type::Ptr type;
 			std::vector<std::string> scope;
 			std::string name;
 			bool readOnly;
+			Documentation doc;
 		};
 
-		Property::Property(const Type::Ptr & type, const std::vector<std::string> & scope, const std::string & name, bool readOnly) :
-				Definition(), priv(new Priv(type, scope, name, readOnly))
+		Property::Property(const Type::Ptr & type, const std::vector<std::string> & scope, const std::string & name, bool readOnly, const Documentation & doc) :
+				Definition(), priv(new Priv(type, scope, name, readOnly, doc))
 		{ }
 
 		Property::~Property()
@@ -465,15 +529,20 @@ namespace PIDL {
 			return priv->name.c_str();
 		}
 
+		const Property::Documentation & Property::documentation() const
+		{
+			return priv->doc;
+		}
+
 
 		struct Object::Priv
 		{
-			Priv(const std::string & name_, const std::vector<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_) :
-				name(name_), scope(scope_), definitions(definitions_)
+			Priv(const std::string & name_, const std::vector<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_) :
+				name(name_), scope(scope_), definitions(definitions_), doc(doc_)
 			{ }
 
-			Priv(const std::string & name_, const std::list<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_) :
-				name(name_), scope(scope_)
+			Priv(const std::string & name_, const std::list<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_) :
+				name(name_), scope(scope_), doc(doc_)
 			{
 				definitions.resize(definitions_.size());
 				std::copy(definitions_.begin(), definitions_.end(), definitions.begin());
@@ -482,16 +551,17 @@ namespace PIDL {
 			std::string name;
 			std::vector<std::string> scope;
 			std::vector<std::shared_ptr<Definition>> definitions;
+			Documentation doc;
 		};
 
-		Object::Object(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope) :
+		Object::Object(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
 			Definition(),
-			priv(new Priv(name, definitions, scope))
+			priv(new Priv(name, definitions, scope, doc))
 		{ }
 
-		Object::Object(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope) :
+		Object::Object(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
 			Definition(),
-			priv(new Priv(name, definitions, scope))
+			priv(new Priv(name, definitions, scope, doc))
 		{ }
 
 		Object::~Object()
@@ -514,20 +584,26 @@ namespace PIDL {
 			return priv->scope;
 		}
 
+		const Object::Documentation & Object::documentation() const
+		{
+			return priv->doc;
+		}
+
 
 		struct Module::Priv
 		{
-			Priv(const std::string & name_, const std::vector<TopLevel::Ptr> & elements_) :
-				name(name_), elements(elements_)
+			Priv(const std::string & name_, const std::vector<TopLevel::Ptr> & elements_, const Documentation & doc_) :
+				name(name_), elements(elements_), doc(doc_)
 			{ }
 
 			std::string name;
 			std::vector<TopLevel::Ptr> elements;
+			Documentation doc;
 		};
 
-		Module::Module(const std::string & name, const std::vector<TopLevel::Ptr> & elements) :
+		Module::Module(const std::string & name, const std::vector<TopLevel::Ptr> & elements, const Documentation & doc) :
 			TopLevel(),
-			priv(new Priv(name, elements))
+			priv(new Priv(name, elements, doc))
 		{ }
 
 		Module::~Module()
@@ -543,6 +619,11 @@ namespace PIDL {
 		const std::vector<TopLevel::Ptr> & Module::elements() const
 		{
 			return priv->elements;
+		}
+
+		const Module::Documentation & Module::documentation() const
+		{
+			return priv->doc;
 		}
 
 }}

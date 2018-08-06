@@ -181,6 +181,11 @@ namespace PIDL {
 				return _get_object<CPPCodeGenLogging, CPPCodeGenLoggingFactory_JSON>(PIDL_OBJECT_TYPE__CPP_CODEGEN_LOGGING, value, ret, ec);
 			}
 
+			bool get_object(const rapidjson::Value & value, std::shared_ptr<CPPCodeGenDocumentation> & ret, ErrorCollector & ec)
+			{
+				return _get_object<CPPCodeGenDocumentation, CPPCodeGenDocumentationFactory_JSON>(PIDL_OBJECT_TYPE__CPP_CODEGEN_DOCUMENTATION, value, ret, ec);
+			}
+
 			bool get_object(const rapidjson::Value & value, std::shared_ptr<Writer> & ret, ErrorCollector & ec)
 			{
 				return _get_object<Writer, WriterFactory_JSON>(PIDL_OBJECT_TYPE__WRITER, value, ret, ec);
@@ -204,6 +209,11 @@ namespace PIDL {
 			bool get_object(const rapidjson::Value & value, std::shared_ptr<CSCodeGenLogging> & ret, ErrorCollector & ec)
 			{
 				return _get_object<CSCodeGenLogging, CSCodeGenLoggingFactory_JSON>(PIDL_OBJECT_TYPE__CS_CODEGEN_LOGGING, value, ret, ec);
+			}
+
+			bool get_object(const rapidjson::Value & value, std::shared_ptr<CSCodeGenDocumentation> & ret, ErrorCollector & ec)
+			{
+				return _get_object<CSCodeGenDocumentation, CSCodeGenDocumentationFactory_JSON>(PIDL_OBJECT_TYPE__CS_CODEGEN_DOCUMENTATION, value, ret, ec);
 			}
 
 			template<class Operation_T>
@@ -304,36 +314,36 @@ namespace PIDL {
 				return true;
 			}
 
-			template<class Settings_T>
-			static bool get_tab_settings(const rapidjson::Value & r, Settings_T & settings, ErrorCollector & ec)
-			{
-				rapidjson::Value * v;
-				if (JSONTools::getValue(r, "tab", v))
-				{
-					if (!v->IsObject())
-					{
-						ec << "value 'tab' is not object";
-						return false;
-					}
-					std::string tab_str(settings.tabChar, 1);
-					if (!getValueOptional(*v, "char", tab_str, ec))
-						return false;
+			//template<class Settings_T>
+			//static bool get_tab_settings(const rapidjson::Value & r, Settings_T & settings, ErrorCollector & ec)
+			//{
+			//	rapidjson::Value * v;
+			//	if (JSONTools::getValue(r, "tab", v))
+			//	{
+			//		if (!v->IsObject())
+			//		{
+			//			ec << "value 'tab' is not object";
+			//			return false;
+			//		}
+			//		std::string tab_str(settings.tabChar, 1);
+			//		if (!getValueOptional(*v, "char", tab_str, ec))
+			//			return false;
 
-					if (tab_str.length() != 1)
-					{
-						ec << "invalid char definition: '" + tab_str + "'";
-						return false;
-					}
-					settings.tabChar = tab_str[0];
+			//		if (tab_str.length() != 1)
+			//		{
+			//			ec << "invalid char definition: '" + tab_str + "'";
+			//			return false;
+			//		}
+			//		settings.tabChar = tab_str[0];
 
-					long long ll_tmp = settings.tabLength;
-					if (getValue(*v, "length", ll_tmp, ec))
-						return false;
-					settings.tabLength = (short)ll_tmp;
-				}
+			//		long long ll_tmp = settings.tabLength;
+			//		if (getValue(*v, "length", ll_tmp, ec))
+			//			return false;
+			//		settings.tabLength = (short)ll_tmp;
+			//	}
 
-				return true;
-			}
+			//	return true;
+			//}
 
 		};
 
@@ -551,16 +561,16 @@ namespace PIDL {
 			}
 		};
 
-		class CPPBasicCodegenHelperFactory : public CPPCodeGenHelperFactory_JSON
+		class CPPBasicCodeGenHelperFactory : public CPPCodeGenHelperFactory_JSON
 		{
 			Context ctx;
 		public:
-			CPPBasicCodegenHelperFactory(const Context & ctx_) :
+			CPPBasicCodeGenHelperFactory(const Context & ctx_) :
 				CPPCodeGenHelperFactory_JSON(),
 				ctx(ctx_)
 			{ }
 
-			virtual ~CPPBasicCodegenHelperFactory() = default;
+			virtual ~CPPBasicCodeGenHelperFactory() = default;
 
 			virtual bool build(const rapidjson::Value & r, std::shared_ptr<CPPCodeGenHelper> & ret, ErrorCollector & ec) override
 			{
@@ -590,7 +600,7 @@ namespace PIDL {
 						return false;
 				}
 
-				ret = std::make_shared<CPPBasicCodegenHelper>(includes);
+				ret = std::make_shared<CPPBasicCodeGenHelper>(includes);
 
 				return true;
 			}
@@ -605,16 +615,51 @@ namespace PIDL {
 			}
 		};
 
-		class CSBasicCodegenHelperFactory : public CSCodeGenHelperFactory_JSON
+		class CPPBasicDocumentationFactory : public CPPCodeGenDocumentationFactory_JSON
 		{
 			Context ctx;
 		public:
-			CSBasicCodegenHelperFactory(const Context & ctx_) :
+			CPPBasicDocumentationFactory(const Context & ctx_) :
+				CPPCodeGenDocumentationFactory_JSON(),
+				ctx(ctx_)
+			{ }
+
+			virtual ~CPPBasicDocumentationFactory() = default;
+
+			virtual bool build(const rapidjson::Value & r, std::shared_ptr<CPPCodeGenDocumentation> & ret, ErrorCollector & ec) override
+			{
+				if (!isValid(r))
+				{
+					ec.add(-1, std::string() + "unexpected: json object is invalid");
+					return false;
+				}
+
+				ret = std::make_shared<CPPBasicDocumentation>();
+
+				return true;
+			}
+
+			virtual bool isValid(const rapidjson::Value & value) const override
+			{
+				std::string type_str;
+				if (!value.IsObject() || !JSONTools::getValue(value, "type", type_str))
+					return false;
+
+				return type_str == "basic";
+			}
+
+		};
+
+		class CSBasicCodeGenHelperFactory : public CSCodeGenHelperFactory_JSON
+		{
+			Context ctx;
+		public:
+			CSBasicCodeGenHelperFactory(const Context & ctx_) :
 				CSCodeGenHelperFactory_JSON(),
 				ctx(ctx_)
 			{ }
 
-			virtual ~CSBasicCodegenHelperFactory() = default;
+			virtual ~CSBasicCodeGenHelperFactory() = default;
 
 			virtual bool build(const rapidjson::Value & r, std::shared_ptr<CSCodeGenHelper> & ret, ErrorCollector & ec) override
 			{
@@ -624,7 +669,7 @@ namespace PIDL {
 					return false;
 				}
 
-				ret = std::make_shared<CSBasicCodegenHelper>();
+				ret = std::make_shared<CSBasicCodeGenHelper>();
 
 				return true;
 			}
@@ -637,6 +682,76 @@ namespace PIDL {
 
 				return type_str == "basic";
 			}
+		};
+
+		class CSBasicDocumentationFactory : public CSCodeGenDocumentationFactory_JSON
+		{
+			Context ctx;
+		public:
+			CSBasicDocumentationFactory(const Context & ctx_) :
+				CSCodeGenDocumentationFactory_JSON(),
+				ctx(ctx_)
+			{ }
+
+			virtual ~CSBasicDocumentationFactory() = default;
+
+			virtual bool build(const rapidjson::Value & r, std::shared_ptr<CSCodeGenDocumentation> & ret, ErrorCollector & ec) override
+			{
+				if (!isValid(r))
+				{
+					ec.add(-1, std::string() + "unexpected: json object is invalid");
+					return false;
+				}
+
+				ret = std::make_shared<CSBasicDocumentation>();
+
+				return true;
+			}
+
+			virtual bool isValid(const rapidjson::Value & value) const override
+			{
+				std::string type_str;
+				if (!value.IsObject() || !JSONTools::getValue(value, "type", type_str))
+					return false;
+
+				return type_str == "basic";
+			}
+
+		};
+
+		class CSdotNetDocumentationFactory : public CSCodeGenDocumentationFactory_JSON
+		{
+			Context ctx;
+		public:
+			CSdotNetDocumentationFactory(const Context & ctx_) :
+				CSCodeGenDocumentationFactory_JSON(),
+				ctx(ctx_)
+			{ }
+
+			virtual ~CSdotNetDocumentationFactory() = default;
+
+			virtual bool build(const rapidjson::Value & r, std::shared_ptr<CSCodeGenDocumentation> & ret, ErrorCollector & ec) override
+			{
+				if (!isValid(r))
+				{
+					ec.add(-1, std::string() + "unexpected: json object is invalid");
+					return false;
+				}
+
+				ret = std::make_shared<CSdotNetDocumentation>();
+
+				return true;
+			}
+
+			virtual bool isValid(const rapidjson::Value & value) const override
+			{
+				std::string type_str;
+				if (!value.IsObject() || !JSONTools::getValue(value, "type", type_str))
+					return false;
+
+				return type_str == "dotnet";
+			}
+
 		};
 
 		class JSON_STL_CodeGenFactory : public CPPCodeGenFactory_JSON
@@ -666,7 +781,7 @@ namespace PIDL {
 						return false;
 				}
 				else
-					helper = std::make_shared<CPPBasicCodegenHelper>();
+					helper = std::make_shared<CPPBasicCodeGenHelper>();
 
 				ret = std::make_shared<JSON_STL_CodeGen>(helper);
 
@@ -710,7 +825,7 @@ namespace PIDL {
 						return false;
 				}
 				else
-					helper = std::make_shared<CSBasicCodegenHelper>();
+					helper = std::make_shared<CSBasicCodeGenHelper>();
 
 				ret = std::make_shared<JSON_CSCodeGen>(helper);
 
@@ -736,10 +851,8 @@ namespace PIDL {
 			public:
 				struct Settings
 				{
-					char tabChar = '\t';
-					short tabLength = 1;
-
 					std::shared_ptr<CPPCodeGenLogging> logging;
+					std::shared_ptr<CPPCodeGenDocumentation> documentation;
 					std::vector<Include> includes;
 					Include coreIncludePath = { IncludeType::GLobal, "pidlCore" };
 
@@ -752,15 +865,14 @@ namespace PIDL {
 
 				virtual ~CustomCPPHelper() = default;
 
-				virtual short tabDefinition(char & ch) const override
-				{
-					ch = settings.tabChar;
-					return settings.tabLength;
-				}
-
 				virtual std::shared_ptr<CPPCodeGenLogging> logging() const override
 				{
 					return settings.logging;
+				}
+
+				virtual std::shared_ptr<CPPCodeGenDocumentation> documentation() const override
+				{
+					return settings.documentation;
 				}
 
 				virtual std::vector<Include> includes() const override
@@ -806,8 +918,8 @@ namespace PIDL {
 
 				CustomCPPHelper::Settings settings;
 
-				if (!ctx.get_tab_settings(r, settings, ec))
-					return false;
+				//if (!ctx.get_tab_settings(r, settings, ec))
+				//	return false;
 
 				rapidjson::Value * v;
 
@@ -818,6 +930,14 @@ namespace PIDL {
 				}
 				else
 					settings.logging = std::make_shared<CPPVoidLogging>();
+
+				if (JSONTools::getValue(r, "documentation", v))
+				{
+					if (!ctx.get_object(*v, settings.documentation, ec))
+						return false;
+				}
+				else
+					settings.documentation = std::make_shared<CPPVoidDocumentation>();
 
 				if (JSONTools::getValue(r, "includes", v))
 				{
@@ -879,10 +999,8 @@ namespace PIDL {
 			public:
 				struct Settings
 				{
-					char tabChar = '\t';
-					short tabLength = 1;
-
 					std::shared_ptr<CSCodeGenLogging> logging;
+					std::shared_ptr<CSCodeGenDocumentation> documentation;
 
 					std::string moduleSuffix;
 					std::string interfaceSuffix;
@@ -893,15 +1011,14 @@ namespace PIDL {
 
 				virtual ~CustomCSHelper() = default;
 
-				virtual short tabDefinition(char & ch) const override
-				{
-					ch = settings.tabChar;
-					return settings.tabLength;
-				}
-
 				virtual std::shared_ptr<CSCodeGenLogging> logging() const override
 				{
 					return settings.logging;
+				}
+
+				virtual std::shared_ptr<CSCodeGenDocumentation> documentation() const override
+				{
+					return settings.documentation;
 				}
 
 				virtual std::string getName(const Language::TopLevel * t) const
@@ -937,8 +1054,8 @@ namespace PIDL {
 
 				CustomCSHelper::Settings settings;
 
-				if (!ctx.get_tab_settings(r, settings, ec))
-					return false;
+				//if (!ctx.get_tab_settings(r, settings, ec))
+				//	return false;
 
 				rapidjson::Value * v;
 
@@ -949,6 +1066,14 @@ namespace PIDL {
 				}
 				else
 					settings.logging = std::make_shared<CSVoidLogging>();
+
+				if (JSONTools::getValue(r, "documentation", v))
+				{
+					if (!ctx.get_object(*v, settings.documentation, ec))
+						return false;
+				}
+				else
+					settings.documentation = std::make_shared<CSVoidDocumentation>();
 
 				if (!ctx.getValueOptional(r, "moduleSuffix", settings.moduleSuffix, ec))
 					return false;
@@ -1244,6 +1369,7 @@ namespace PIDL {
 				return value.HasMember("message");
 			}
 		};
+
 	}
 
 	//static
@@ -1257,8 +1383,11 @@ namespace PIDL {
 		ret->add(std::make_shared<Factories_JSON::CSWriterFactory>(ctx));
 		ret->add(std::make_shared<Factories_JSON::JSONReaderFactory>(ctx));
 		ret->add(std::make_shared<Factories_JSON::XMLReaderFactory>(ctx));
-		ret->add(std::make_shared<Factories_JSON::CPPBasicCodegenHelperFactory>(ctx));
-		ret->add(std::make_shared<Factories_JSON::CSBasicCodegenHelperFactory>(ctx));
+		ret->add(std::make_shared<Factories_JSON::CPPBasicCodeGenHelperFactory>(ctx));
+		ret->add(std::make_shared<Factories_JSON::CPPBasicDocumentationFactory>(ctx));
+		ret->add(std::make_shared<Factories_JSON::CSBasicCodeGenHelperFactory>(ctx));
+		ret->add(std::make_shared<Factories_JSON::CSBasicDocumentationFactory>(ctx));
+		ret->add(std::make_shared<Factories_JSON::CSdotNetDocumentationFactory>(ctx));
 		ret->add(std::make_shared<Factories_JSON::JSON_STL_CodeGenFactory>(ctx));
 		ret->add(std::make_shared<Factories_JSON::JSON_CSCodeGenFactory>(ctx));
 		ret->add(std::make_shared<Factories_JSON::CustomCPPHelperFactory>(ctx));

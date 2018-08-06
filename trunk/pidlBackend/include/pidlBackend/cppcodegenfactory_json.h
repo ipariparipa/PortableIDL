@@ -40,6 +40,16 @@ namespace PIDL {
 		virtual bool build(const rapidjson::Value & value, std::shared_ptr<CPPCodeGenLogging> & ret, ErrorCollector & ec) = 0;
 	};
 
+	class PIDL_BACKEND__CLASS CPPCodeGenDocumentationFactory_JSON : public ObjectFactory_JSON
+	{
+	public:
+		virtual ~CPPCodeGenDocumentationFactory_JSON() = default;
+
+		virtual const char * objectType() const override { return PIDL_OBJECT_TYPE__CPP_CODEGEN_DOCUMENTATION; }
+
+		virtual bool build(const rapidjson::Value & value, std::shared_ptr<CPPCodeGenDocumentation> & ret, ErrorCollector & ec) = 0;
+	};
+
 	class PIDL_BACKEND__CLASS CPPCodeGenHelperFactory_JSON : public ObjectFactory_JSON
 	{
 	public:

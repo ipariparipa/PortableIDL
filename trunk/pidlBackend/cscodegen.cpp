@@ -19,26 +19,39 @@
 #include "include/pidlBackend/language.h"
 
 #include <assert.h>
+#include <sstream>
+#include <algorithm>
 
 namespace PIDL {
 
 	struct CSCodeGenContext::Priv
 	{
-		Priv(std::ostream & o_, Role role_) :
+		Priv(short tab_length_, char tab_char_, std::ostream & o_, Role role_) :
 			o(o_),
-			role(role_)
+			role(role_),
+			tab_length(tab_length_),
+			tab_char(tab_char_)
 		{ }
 
 		std::ostream & o;
 		Role role;
+
+		short tab_length;
+		char tab_char;
 	};
 
-	CSCodeGenContext::CSCodeGenContext(std::ostream & o, Role role) : priv(new Priv(o, role))
+	CSCodeGenContext::CSCodeGenContext(short tab_length, char tab_char, std::ostream & o, Role role) : 
+		priv(new Priv(tab_length, tab_char, o, role))
 	{ }
 
 	CSCodeGenContext::~CSCodeGenContext()
 	{
 		delete priv;
+	}
+
+	std::ostream & CSCodeGenContext::operator * () const
+	{
+		return priv->o;
 	}
 
 	std::ostream & CSCodeGenContext::stream() const
@@ -49,6 +62,13 @@ namespace PIDL {
 	CSCodeGenContext::Role CSCodeGenContext::role() const
 	{
 		return priv->role;
+	}
+
+	std::ostream & CSCodeGenContext::writeTabs(short code_deepness)
+	{
+		for (short i = 0, l = code_deepness * priv->tab_length; i < l; ++i)
+			priv->o << priv->tab_char;
+		return priv->o;
 	}
 
 
@@ -74,59 +94,254 @@ namespace PIDL {
 	std::string CSVoidLogging::loggingFatal(const std::string & logger, const std::string & message) const { return std::string(); }
 
 
+	//struct CSCodeGenDocumentation::Priv { };
+	CSCodeGenDocumentation::CSCodeGenDocumentation() : priv(nullptr) { }
+	CSCodeGenDocumentation::~CSCodeGenDocumentation() = default;
+
+
+	//struct CSVoidDocumentation::Priv { };
+	CSVoidDocumentation::CSVoidDocumentation() : priv(nullptr) { }
+	CSVoidDocumentation::~CSVoidDocumentation() = default;
+
+	bool CSVoidDocumentation::write(short code_deepness, CSCodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec)
+	{
+		return true;
+	}
+
+
+	//struct CPPBasicDocumentation::Priv { };
+	CSBasicDocumentation::CSBasicDocumentation() : priv(nullptr) { }
+	CSBasicDocumentation::~CSBasicDocumentation() = default;
+
+	bool CSBasicDocumentation::write(short code_deepness, CSCodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec)
+	{
+		auto & doc = docprov->documentation();
+
+		if (!doc.brief.length() && !doc.details.size())
+			return true;
+
+		auto split = [](const std::string & src, char delimeter) -> std::list<std::string>
+		{
+			std::stringstream ss(src);
+			std::string item;
+			std::list<std::string> splittedStrings;
+			while (std::getline(ss, item, delimeter))
+				splittedStrings.push_back(item);
+			return splittedStrings;
+		};
+
+		auto join = [](const std::list<std::string> & src, char delimeter) -> std::string
+		{
+			std::stringstream ss;
+			bool is_first = true;
+			for (auto & s : src)
+			{
+				if (is_first)
+					is_first = false;
+				else if (delimeter)
+					ss << delimeter;
+				ss << s;
+			}
+			return ss.str();
+		};
+
+		auto writeLines = [&](const std::string & title, std::list<std::string> & lines)
+		{
+			if (title.length())
+				ctx->writeTabs(code_deepness) << " * " << title << std::endl;
+			for (auto & l : lines)
+				ctx->writeTabs(code_deepness) << " * " << join(split(l, '\r'), '\0') << std::endl;
+		};
+
+		switch (place)
+		{
+		case Place::Before:
+			if (!dynamic_cast<Language::Function::Argument*>(docprov))
+			{
+				ctx->writeTabs(code_deepness) << std::endl << "/*" << std::endl;
+
+				if (doc.brief.size())
+					writeLines(std::string(), split(doc.brief, '\n'));
+
+				if (doc.details.count(Language::DocumentationProvider::Documentation::Description))
+					writeLines("Description:", split(docprov->documentation().details.at(Language::DocumentationProvider::Documentation::Description), '\n'));
+
+				if (dynamic_cast<Language::Function*>(docprov) &&
+					doc.details.count(Language::DocumentationProvider::Documentation::Return))
+					writeLines("Return:", split(docprov->documentation().details.at(Language::DocumentationProvider::Documentation::Description), '\n'));
+
+				ctx->writeTabs(code_deepness) << " */" << std::endl;
+			}
+			break;
+		case Place::After:
+			if (dynamic_cast<Language::Function::Argument*>(docprov))
+			{
+				*ctx << " // ";
+				if (doc.details.count(doc.ArgDirection))
+					*ctx << "[" << doc.details.at(doc.ArgDirection) << "] ";
+				*ctx << doc.brief << std::endl;
+				ctx->writeTabs(code_deepness + 1);
+			}
+			break;
+		}
+
+		return true;
+	}
+
+	//struct CSdotNetDocumentation::Priv { };
+	CSdotNetDocumentation::CSdotNetDocumentation() : priv(nullptr) { }
+	CSdotNetDocumentation::~CSdotNetDocumentation() = default;
+
+	bool CSdotNetDocumentation::write(short code_deepness, CSCodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec)
+	{
+		auto & doc = docprov->documentation();
+
+		if (!doc.brief.length() && !doc.details.size())
+			return true;
+
+		auto split = [](const std::string & src, char delimeter) -> std::list<std::string>
+		{
+			std::stringstream ss(src);
+			std::string item;
+			std::list<std::string> splittedStrings;
+			while (std::getline(ss, item, delimeter))
+				splittedStrings.push_back(item);
+			return splittedStrings;
+		};
+
+		auto join = [](const std::list<std::string> & src, char delimeter) -> std::string
+		{
+			std::stringstream ss;
+			bool is_first = true;
+			for (auto & s : src)
+			{
+				if (is_first)
+					is_first = false;
+				else if (delimeter)
+					ss << delimeter;
+				ss << s;
+			}
+			return ss.str();
+		};
+
+		auto writeLines = [&](std::list<std::string> & lines)
+		{
+			for (auto & l : lines)
+				ctx->writeTabs(code_deepness) << "/// " << join(split(l, '\r'), '\0') << std::endl;
+		};
+
+		switch (place)
+		{
+		case Place::Before:
+			if (!dynamic_cast<Language::Function::Argument*>(docprov))
+			{
+				**ctx << std::endl;
+
+				if (doc.brief.length())
+				{
+					ctx->writeTabs(code_deepness) << "/// <summary>" << std::endl;
+					writeLines(split(doc.brief, '\n'));
+					ctx->writeTabs(code_deepness) << "/// </summary>" << std::endl;
+				}
+
+				if (doc.details.count(Language::DocumentationProvider::Documentation::Description))
+				{
+					ctx->writeTabs(code_deepness) << "/// <remarks>" << std::endl;
+					writeLines(split(docprov->documentation().details.at(Language::DocumentationProvider::Documentation::Description), '\n'));
+					ctx->writeTabs(code_deepness) << "/// </remarks>" << std::endl;
+				}
+
+				if (dynamic_cast<Language::Function*>(docprov))
+				{
+					if (doc.details.count(Language::DocumentationProvider::Documentation::Return))
+					{
+						ctx->writeTabs(code_deepness) << "/// <returns>" << std::endl;
+						writeLines(split(docprov->documentation().details.at(Language::DocumentationProvider::Documentation::Description), '\n'));
+						ctx->writeTabs(code_deepness) << "/// </returns>" << std::endl;
+					}
+
+					for (auto & arg : dynamic_cast<Language::Function*>(docprov)->arguments())
+					{
+						if (arg->documentation().brief.find("\n") == -1)
+						{
+							ctx->writeTabs(code_deepness) << "/// <param name=\"" << arg->name() << "\">";
+							*ctx << arg->documentation().brief;
+							*ctx << "</param>" << std::endl;
+						}
+						else
+						{
+							ctx->writeTabs(code_deepness) << "/// <param name=\"" << arg->name() << "\">" << std::endl;
+							writeLines(split(arg->documentation().brief, '\n'));
+							ctx->writeTabs(code_deepness) << "/// </param>" << std::endl;
+						}
+					}
+				}
+
+			}
+			break;
+		case Place::After:
+			break;
+		}
+
+		return true;
+	}
+
 	CSCodeGenHelper::CSCodeGenHelper() : priv(nullptr)
 	{ }
 
 	CSCodeGenHelper::~CSCodeGenHelper() = default;
 
 
-	struct CSBasicCodegenHelper::Priv
+	struct CSBasicCodeGenHelper::Priv
 	{
 		Priv() :
-			logging(std::make_shared<CSVoidLogging>())
+			logging(std::make_shared<CSVoidLogging>()),
+			documentation(std::make_shared<CSVoidDocumentation>())
 		{ }
 
 		std::shared_ptr<CSCodeGenLogging> logging;
+		std::shared_ptr<CSCodeGenDocumentation> documentation;
 	};
 
-	CSBasicCodegenHelper::CSBasicCodegenHelper() : CSCodeGenHelper(), priv(new Priv())
+	CSBasicCodeGenHelper::CSBasicCodeGenHelper() : CSCodeGenHelper(), priv(new Priv())
 	{ }
 
-	CSBasicCodegenHelper::~CSBasicCodegenHelper()
+	CSBasicCodeGenHelper::~CSBasicCodeGenHelper()
 	{
 		delete priv;
 	}
 
-	std::string CSBasicCodegenHelper::getName(const Language::TopLevel * t) const
+	std::string CSBasicCodeGenHelper::getName(const Language::TopLevel * t) const
 	{
 		return t->name();
 	}
 
-	short CSBasicCodegenHelper::tabDefinition(char & ch) const
-	{
-		ch = '\t';
-		return 1;
-	}
-
-	std::shared_ptr<CSCodeGenLogging> CSBasicCodegenHelper::logging() const
+	std::shared_ptr<CSCodeGenLogging> CSBasicCodeGenHelper::logging() const
 	{
 		return priv->logging;
 	}
 
+	std::shared_ptr<CSCodeGenDocumentation> CSBasicCodeGenHelper::documentation() const
+	{
+		return priv->documentation;
+	}
+
 	struct CSCodeGen::Priv
 	{
-		Priv(CSCodeGen * obj_) :
-			obj(obj_)
+		Priv(CSCodeGen * that_) :
+			that(that_)
 		{ }
 
-		CSCodeGen * obj;
+		CSCodeGen * that;
 
-		std::ostream & writeTabs(short code_deepness, CSCodeGenContext * ctx) const
+		CSCodeGenHelper * helper() const
 		{
-			char ch;
-			for (short i = 0, l = code_deepness * obj->helper()->tabDefinition(ch); i < l; ++i)
-				*ctx << ch;
-			return ctx->stream();
+			return that->helper();
+		}
+
+		bool writeDocumentation(short code_deepness, CSCodeGenContext * ctx, CSCodeGenDocumentation::Place place, Language::DocumentationProvider *docprov, ErrorCollector & ec)
+		{
+			return that->helper()->documentation()->write(code_deepness, ctx, place, docprov, ec);
 		}
 
 		bool writeStructureBody(short code_deepness, CSCodeGenContext * ctx, Language::Structure * structure, ErrorCollector & ec)
@@ -134,10 +349,15 @@ namespace PIDL {
 			auto & o = ctx->stream();
 			for (auto & member : structure->members())
 			{
-				writeTabs(code_deepness, ctx) << "public ";
+				if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::Before, member.get(), ec))
+					return false;
+				ctx->writeTabs(code_deepness) << "public ";
 				if (!addType(code_deepness, ctx, member->type().get(), ec))
 					return false;
-				o << " " << member->name() << ";" << std::endl;
+				o << " " << member->name() << ";";
+				if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::After, member.get(), ec))
+					return false;
+				o << std::endl;
 			}
 
 			return true;
@@ -145,19 +365,20 @@ namespace PIDL {
 
 		bool writeStructure(short code_deepness, CSCodeGenContext * ctx, Language::TypeDefinition * structure, ErrorCollector & ec)
 		{
-			auto & o = writeTabs(code_deepness, ctx);
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::Before, structure, ec))
+				return false;
 			switch (ctx->role())
 			{
 			case CSCodeGenContext::Role::Client:
-				 o << "public ";
+				 ctx->writeTabs(code_deepness) << "public ";
 				 break;
 			case CSCodeGenContext::Role::Server:
-				o << "protected ";
+				ctx->writeTabs(code_deepness) << "protected ";
 				break;
 			}
-			o << "struct " << structure->name() << std::endl;
+			*ctx << "struct " << structure->name() << std::endl;
 
-			writeTabs(code_deepness++, ctx) << "{" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
 
 			auto struct_type = dynamic_cast<Language::Structure*>(structure->type()->finalType().get());
 			assert(struct_type);
@@ -165,7 +386,10 @@ namespace PIDL {
 			if (!writeStructureBody(code_deepness, ctx, struct_type, ec))
 				return false;
 
-			writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+			ctx->writeTabs(--code_deepness) << "}" << std::endl;
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::After, structure, ec))
+				return false;
+			**ctx << std::endl;
 
 			return true;
 		}
@@ -173,12 +397,12 @@ namespace PIDL {
 		bool addStructure(short code_deepness, CSCodeGenContext * ctx, Language::Structure * structure, ErrorCollector & ec)
 		{
 			*ctx << "struct " << std::endl;
-			writeTabs(code_deepness++, ctx) << "{" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
 
 			if (!writeStructureBody(code_deepness, ctx, structure, ec))
 				return false;
 
-			writeTabs(--code_deepness, ctx) << "}";
+			ctx->writeTabs(--code_deepness) << "}";
 
 			return true;
 		}
@@ -285,173 +509,199 @@ namespace PIDL {
 
 		bool writeFunction(short code_deepness, CSCodeGenContext * ctx, Language::Function * function, ErrorCollector & ec)
 		{
-			auto & o = writeTabs(code_deepness, ctx);
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::Before, function, ec))
+				return false;
 
 			switch (ctx->role())
 			{
 			case CSCodeGenContext::Role::Client:
-				o << "public " ;
+				ctx->writeTabs(code_deepness) << "public " ;
 				break;
 			case CSCodeGenContext::Role::Server:
-				o << "protected abstract ";
+				ctx->writeTabs(code_deepness) << "protected abstract ";
 				break;
 			}
 
 			if (!addType(code_deepness, ctx, function->returnType().get(), ec))
 				return false;
 
-			o << " " << function->name() << "(";
+			*ctx << " " << function->name() << "(";
 
 			bool is_first_arg = true;
 			for (auto & arg : function->arguments())
 			{
 				if (!is_first_arg)
-					o << ", ";
+					*ctx << ", ";
 				is_first_arg = false;
+
+				if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::Before, arg.get(), ec))
+					return false;
+
 				switch (arg->direction())
 				{
 				case Language::Function::Argument::Direction::In:
 					addType(code_deepness, ctx, arg->type().get(), ec);
-					o << " " << arg->name();
+					*ctx << " " << arg->name();
 					break;
 				case Language::Function::Argument::Direction::InOut:
-					o << "ref ";
+					*ctx << "ref ";
 					addType(code_deepness, ctx, arg->type().get(), ec);
-					o << " " << arg->name();
+					*ctx << " " << arg->name();
 					break;
 				case Language::Function::Argument::Direction::Out:
-					o << "out ";
+					*ctx << "out ";
 					addType(code_deepness, ctx, arg->type().get(), ec);
-					o << " " << arg->name();
+					*ctx << " " << arg->name();
 					break;
 				}
+
+				if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::After, arg.get(), ec))
+					return false;
 			}
-			o << ")";
+			*ctx << ")";
 
 			switch (ctx->role())
 			{
 			case CSCodeGenContext::Role::Client:
-				o << std::endl;
-				writeTabs(code_deepness++, ctx) << "{" << std::endl;
+				**ctx << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 
-				if (!obj->writeFunctionBody(function, code_deepness, ctx, ec))
+				if (!that->writeFunctionBody(function, code_deepness, ctx, ec))
 					return false;
 
-				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				break;
 			case CSCodeGenContext::Role::Server:
-				o << ";" << std::endl;
+				*ctx << ";";
 				break;
 			}
+
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::After, function, ec))
+				return false;
+
+			**ctx << std::endl;
 
 			return true;
 		}
 
 		bool writeProperty(short code_deepness, CSCodeGenContext * ctx, Language::Property * property, ErrorCollector & ec)
 		{
-			auto & o = writeTabs(code_deepness, ctx);
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::Before, property, ec))
+				return false;
 
 			switch (ctx->role())
 			{
 			case CSCodeGenContext::Role::Client:
-				o << "public ";
+				ctx->writeTabs(code_deepness) << "public ";
 				if (!addType(code_deepness, ctx, property->type().get(), ec))
 					return false;
-				o << " " << property->name() << std::endl;
-				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				writeTabs(code_deepness, ctx) << "get" << std::endl;
-				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				if (!obj->writePropertyGetterBody(property, code_deepness, ctx, ec))
+				*ctx << " " << property->name() << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "get" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				if (!that->writePropertyGetterBody(property, code_deepness, ctx, ec))
 					return false;
-				writeTabs(--code_deepness, ctx) << "}" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				if (!property->readOnly())
 				{
-					writeTabs(code_deepness, ctx) << "set" << std::endl;
-					writeTabs(code_deepness++, ctx) << "{" << std::endl;
-					if (!obj->writePropertySetterBody(property, code_deepness, ctx, ec))
+					ctx->writeTabs(code_deepness) << "set" << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					if (!that->writePropertySetterBody(property, code_deepness, ctx, ec))
 						return false;
-					writeTabs(--code_deepness, ctx) << "}" << std::endl;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				}
-				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				break;
 			case CSCodeGenContext::Role::Server:
-				o << "protected abstract ";
+				ctx->writeTabs(code_deepness) << "protected abstract ";
 				if (!addType(code_deepness, ctx, property->type().get(), ec))
 					return false;
-				o << " " << property->name() << " { get; ";
+				*ctx << " " << property->name() << " { get; ";
 				if (!property->readOnly())
-					o << "set;";
-				o << "}";
+					*ctx << "set;";
+				*ctx << "}";
 				break;
 			}
+
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::After, property, ec))
+				return false;
+
+			**ctx << std::endl;
 
 			return true;
 		}
 		bool writeObject(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, Language::Object * object, ErrorCollector & ec)
 		{
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::Before, intf, ec))
+				return false;
 			switch (ctx->role())
 			{
 			case Role::Client:
-				writeTabs(code_deepness, ctx) << "public class " << object->name() << " : _IObject" << std::endl;
-				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				writeTabs(code_deepness, ctx) << intf->name() << " _intf;" << std::endl;
+				ctx->writeTabs(code_deepness) << "public class " << object->name() << " : _IObject" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << intf->name() << " _intf;" << std::endl;
 
-				writeTabs(code_deepness, ctx) << "public string _id { get; private set; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "public string _id { get; private set; }" << std::endl;
 
-				if (!obj->writeMembers(code_deepness, ctx, object, ec))
+				if (!that->writeMembers(code_deepness, ctx, object, ec))
 					return false;
 
-				writeTabs(code_deepness, ctx) << "public " << object->name() << "(" << intf->name() << " intf, string id)" << std::endl;
+				ctx->writeTabs(code_deepness) << "public " << object->name() << "(" << intf->name() << " intf, string id)" << std::endl;
 
-				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				writeTabs(code_deepness, ctx) << "_intf = intf;" << std::endl;
-				writeTabs(code_deepness, ctx) << "_id = id;" << std::endl;
-				if (!obj->writeConstructorBody(object, code_deepness, ctx, ec))
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "_intf = intf;" << std::endl;
+				ctx->writeTabs(code_deepness) << "_id = id;" << std::endl;
+				if (!that->writeConstructorBody(object, code_deepness, ctx, ec))
 					return false;
-				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
-				writeTabs(code_deepness, ctx) << "~" << object->name() << "()" << std::endl;
-				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				if (!obj->writeDestructorBody(object, code_deepness, ctx, ec))
+				ctx->writeTabs(code_deepness) << "~" << object->name() << "()" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				if (!that->writeDestructorBody(object, code_deepness, ctx, ec))
 					return false;
-				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
 				if (!writeDefinitions(code_deepness, ctx, object, ec))
 					return false;
 
-				if (!obj->writeInvoke(code_deepness, ctx, object, ec))
+				if (!that->writeInvoke(code_deepness, ctx, object, ec))
 					return false;
 
-				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				break;
 			case Role::Server:
-				writeTabs(code_deepness, ctx) << "public abstract class " << object->name() << " : _IObject" << std::endl;
-				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				writeTabs(code_deepness, ctx) << intf->name() << " _intf;" << std::endl;
-				writeTabs(code_deepness, ctx) << "public string _id { get; private set; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "public abstract class " << object->name() << " : _IObject" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << intf->name() << " _intf;" << std::endl;
+				ctx->writeTabs(code_deepness) << "public string _id { get; private set; }" << std::endl;
 
-				if (!obj->writeMembers(code_deepness, ctx, object, ec))
+				if (!that->writeMembers(code_deepness, ctx, object, ec))
 					return false;
 
-				writeTabs(code_deepness, ctx) << "public " << object->name() << "(" << intf->name() << " intf, string id)" << std::endl;
+				ctx->writeTabs(code_deepness) << "public " << object->name() << "(" << intf->name() << " intf, string id)" << std::endl;
 
-				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				writeTabs(code_deepness, ctx) << "_intf = intf;" << std::endl;
-				writeTabs(code_deepness, ctx) << "_id = id;" << std::endl;
-				if (!obj->writeConstructorBody(object, code_deepness, ctx, ec))
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "_intf = intf;" << std::endl;
+				ctx->writeTabs(code_deepness) << "_id = id;" << std::endl;
+				if (!that->writeConstructorBody(object, code_deepness, ctx, ec))
 					return false;
-				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
 				if (!writeDefinitions(code_deepness, ctx, object, ec))
 					return false;
 
-				if (!obj->writeInvoke(code_deepness, ctx, object, ec))
+				if (!that->writeInvoke(code_deepness, ctx, object, ec))
 					return false;
 
-				writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				break;
 			}
-			//TODO
+
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::After, intf, ec))
+				return false;
+
+			**ctx << std::endl;
+
 			return true;
 		}
 
@@ -495,17 +745,17 @@ namespace PIDL {
 			switch (ctx->role())
 			{
 			case Role::Client:
-				writeTabs(code_deepness, ctx) << "public interface _IObject" << std::endl;
-				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				writeTabs(code_deepness, ctx) << "string _id { get; }" << std::endl;
-				writeTabs(--code_deepness, ctx) << "}" << std::endl;
+				ctx->writeTabs(code_deepness) << "public interface _IObject" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "string _id { get; }" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				break;
 			case Role::Server:
-				writeTabs(code_deepness, ctx) << "protected interface _IObject" << std::endl;
-				writeTabs(code_deepness++, ctx) << "{" << std::endl;
-				writeTabs(code_deepness, ctx) << "string _id { get; }" << std::endl;
-				writeTabs(code_deepness, ctx) << "_InvokeStatus _invoke(XElement root, out XElement ret, PIDL.IPIDLErrorCollector ec);" << std::endl;
-				writeTabs(--code_deepness, ctx) << "}" << std::endl;
+				ctx->writeTabs(code_deepness) << "protected interface _IObject" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "string _id { get; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "_InvokeStatus _invoke(XElement root, out XElement ret, PIDL.IPIDLErrorCollector ec);" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				break;
 			}
 
@@ -548,41 +798,56 @@ namespace PIDL {
 
 		bool writeInterface(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 		{
-			writeTabs(code_deepness, ctx) << "abstract class " << obj->helper()->getName(intf) << std::endl;
-			writeTabs(code_deepness++, ctx) << "{" << std::endl;
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::Before, intf, ec))
+				return false;
+			ctx->writeTabs(code_deepness) << "abstract class " << helper()->getName(intf) << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
 
-			if (!obj->writeMembers(code_deepness, ctx, intf, ec) ||
+			if (!that->writeMembers(code_deepness, ctx, intf, ec) ||
 				!writeConstructor(code_deepness, ctx, intf, ec) ||
 				!writeDefinitions(code_deepness, ctx, intf, ec) ||
-				!obj->writeInvoke(code_deepness, ctx, intf, ec))
+				!that->writeInvoke(code_deepness, ctx, intf, ec))
 				return false;
 
-			writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+			ctx->writeTabs(--code_deepness) << "}" << std::endl;
+
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::After, intf, ec))
+				return false;
+
+			**ctx << std::endl;
 
 			return true;
 		}
 
 		bool writeConstructor(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 		{
-			writeTabs(code_deepness, ctx) << "protected " << intf->name() << "()" << std::endl;
-			writeTabs(code_deepness++, ctx) << "{" << std::endl;
-			if (!obj->writeConstructorBody(intf, code_deepness, ctx, ec))
+			ctx->writeTabs(code_deepness) << "protected " << intf->name() << "()" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
+			if (!that->writeConstructorBody(intf, code_deepness, ctx, ec))
 				return false;
-			writeTabs(--code_deepness, ctx) << "}" << std::endl << std::endl;
+			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
 			return true;
 		}
 
 		bool writeModule(short code_deepness, CSCodeGenContext * ctx, Language::Module * module, ErrorCollector & ec)
 		{
-			auto & o = writeTabs(code_deepness++, ctx) << "namespace " << obj->helper()->getName(module) << " {" << std::endl;
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::Before, module, ec))
+				return false;
+			auto & o = ctx->writeTabs(code_deepness++) << "namespace " << helper()->getName(module) << " {" << std::endl;
 			for (auto & element : module->elements())
 			{
 				o << std::endl;
 				if (!writeTopLevel(code_deepness, ctx, element.get(), ec))
 					return false;
 			}
-			writeTabs(--code_deepness, ctx) << "}" << std::endl;
+			ctx->writeTabs(--code_deepness) << "}" << std::endl;
+			
+			if (!writeDocumentation(code_deepness, ctx, CSCodeGenDocumentation::Before, module, ec))
+				return false;
+
+			**ctx << std::endl;
+
 			return true;
 		}
 
