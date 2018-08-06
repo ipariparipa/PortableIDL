@@ -145,7 +145,7 @@ namespace PIDL {
 			return ss.str();
 		};
 
-		auto writeLines = [&](const std::string & title, std::list<std::string> & lines)
+		auto writeLines = [&](const std::string & title, const std::list<std::string> & lines)
 		{
 			if (title.length())
 				ctx->writeTabs(code_deepness) << " * " << title << std::endl;
@@ -224,7 +224,7 @@ namespace PIDL {
 			return ss.str();
 		};
 
-		auto writeLines = [&](std::list<std::string> & lines)
+		auto writeLines = [&](const std::list<std::string> & lines)
 		{
 			for (auto & l : lines)
 				ctx->writeTabs(code_deepness) << "/// " << join(split(l, '\r'), '\0') << std::endl;
@@ -262,7 +262,7 @@ namespace PIDL {
 
 					for (auto & arg : dynamic_cast<Language::Function*>(docprov)->arguments())
 					{
-						if (arg->documentation().brief.find("\n") == -1)
+						if ((long)arg->documentation().brief.find("\n") == -1)
 						{
 							ctx->writeTabs(code_deepness) << "/// <param name=\"" << arg->name() << "\">";
 							*ctx << arg->documentation().brief;

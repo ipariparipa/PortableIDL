@@ -47,7 +47,7 @@ namespace PIDL
 			if (!d.brief.length() && !d.details.size())
 				return;
 
-			if (!d.details.size() && d.brief.find('\n') == -1)
+			if (!d.details.size() && (long)d.brief.find('\n') == -1)
 				JSONTools::addValue(doc, r, "documentation", d.brief);
 			else
 			{
