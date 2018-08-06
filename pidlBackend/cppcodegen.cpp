@@ -36,11 +36,11 @@ namespace PIDL
 			role(role_)
 		{ }
 
+		short tab_length;
+		char tab_char;
 		std::ostream & o;
 		Mode mode;
 		Role role;
-		short tab_length;
-		char tab_char;
 	};
 
 	CPPCodeGenContext::CPPCodeGenContext(short tab_length, char tab_char, std::ostream & o, Mode mode, Role role) : 
@@ -152,7 +152,7 @@ namespace PIDL
 			return ss.str();
 		};
 
-		auto writeLines = [&](const std::string & title, std::list<std::string> & lines)
+		auto writeLines = [&](const std::string & title, const std::list<std::string> & lines)
 		{
 			if (title.length())
 				ctx->writeTabs(code_deepness) << " * " << title << std::endl;
