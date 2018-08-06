@@ -749,7 +749,7 @@ namespace PIDL {
 				if (!value.IsObject() || !JSONTools::getValue(value, "type", type_str))
 					return false;
 
-				return type_str == "dotnet";
+				return type_str == ".net";
 			}
 
 		};
