@@ -36,6 +36,7 @@ namespace PIDL {
 		class Object;
 		class Method;
 		class Property;
+		class DocumentationProvider;	
 	}
 
 	class ErrorCollector;
@@ -51,7 +52,7 @@ namespace PIDL {
 			Server, Client
 		};
 
-		CSCodeGenContext(std::ostream & o, Role role);
+		CSCodeGenContext(short tab_length, char tab_char, std::ostream & o, Role role);
 		~CSCodeGenContext();
 
 		template<typename T>
@@ -61,8 +62,12 @@ namespace PIDL {
 			return stream();
 		}
 
+		std::ostream & operator * () const;
+
 		std::ostream & stream() const;
 		Role role() const;
+
+		std::ostream & writeTabs(short code_deepness);
 	};
 
 #define PIDL_OBJECT_TYPE__CS_CODEGEN_LOGGING "cs_codegen_logging"
@@ -114,6 +119,69 @@ namespace PIDL {
 		virtual std::string loggingFatal(const std::string & logger, const std::string & message) const override;
 	};
 
+
+#define PIDL_OBJECT_TYPE__CS_CODEGEN_DOCUMENTATION "cs_codegen_documentation"
+	class PIDL_BACKEND__CLASS CSCodeGenDocumentation : public Object
+	{
+		PIDL_COPY_PROTECTOR(CSCodeGenDocumentation)
+		struct Priv;
+		Priv * priv;
+
+	protected:
+		CSCodeGenDocumentation();
+		virtual ~CSCodeGenDocumentation();
+
+		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CS_CODEGEN_DOCUMENTATION; }
+
+	public:
+		enum Place
+		{
+			Before,
+			After
+		};
+		virtual bool write(short code_deepness, CSCodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec) = 0;
+	};
+
+	class PIDL_BACKEND__CLASS CSVoidDocumentation : public CSCodeGenDocumentation
+	{
+		PIDL_COPY_PROTECTOR(CSVoidDocumentation)
+		struct Priv;
+		Priv * priv;
+
+	public:
+		CSVoidDocumentation();
+		virtual ~CSVoidDocumentation();
+
+		virtual bool write(short code_deepness, CSCodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec) override;
+	};
+
+	class PIDL_BACKEND__CLASS CSBasicDocumentation : public CSCodeGenDocumentation
+	{
+		PIDL_COPY_PROTECTOR(CSBasicDocumentation)
+		struct Priv;
+		Priv * priv;
+
+	public:
+		CSBasicDocumentation();
+		virtual ~CSBasicDocumentation();
+
+		virtual bool write(short code_deepness, CSCodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec) override;
+	};
+
+	class PIDL_BACKEND__CLASS CSdotNetDocumentation : public CSCodeGenDocumentation
+	{
+		PIDL_COPY_PROTECTOR(CSdotNetDocumentation)
+		struct Priv;
+		Priv * priv;
+
+	public:
+		CSdotNetDocumentation();
+		virtual ~CSdotNetDocumentation();
+
+		virtual bool write(short code_deepness, CSCodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec) override;
+	};
+
+
 #define PIDL_OBJECT_TYPE__CS_CODEGEN_HELPER "cs_codegen_helper"
 
 	class PIDL_BACKEND__CLASS CSCodeGenHelper : public Object
@@ -128,23 +196,23 @@ namespace PIDL {
 
 		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CS_CODEGEN_HELPER; }
 
-		virtual short tabDefinition(char & ch) const = 0;
 		virtual std::shared_ptr<CSCodeGenLogging> logging() const = 0;
+		virtual std::shared_ptr<CSCodeGenDocumentation> documentation() const = 0;
 
 		virtual std::string getName(const Language::TopLevel * t) const = 0;
 	};
 
-	class PIDL_BACKEND__CLASS CSBasicCodegenHelper : public CSCodeGenHelper
+	class PIDL_BACKEND__CLASS CSBasicCodeGenHelper : public CSCodeGenHelper
 	{
-		PIDL_COPY_PROTECTOR(CSBasicCodegenHelper)
+		PIDL_COPY_PROTECTOR(CSBasicCodeGenHelper)
 		struct Priv;
 		Priv * priv;
 	public:
-		CSBasicCodegenHelper();
-		virtual ~CSBasicCodegenHelper();
+		CSBasicCodeGenHelper();
+		virtual ~CSBasicCodeGenHelper();
 
-		virtual short tabDefinition(char & ch) const override;
 		virtual std::shared_ptr<CSCodeGenLogging> logging() const override;
+		virtual std::shared_ptr<CSCodeGenDocumentation> documentation() const override;
 
 		virtual std::string getName(const Language::TopLevel * t) const override;
 	};

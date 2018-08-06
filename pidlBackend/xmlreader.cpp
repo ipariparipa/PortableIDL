@@ -149,6 +149,55 @@ namespace PIDL
 			std::list<std::shared_ptr<Language::Definition>> definitions_list;
 		};
 
+
+		bool readDocumentation(const rapidxml::xml_base<> * v, Language::DocumentationProvider::Documentation & ret, const std::string & error_path, ErrorCollector & ec)
+		{
+			if (dynamic_cast<const rapidxml::xml_node<>*>(v))
+			{
+				auto *_v = dynamic_cast<const rapidxml::xml_node<>*>(v);
+				auto doc_n = _v->first_node("documentation");
+				if (doc_n)
+				{
+					auto brief_n = doc_n->first_node("brief");
+					if (brief_n)
+						ret.brief = brief_n->value();
+
+					auto desc_n = doc_n->first_node("description");
+					if (desc_n)
+						ret.details[Language::DocumentationProvider::Documentation::Description] = desc_n->value();
+
+					auto ret_n = doc_n->first_node("return");
+					if (ret_n)
+						ret.details[Language::DocumentationProvider::Documentation::Return] = ret_n->value();
+
+					auto dir_n = doc_n->first_node("direction");
+					if (dir_n)
+						ret.details[Language::DocumentationProvider::Documentation::ArgDirection] = dir_n->value();
+					else
+					{
+						auto dir_a = doc_n->first_attribute("direction");
+						if (dir_a)
+							ret.details[Language::DocumentationProvider::Documentation::ArgDirection] = dir_a->value();
+					}
+					if (!brief_n && !desc_n && !ret_n && !dir_n)
+						ret.brief = doc_n->value();
+					else if (!brief_n)
+					{
+						ec << (error_path + ": 'brief' is not defined for documentation");
+						return false;
+					}
+				}
+				else
+				{
+					auto doc_a = _v->first_attribute("documentation");
+					if (doc_a)
+						ret.brief = doc_a->value();
+				}
+			}
+
+			return true;
+		}
+
 		bool readType(InterfaceElementRegistry & registry, const rapidxml::xml_base<> * v, std::shared_ptr<Language::Type> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (dynamic_cast<const rapidxml::xml_attribute<>*>(v))
@@ -229,7 +278,12 @@ namespace PIDL
 						std::shared_ptr<Language::Type> tmp;
 						if (!readType(registry, t, tmp, error_path, ec))
 							return false;
-						members.push_back(std::make_shared<Language::Structure::Member>(tmp, m_name));
+
+						Language::DocumentationProvider::Documentation doc;
+						if (!readDocumentation(m, doc, error_path, ec))
+							return false;
+
+						members.push_back(std::make_shared<Language::Structure::Member>(tmp, m_name, doc));
 						++i;
 					}
 				}
@@ -273,7 +327,12 @@ namespace PIDL
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
 			}
-			registry.types[name] = ret = std::make_shared<Language::TypeDefinition>(name, tmp, scope);
+
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			registry.types[name] = ret = std::make_shared<Language::TypeDefinition>(name, tmp, scope, doc);
 			registry.definitions[name] = ret;
 			registry.definitions_list.push_back(ret);
 			return true;
@@ -352,8 +411,11 @@ namespace PIDL
 						}
 					}
 
+					Language::DocumentationProvider::Documentation doc;
+					if (!readDocumentation(a, doc, error_path, ec))
+						return false;
 
-					arguments.push_back(std::make_shared<Language::Function::Argument>(tmp, a_name, direction));
+					arguments.push_back(std::make_shared<Language::Function::Argument>(tmp, a_name, direction, doc));
 					++i;
 				}
 			}
@@ -363,7 +425,12 @@ namespace PIDL
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
 			}
-			objectRegistry.definitions[name] = ret = std::make_shared<Language::Method>(ret_type, scope, name, arguments);
+
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			objectRegistry.definitions[name] = ret = std::make_shared<Language::Method>(ret_type, scope, name, arguments, doc);
 			objectRegistry.definitions_list.push_back(ret);
 			return true;
 		}
@@ -396,7 +463,11 @@ namespace PIDL
 				return false;
 			}
 
-			objectRegistry.definitions[name] = ret = std::make_shared<Language::Property>(type, scope, name, readonly);
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			objectRegistry.definitions[name] = ret = std::make_shared<Language::Property>(type, scope, name, readonly, doc);
 			objectRegistry.definitions_list.push_back(ret);
 			return true;
 		}
@@ -452,7 +523,11 @@ namespace PIDL
 				}
 			}
 
-			ret = std::make_shared<Language::Object>(name, registry.definitions_list, scope);
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			ret = std::make_shared<Language::Object>(name, registry.definitions_list, scope, doc);
 			interfaceRegistry.types[name] = ret;
 			interfaceRegistry.definitions[name] = ret;
 			interfaceRegistry.definitions_list.push_back(ret);
@@ -533,8 +608,11 @@ namespace PIDL
 						}
 					}
 
+					Language::DocumentationProvider::Documentation doc;
+					if (!readDocumentation(a, doc, error_path, ec))
+						return false;
 
-					arguments.push_back(std::make_shared<Language::Function::Argument>(tmp, a_name, direction));
+					arguments.push_back(std::make_shared<Language::Function::Argument>(tmp, a_name, direction, doc));
 					++i;
 				}
 			}
@@ -544,7 +622,12 @@ namespace PIDL
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
 			}
-			registry.functions[name] = ret = std::make_shared<Language::Function>(ret_type, scope, name, arguments);
+
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			registry.functions[name] = ret = std::make_shared<Language::Function>(ret_type, scope, name, arguments, doc);
 			registry.definitions[name] = ret;
 			registry.definitions_list.push_back(ret);
 			return true;
@@ -608,7 +691,11 @@ namespace PIDL
 				}
 			}
 
-			ret = std::make_shared<Language::Interface>(name, registry.definitions_list, scope);
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, name, ec))
+				return false;
+
+			ret = std::make_shared<Language::Interface>(name, registry.definitions_list, scope, doc);
 
 			return true;
 		}
@@ -647,7 +734,11 @@ namespace PIDL
 					_elements[i++] = d.second;
 			}
 
-			ret = std::make_shared<Language::Module>(name, _elements);
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, name, ec))
+				return false;
+
+			ret = std::make_shared<Language::Module>(name, _elements, doc);
 
 			return true;
 		}

@@ -49,7 +49,7 @@ namespace PIDL {
 
 	bool CSWriter::write(Reader * reader, ErrorCollector & ec)
 	{
-		CSCodeGenContext ctx((*priv->o), (CSCodeGenContext::Role)priv->role);
+		CSCodeGenContext ctx(1, '\t', (*priv->o), (CSCodeGenContext::Role)priv->role);
 		if (!priv->codegen->generateUsings(0, &ctx, ec))
 			return false;
 

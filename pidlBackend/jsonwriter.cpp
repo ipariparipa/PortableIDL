@@ -42,6 +42,37 @@ namespace PIDL
 			JSONTools::addValue(doc, r, "nature", str);
 		}
 
+		static void addDocumentation(rapidjson::Document & doc, rapidjson::Value & r, const Language::DocumentationProvider::Documentation & d)
+		{
+			if (!d.brief.length() && !d.details.size())
+				return;
+
+			if (!d.details.size() && d.brief.find('\n') == -1)
+				JSONTools::addValue(doc, r, "documentation", d.brief);
+			else
+			{
+				rapidjson::Value docu_v(rapidjson::kObjectType);
+				JSONTools::addValue(doc, docu_v, "brief", d.brief);
+				for (auto & det : d.details)
+				{
+					switch (det.first)
+					{
+					case Language::DocumentationProvider::Documentation::ArgDirection:
+						JSONTools::addValue(doc, docu_v, "direction", det.second);
+						break;
+					case Language::DocumentationProvider::Documentation::Description:
+						JSONTools::addValue(doc, docu_v, "description", det.second);
+						break;
+					case Language::DocumentationProvider::Documentation::Return:
+						JSONTools::addValue(doc, docu_v, "return", det.second);
+						break;
+					}
+				}
+
+				JSONTools::addValue(doc, r, "documentation", docu_v);
+			}
+		}
+
 		static void addType(rapidjson::Document & doc, rapidjson::Value & r, const std::shared_ptr<Language::Type> & t)
 		{
 			if (dynamic_cast<Language::Structure*>(t.get()))
@@ -55,6 +86,7 @@ namespace PIDL
 					rapidjson::Value e(rapidjson::kObjectType);
 					addName(doc, e, memb->name());
 					addType(doc, e, memb->type());
+					addDocumentation(doc, e, memb->documentation());
 					m.PushBack(e, doc.GetAllocator());
 				}
 
@@ -84,6 +116,7 @@ namespace PIDL
 			addNature(doc, v, "typedef");
 			addName(doc, v, t->name());
 			addType(doc, v, t->type());
+			addDocumentation(doc, v, t->documentation());
 		}
 
 		static void addFunction(rapidjson::Document & doc, rapidjson::Value & v, const std::shared_ptr<Language::Function> & f)
@@ -106,9 +139,11 @@ namespace PIDL
 				}
 				addName(doc, e, arg->name());
 				addType(doc, e, arg->type());
+				addDocumentation(doc, e, arg->documentation());
 				a.PushBack(e, doc.GetAllocator());
 			}
 			JSONTools::addValue(doc, v, "arguments", a);
+			addDocumentation(doc, v, f->documentation());
 		}
 
 		static void addMethod(rapidjson::Document & doc, rapidjson::Value & v, const std::shared_ptr<Language::Method> & f)
@@ -131,9 +166,11 @@ namespace PIDL
 				}
 				addName(doc, e, arg->name());
 				addType(doc, e, arg->type());
+				addDocumentation(doc, e, arg->documentation());
 				a.PushBack(e, doc.GetAllocator());
 			}
 			JSONTools::addValue(doc, v, "arguments", a);
+			addDocumentation(doc, v, f->documentation());
 		}
 
 		static void addProperty(rapidjson::Document & doc, rapidjson::Value & v, const std::shared_ptr<Language::Property> & p)
@@ -142,6 +179,7 @@ namespace PIDL
 			addName(doc, v, p->name());
 			addType(doc, v, p->type());
 			JSONTools::addValue(doc, v, "readonly", p->readOnly());
+			addDocumentation(doc, v, p->documentation());
 		}
 
 		static void addObject(rapidjson::Document & doc, rapidjson::Value & v, const std::shared_ptr<Language::Object> & o)
@@ -167,6 +205,7 @@ namespace PIDL
 				}
 			}
 			JSONTools::addValue(doc, v, "body", b);
+			addDocumentation(doc, v, o->documentation());
 		}
 
 		static void addInterface(rapidjson::Document & doc, rapidjson::Value & v, const std::shared_ptr<Language::Interface> & intf)
@@ -199,6 +238,7 @@ namespace PIDL
 			}
 
 			JSONTools::addValue(doc, v, "body", b);
+			addDocumentation(doc, v, intf->documentation());
 		}
 
 		static void addModule(rapidjson::Document & doc, rapidjson::Value & v, const std::shared_ptr<Language::Module> & mod)
@@ -215,6 +255,7 @@ namespace PIDL
 				b.PushBack(t, doc.GetAllocator());
 			}
 			JSONTools::addValue(doc, v, "body", b);
+			addDocumentation(doc, v, mod->documentation());
 		}
 
 		static void addTopLevel(rapidjson::Document & doc, rapidjson::Value & v, const std::shared_ptr<Language::TopLevel> & tl)
