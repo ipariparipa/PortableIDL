@@ -78,9 +78,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="codegencontext.cpp" />
     <ClCompile Include="cppcodegen.cpp" />
     <ClCompile Include="cpppwriter.cpp" />
     <ClCompile Include="cscodegen.cpp" />
+    <ClCompile Include="cstyledocumentation.cpp" />
     <ClCompile Include="cswriter.cpp" />
     <ClCompile Include="jsonreader.cpp" />
     <ClCompile Include="jsonwriter.cpp" />
@@ -95,12 +97,15 @@
     <ClCompile Include="xmlreader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\pidlBackend\codegencontext.h" />
     <ClInclude Include="include\pidlBackend\config.h" />
     <ClInclude Include="include\pidlBackend\cppcodegen.h" />
     <ClInclude Include="include\pidlBackend\cppcodegenfactory_json.h" />
     <ClInclude Include="include\pidlBackend\cppwriter.h" />
     <ClInclude Include="include\pidlBackend\cscodegen.h" />
     <ClInclude Include="include\pidlBackend\cscodegenfactory_json.h" />
+    <ClInclude Include="include\pidlBackend\cstyledocumentation.h" />
+    <ClInclude Include="include\pidlBackend\cstyledocumentationfactory_json.h" />
     <ClInclude Include="include\pidlBackend\cswriter.h" />
     <ClInclude Include="include\pidlBackend\jsonreader.h" />
     <ClInclude Include="include\pidlBackend\jsonwriter.h" />

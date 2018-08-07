@@ -65,7 +65,7 @@ namespace PIDL {
 				(*priv->o) << "#ifndef " << guard << std::endl;
 				(*priv->o) << "#define " << guard << std::endl;
 
-				CPPCodeGenContext ctx(1, '\t', (*priv->o), CPPCodeGenContext::Mode::Declaration, (CPPCodeGenContext::Role)priv->role);
+				CPPCodeGenContext ctx(1, '\t', (*priv->o), (CPPCodeGenContext::Role)priv->role, CPPCodeGenContext::Mode::Declaration);
 				if (!priv->codegen->generateIncludes(0, &ctx, ec))
 					return false;
 
@@ -82,7 +82,7 @@ namespace PIDL {
 			break;
 		case Mode::Source:
 			{
-				CPPCodeGenContext ctx(1, '\t', (*priv->o), CPPCodeGenContext::Mode::Implementatinon, (CPPCodeGenContext::Role)priv->role);
+				CPPCodeGenContext ctx(1, '\t', (*priv->o), (CPPCodeGenContext::Role)priv->role, CPPCodeGenContext::Mode::Implementatinon);
 				if (!priv->codegen->generateIncludes(0, &ctx, ec))
 					return false;
 
@@ -97,7 +97,7 @@ namespace PIDL {
 			break;
 		case Mode::Combo:
 			{
-				CPPCodeGenContext ctx(1, '\t', (*priv->o), CPPCodeGenContext::Mode::AllInOne, (CPPCodeGenContext::Role)priv->role);
+				CPPCodeGenContext ctx(1, '\t', (*priv->o), (CPPCodeGenContext::Role)priv->role, CPPCodeGenContext::Mode::AllInOne);
 				if (!priv->codegen->generateIncludes(0, &ctx, ec))
 					return false;
 

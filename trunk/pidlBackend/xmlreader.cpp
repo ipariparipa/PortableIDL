@@ -170,16 +170,7 @@ namespace PIDL
 					if (ret_n)
 						ret.details[Language::DocumentationProvider::Documentation::Return] = ret_n->value();
 
-					auto dir_n = doc_n->first_node("direction");
-					if (dir_n)
-						ret.details[Language::DocumentationProvider::Documentation::ArgDirection] = dir_n->value();
-					else
-					{
-						auto dir_a = doc_n->first_attribute("direction");
-						if (dir_a)
-							ret.details[Language::DocumentationProvider::Documentation::ArgDirection] = dir_a->value();
-					}
-					if (!brief_n && !desc_n && !ret_n && !dir_n)
+					if (!brief_n && !desc_n && !ret_n)
 						ret.brief = doc_n->value();
 					else if (!brief_n)
 					{

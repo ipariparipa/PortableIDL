@@ -262,23 +262,7 @@ namespace PIDL {
 		struct Function::Argument::Priv
 		{
 			Priv(Direction direction_, const Documentation & doc_) : direction(direction_), doc(doc_)
-			{
-				if (!doc.details.count(Documentation::ArgDirection) && doc.brief.length())
-				{
-					switch (direction)
-					{
-					case Direction::In:
-						doc.details[Documentation::ArgDirection] = "in";
-						break;
-					case Direction::Out:
-						doc.details[Documentation::ArgDirection] = "out";
-						break;
-					case Direction::InOut:
-						doc.details[Documentation::ArgDirection] = "in,out";
-						break;
-					}
-				}
-			}
+			{ }
 
 			Direction direction;
 			Documentation doc;

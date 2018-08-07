@@ -151,9 +151,6 @@ namespace PIDL
 
 						if (JSONTools::getValue(*doc_v, "return", tmp))
 							ret.details[Language::DocumentationProvider::Documentation::Return] = tmp;
-
-						if (JSONTools::getValue(*doc_v, "direction", tmp))
-							ret.details[Language::DocumentationProvider::Documentation::ArgDirection] = tmp;
 					}
 				}
 			}

@@ -60,6 +60,12 @@
     <ClCompile Include="operation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="codegencontext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cstyledocumentation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\pidlBackend\config.h">
@@ -123,6 +129,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\pidlBackend\operationfactory_json.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\pidlBackend\cstyledocumentation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\pidlBackend\codegencontext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\pidlBackend\cstyledocumentationfactory_json.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
