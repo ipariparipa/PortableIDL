@@ -474,8 +474,7 @@ namespace PIDL
 					ctx->writeTabs(code_deepness) << "if(!PIDL.JSONTools.checkType(v, PIDL.JSONTools.Type.Object))" << std::endl;
 					ctx->writeTabs(code_deepness++) << "{" << std::endl;
 					ctx->writeTabs(code_deepness) << "ec.Add(-1, \"value of '" << td->name() << "'is not object\");" << std::endl;
-					ctx->writeTabs(code_deepness) << "isOk = false;" << std::endl;
-					ctx->writeTabs(code_deepness) << "return ret;" << std::endl;
+					ctx->writeTabs(code_deepness) << "isOk = false; return ret;" << std::endl;
 					ctx->writeTabs(--code_deepness) << "}" << std::endl;
 
 					auto & members = s->members();
@@ -504,10 +503,7 @@ namespace PIDL
 					ctx->writeTabs(code_deepness) << "var ret = new " << td->name() << "();" << std::endl;
 					ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
 					ctx->writeTabs(code_deepness) << "if (!_getValue(r, name, PIDL.JSONTools.Type.Object, out v, ec))" << std::endl;
-					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					ctx->writeTabs(code_deepness) << "isOk = false;" << std::endl;
-					ctx->writeTabs(code_deepness) << "return ret;" << std::endl;
-					ctx->writeTabs(--code_deepness) << "}" << std::endl;
+					ctx->writeTabs(code_deepness++) << "{ isOk = false; return ret; }" << std::endl;
 					ctx->writeTabs(code_deepness) << "return _getValue_" << td->name() << "(v, out isOk, ec);" << std::endl;
 					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 				}
@@ -662,23 +658,15 @@ namespace PIDL
 		ctx->writeTabs(code_deepness) << "if (!PIDL.JSONTools.getValue(r, name, out v) || (t = PIDL.JSONTools.getType(v)) == PIDL.JSONTools.Type.None)" << std::endl;
 		ctx->writeTabs(code_deepness++) << "{" << std::endl;
 		ctx->writeTabs(code_deepness) << "ec.Add(-1, \"value '\" + name + \"' is not found or invalid\");" << std::endl;
-		ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;
-		ctx->writeTabs(code_deepness) << "return false;" << std::endl;
+		ctx->writeTabs(code_deepness) << "ret = null; return false;" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl;
 		ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.Null)" << std::endl;
-		ctx->writeTabs(code_deepness++) << "{" << std::endl;
-		ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;
-		ctx->writeTabs(code_deepness) << "return true;" << std::endl;
-		ctx->writeTabs(--code_deepness) << "}" << std::endl;
+		ctx->writeTabs(code_deepness) << "{ ret = null; return true; }" << std::endl;
 		ctx->writeTabs(code_deepness) << "T _ret;" << std::endl;
 		ctx->writeTabs(code_deepness) << "if (!_getValue(v, out _ret, ec))" << std::endl;
-		ctx->writeTabs(code_deepness) << "{" << std::endl;
-		ctx->writeTabs(code_deepness++) << "ret = null;" << std::endl;
-		ctx->writeTabs(code_deepness) << "return false;" << std::endl;
-		ctx->writeTabs(--code_deepness) << "}" << std::endl;
-		ctx->writeTabs(code_deepness) << "ret = _ret;" << std::endl;
-		ctx->writeTabs(code_deepness) << "return true;" << std::endl;
-		ctx->writeTabs(code_deepness) << "}" << std::endl << std::endl;
+		ctx->writeTabs(code_deepness) << "{ ret = null; return false; }" << std::endl;
+		ctx->writeTabs(code_deepness) << "ret = _ret; return true;" << std::endl;
+		ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
 		ctx->writeTabs(code_deepness) << "bool _getValue<T>(XElement r, string name, out T[] ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 		ctx->writeTabs(code_deepness + 1) << "where T : struct" << std::endl;
@@ -688,8 +676,7 @@ namespace PIDL
 		ctx->writeTabs(code_deepness) << "if (!PIDL.JSONTools.getValue(r, name, out v) || (t = PIDL.JSONTools.getType(v)) == PIDL.JSONTools.Type.None)" << std::endl;
 		ctx->writeTabs(code_deepness++) << "{" << std::endl;
 		ctx->writeTabs(code_deepness) << "ec.Add(-1, \"value '\" + name + \"' is not found or invalid\");" << std::endl;
-		ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;
-		ctx->writeTabs(code_deepness) << "return false;" << std::endl;
+		ctx->writeTabs(code_deepness) << "ret = null; return false;" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl;
 		ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.Null)" << std::endl;
 		ctx->writeTabs(code_deepness) << "{ ret = null; return true; }" << std::endl;
@@ -704,8 +691,7 @@ namespace PIDL
 		ctx->writeTabs(code_deepness) << "if (t != PIDL.JSONTools.Type.Array)" << std::endl;
 		ctx->writeTabs(code_deepness++) << "{" << std::endl;
 		ctx->writeTabs(code_deepness) << "ec.Add(-1, \"value '\" + name + \"' is not array\");" << std::endl;
-		ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;
-		ctx->writeTabs(code_deepness) << "return false;" << std::endl;
+		ctx->writeTabs(code_deepness) << "ret = null; return false;" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl;
 		ctx->writeTabs(code_deepness) << "var elems = v.Elements(\"item\");" << std::endl;
 		ctx->writeTabs(code_deepness) << "int i = 0;" << std::endl;
