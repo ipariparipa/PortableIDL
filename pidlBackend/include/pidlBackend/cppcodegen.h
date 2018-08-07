@@ -25,6 +25,7 @@
 #include <string>
 
 #include "object.h"
+#include "codegencontext.h"
 
 namespace PIDL {
 	
@@ -42,8 +43,9 @@ namespace PIDL {
 	}
 
 	class ErrorCollector;
+	class CStyleDocumentation;
 
-	class PIDL_BACKEND__CLASS CPPCodeGenContext
+	class PIDL_BACKEND__CLASS CPPCodeGenContext : public CodeGenContext
 	{
 		PIDL_COPY_PROTECTOR(CPPCodeGenContext)
 		struct Priv;
@@ -54,28 +56,10 @@ namespace PIDL {
 			Declaration, Implementatinon, AllInOne
 		};
 
-		enum class Role
-		{
-			Server, Client
-		};
+		CPPCodeGenContext(short tab_length, char tab_char, std::ostream & o, Role role, Mode mode);
+		virtual ~CPPCodeGenContext();
 
-		CPPCodeGenContext(short tab_length, char tab_char, std::ostream & o, Mode mode, Role role);
-		~CPPCodeGenContext();
-
-		template<typename T>
-		std::ostream & operator << (const T & v) const
-		{
-			stream() << v;
-			return stream();
-		}
-
-		std::ostream & operator * () const;
-
-		std::ostream & stream() const;
 		Mode mode() const;
-		Role role() const;
-
-		std::ostream & writeTabs(short code_deepness);
 	};
 
 #define PIDL_OBJECT_TYPE__CPP_CODEGEN_LOGGING "cpp_codegen_logging"
@@ -125,56 +109,6 @@ namespace PIDL {
 		virtual std::string loggingFatal(const std::string & logger, const std::string & message) const override;
 	};
 
-
-#define PIDL_OBJECT_TYPE__CPP_CODEGEN_DOCUMENTATION "cpp_codegen_documentation"
-	class PIDL_BACKEND__CLASS CPPCodeGenDocumentation : public Object
-	{
-		PIDL_COPY_PROTECTOR(CPPCodeGenDocumentation)
-		struct Priv;
-		Priv * priv;
-
-	protected:
-		CPPCodeGenDocumentation();
-		virtual ~CPPCodeGenDocumentation();
-
-		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CPP_CODEGEN_DOCUMENTATION; }
-
-	public:
-		enum Place
-		{
-			Before,
-			After
-		};
-		virtual bool write(short code_deepness, CPPCodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec) = 0;
-	};
-
-	class PIDL_BACKEND__CLASS CPPVoidDocumentation : public CPPCodeGenDocumentation
-	{
-		PIDL_COPY_PROTECTOR(CPPVoidDocumentation)
-		struct Priv;
-		Priv * priv;
-
-	public:
-		CPPVoidDocumentation();
-		virtual ~CPPVoidDocumentation();
-
-		virtual bool write(short code_deepness, CPPCodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec) override;
-	};
-
-	class PIDL_BACKEND__CLASS CPPBasicDocumentation : public CPPCodeGenDocumentation
-	{
-		PIDL_COPY_PROTECTOR(CPPBasicDocumentation)
-		struct Priv;
-		Priv * priv;
-
-	public:
-		CPPBasicDocumentation();
-		virtual ~CPPBasicDocumentation();
-
-		virtual bool write(short code_deepness, CPPCodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec) override;
-	};
-
-
 #define PIDL_OBJECT_TYPE__CPP_CODEGEN_HELPER "cpp_codegen_helper"
 
 	class PIDL_BACKEND__CLASS CPPCodeGenHelper : public Object
@@ -196,7 +130,7 @@ namespace PIDL {
 		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CPP_CODEGEN_HELPER; }
 
 		virtual std::shared_ptr<CPPCodeGenLogging> logging() const = 0;
-		virtual std::shared_ptr<CPPCodeGenDocumentation> documentation() const = 0;
+		virtual std::shared_ptr<CStyleDocumentation> documentation() const = 0;
 
 		virtual std::vector<Include> includes() const = 0;
 
@@ -215,7 +149,7 @@ namespace PIDL {
 		virtual ~CPPBasicCodeGenHelper();
 
 		virtual std::shared_ptr<CPPCodeGenLogging> logging() const override;
-		virtual std::shared_ptr<CPPCodeGenDocumentation> documentation() const override;
+		virtual std::shared_ptr<CStyleDocumentation> documentation() const override;
 
 		virtual std::vector<Include> includes() const override;
 

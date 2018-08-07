@@ -57,9 +57,6 @@ namespace PIDL
 				{
 					switch (det.first)
 					{
-					case Language::DocumentationProvider::Documentation::ArgDirection:
-						JSONTools::addValue(doc, docu_v, "direction", det.second);
-						break;
 					case Language::DocumentationProvider::Documentation::Description:
 						JSONTools::addValue(doc, docu_v, "description", det.second);
 						break;
