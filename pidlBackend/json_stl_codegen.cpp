@@ -197,11 +197,28 @@ namespace PIDL
 						ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 						break;
 					case Role::Server:
+						ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & v, " << obj->name() << "::Ptr & ret, error_collector & ec)" << std::endl;
+						ctx->writeTabs(code_deepness++) << "{" << std::endl;
+						ctx->writeTabs(code_deepness) << "std::string id;" << std::endl;
+						ctx->writeTabs(code_deepness) << "if (!PIDL::JSONTools::getValue(v, id))" << std::endl;
+						ctx->writeTabs(code_deepness) << "{ ec << \"value is invalid\"; return false; }" << std::endl;
+						ctx->writeTabs(code_deepness) << "return (bool)(ret = _that->_get_object<" << obj->name() << ">(id, ec));" << std::endl;
+						ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+						ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & r, const char * name, " << obj->name() << "::Ptr & ret, error_collector & ec)" << std::endl;
+						ctx->writeTabs(code_deepness++) << "{" << std::endl;
+						ctx->writeTabs(code_deepness) << "rapidjson::Value * v; " << std::endl;
+						ctx->writeTabs(code_deepness) << "if (!PIDL::JSONTools::getValue(r, name, v))" << std::endl;
+						ctx->writeTabs(code_deepness) << "{ ec << std::string() + \"value '\" + name + \"' is not found or null\"; return false; }" << std::endl;
+						ctx->writeTabs(code_deepness) << "if (v->IsNull())" << std::endl;
+						ctx->writeTabs(code_deepness) << "{ ret = nullptr; return true; }" << std::endl;
+						ctx->writeTabs(code_deepness) << "return _getValue(*v, ret, ec);" << std::endl;
+						ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
 						break;
 					}
 				}
 			}
-
 
 			//_createValue
 			for (auto & d : cl->definitions())
@@ -936,6 +953,14 @@ namespace PIDL
 				break;
 			case Role::Server:
 				ctx->writeTabs(code_deepness) << "virtual _Object::Ptr _get_object(const std::string & object_id, error_collector & ec) = 0;" << std::endl;
+				ctx->writeTabs(code_deepness) << "template<class Object_T> typename Object_T::Ptr _get_object(const std::string & object_id, error_collector & ec)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "auto o = _get_object(object_id, ec);" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (!o) return nullptr;" << std::endl;
+				ctx->writeTabs(code_deepness) << "auto ret = std::dynamic_pointer_cast<Object_T, _Object>(o);" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (!ret) ec.add(-1, \"unexpected: invalid object type for id '\" + object_id + \"'\");" << std::endl;
+				ctx->writeTabs(code_deepness) << "return ret;" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				ctx->writeTabs(code_deepness) << "virtual void _dispose_object(const std::string & object_id) = 0;" << std::endl;
 				break;
 			}
