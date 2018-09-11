@@ -503,7 +503,7 @@ namespace PIDL
 					ctx->writeTabs(code_deepness) << "var ret = new " << td->name() << "();" << std::endl;
 					ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
 					ctx->writeTabs(code_deepness) << "if (!_getValue(r, name, PIDL.JSONTools.Type.Object, out v, ec))" << std::endl;
-					ctx->writeTabs(code_deepness++) << "{ isOk = false; return ret; }" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ isOk = false; return ret; }" << std::endl;
 					ctx->writeTabs(code_deepness) << "return _getValue_" << td->name() << "(v, out isOk, ec);" << std::endl;
 					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 				}
@@ -532,6 +532,28 @@ namespace PIDL
 					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 					break;
 				case Role::Server:
+					ctx->writeTabs(code_deepness) << object->name() << " _getValue_" << object->name() << "(XElement v, out bool isOk, PIDL.IPIDLErrorCollector ec)" << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					ctx->writeTabs(code_deepness) << "string object_id;" << std::endl;
+					ctx->writeTabs(code_deepness) << "if(!_getValue(v, out object_id, ec))" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ isOk = false; return null; }" << std::endl;
+					ctx->writeTabs(code_deepness) << "var o = _get_object(object_id, ec);" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (o == null)" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ isOk = false; return null; }" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (!(o is " << object->name() << "))" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"unexpected: invalid object type for id '\" + object_id + \" '\"); isOk = false; return null; }" << std::endl;
+					ctx->writeTabs(code_deepness) << "isOk = true; return o as " << object->name() << ";" << std::endl;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+					ctx->writeTabs(code_deepness) << object->name() << " _getValue_" << object->name() << "(XElement r, string name, out bool isOk, PIDL.IPIDLErrorCollector ec)" << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (!_getValue(r, name, out v, ec))" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ isOk = false; return null; }" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (PIDL.JSONTools.checkType(v, PIDL.JSONTools.Type.Null))" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ isOk = true; return null; }" << std::endl;
+					ctx->writeTabs(code_deepness) << "return _getValue_" << object->name() << "(v, out isOk, ec);" << std::endl;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 					break;
 				}
 			}
@@ -540,10 +562,7 @@ namespace PIDL
 		ctx->writeTabs(code_deepness) << "bool _getValue(XElement r, string name, PIDL.JSONTools.Type type, out XElement ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 		ctx->writeTabs(code_deepness++) << "{" << std::endl;
 		ctx->writeTabs(code_deepness) << "if(!PIDL.JSONTools.getValue(r, name, type, out ret))" << std::endl;
-		ctx->writeTabs(code_deepness++) << "{" << std::endl;
-		ctx->writeTabs(code_deepness) << "ec.Add(-1, \"value '\" + name + \"' is not found or invalid\");" << std::endl;
-		ctx->writeTabs(code_deepness) << "return false;" << std::endl;
-		ctx->writeTabs(--code_deepness) << "}" << std::endl;
+		ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value '\" + name + \"' is not found or invalid\"); return false; }" << std::endl;
 		ctx->writeTabs(code_deepness) << "return true;" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl;
 
@@ -574,22 +593,15 @@ namespace PIDL
 			else if (dynamic_cast<Language::Object*>(d.get()))
 			{
 				auto object = dynamic_cast<Language::Object*>(d.get());
-				switch (ctx->role())
+				if (is_first)
 				{
-				case Role::Client:
-					if (is_first)
-					{
-						is_first = false;
-						ctx->writeTabs(code_deepness);
-					}
-					else
-						ctx->writeTabs(code_deepness) << "else ";
-					*ctx << "if (typeof(T) == typeof(" << object->name() << "))" << std::endl;
-					ctx->writeTabs(code_deepness + 1) << "ret = (T)(object)_getValue_" << object->name() << "(r, name, out isOk, ec);" << std::endl;
-					break;
-				case Role::Server:
-					break;
+					is_first = false;
+					ctx->writeTabs(code_deepness);
 				}
+				else
+					ctx->writeTabs(code_deepness) << "else ";
+				*ctx << "if (typeof(T) == typeof(" << object->name() << "))" << std::endl;
+				ctx->writeTabs(code_deepness + 1) << "ret = (T)(object)_getValue_" << object->name() << "(r, name, out isOk, ec);" << std::endl;
 			}
 		}
 		if (!is_first)
@@ -626,19 +638,12 @@ namespace PIDL
 			else if (dynamic_cast<Language::Object*>(d.get()))
 			{
 				auto object = dynamic_cast<Language::Object*>(d.get());
-				switch (ctx->role())
-				{
-				case Role::Client:
-					ctx->writeTabs(code_deepness) << "if (typeof(T) == typeof(" << object->name() << "))" << std::endl;
-					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					ctx->writeTabs(code_deepness) << "bool isOk;" << std::endl;
-					ctx->writeTabs(code_deepness) << "ret = (T)(object)_getValue_" << object->name() << "(v, out isOk, ec);" << std::endl;
-					ctx->writeTabs(code_deepness) << "return isOk;" << std::endl;
-					ctx->writeTabs(--code_deepness) << "}" << std::endl;
-					break;
-				case Role::Server:
-					break;
-				}
+				ctx->writeTabs(code_deepness) << "if (typeof(T) == typeof(" << object->name() << "))" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "bool isOk;" << std::endl;
+				ctx->writeTabs(code_deepness) << "ret = (T)(object)_getValue_" << object->name() << "(v, out isOk, ec);" << std::endl;
+				ctx->writeTabs(code_deepness) << "return isOk;" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 			}
 		}
 
