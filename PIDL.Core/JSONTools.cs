@@ -79,6 +79,11 @@ namespace PIDL
 				ret = default(T);
 				return false;
 			}
+			if (typeof(T) == typeof(XElement))
+			{
+				ret = (T)(object)v;
+				return true;
+			}
 			bool isOk;
 			dynamic _ret = getValueX<T>(v, out isOk);
 			if (!isOk)
