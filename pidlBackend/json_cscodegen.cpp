@@ -116,7 +116,7 @@ namespace PIDL
 					if (dynamic_cast<Language::Function*>(d.get()))
 					{
 						auto function = dynamic_cast<Language::Function*>(d.get());
-						ctx->writeTabs(code_deepness++) << "_functions[\"" << function->name() << "\"] = (root, ec) => {" << std::endl;
+						ctx->writeTabs(code_deepness++) << "_functions[\"" << function->hash() << "\"] = (root, ec) => {" << std::endl;
 						if (!dynamic_cast<Language::Method* > (function))
 							ctx->writeTabs(code_deepness) << "var _intf = this;" << std::endl;
 						ctx->writeTabs(code_deepness) << "var ret = new _FunctionRet();" << std::endl;
@@ -284,7 +284,7 @@ namespace PIDL
 						ctx->writeTabs(code_deepness) << "var _intf = this;" << std::endl;
 						ctx->writeTabs(code_deepness) << "var _v = PIDL.JSONTools.addValue(_root, \"function\", PIDL.JSONTools.Type.Object);" << std::endl;
 					}
-					ctx->writeTabs(code_deepness) << "_intf._addValue(_v, \"name\", \"" << function->name() << "\");" << std::endl;
+					ctx->writeTabs(code_deepness) << "_intf._addValue(_v, \"name\", \"" << function->hash() << "\");" << std::endl;
 
 					auto in_args = function->in_arguments();
 					if (in_args.size())

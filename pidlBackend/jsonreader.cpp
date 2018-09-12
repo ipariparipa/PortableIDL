@@ -405,18 +405,20 @@ namespace PIDL
 				}
 			}
 
-			if (registry.definitions.count(name))
+			Language::DocumentationProvider::Documentation doc;
+			if (!readDocumentation(v, doc, error_path, ec))
+				return false;
+
+			auto func = std::make_shared<Language::Function>(ret_type, scope, name, arguments, doc);
+
+			if (registry.definitions.count(func->hash()))
 			{
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
 			}
 
-			Language::DocumentationProvider::Documentation doc;
-			if (!readDocumentation(v, doc, error_path, ec))
-				return false;
-
-			registry.functions[name] = ret = std::make_shared<Language::Function>(ret_type, scope, name, arguments, doc);
-			registry.definitions[name] = ret;
+			registry.functions[func->hash()] = ret = func;
+			registry.definitions[func->hash()] = ret;
 			registry.definitions_list.push_back(ret);
 			return true;
 		}
@@ -509,17 +511,19 @@ namespace PIDL
 				}
 			}
 
-			if (obj_registry.definitions.count(name))
-			{
-				ec << (error_path + ": name '" + name + "' is already registered");
-				return false;
-			}
-
 			Language::DocumentationProvider::Documentation doc;
 			if (!readDocumentation(v, doc, error_path, ec))
 				return false;
 
-			obj_registry.definitions[name] = ret = std::make_shared<Language::Method>(ret_type, scope, name, arguments, doc);
+			auto meth = std::make_shared<Language::Method>(ret_type, scope, name, arguments, doc);
+
+			if (obj_registry.definitions.count(meth->hash()))
+			{
+				ec << (error_path + ": name '" + meth->hash() + "' is already registered");
+				return false;
+			}
+
+			obj_registry.definitions[meth->hash()] = ret = meth;
 			obj_registry.definitions_list.push_back(ret);
 			return true;
 		}
