@@ -300,6 +300,7 @@ namespace PIDL {
 				doc(doc_)
 			{
 				buildArguments();
+				updateHash();
 			}
 
 			Priv(const Type::Ptr & returnType_, const std::vector<std::string> & scope_, const std::string & name_, const std::list<Argument::Ptr> & arguments_, const Documentation & doc_) :
@@ -311,14 +312,22 @@ namespace PIDL {
 				arguments.resize(arguments_.size());
 				std::copy(arguments_.begin(), arguments_.end(), arguments.begin());
 				buildArguments();
+				updateHash();
 			}
 
 			std::shared_ptr<Type> returnType;
 			std::vector<std::string> scope;
 			std::string name;
+			std::string hash;
 			std::vector<std::shared_ptr<Argument>> arguments, in_arguments, out_arguments;
 			Documentation doc;
 
+			void updateHash()
+			{
+				hash = name;
+				for (auto & a : arguments)
+					hash +=std::string("|") + a->name();
+			}
 		private:
 			void buildArguments()
 			{
@@ -357,6 +366,11 @@ namespace PIDL {
 		const char * Function::name() const
 		{
 			return priv->name.c_str();
+		}
+
+		const std::string & Function::hash() const
+		{
+			return priv->hash;
 		}
 
 		const std::vector<std::shared_ptr<Function::Argument>> & Function::arguments() const

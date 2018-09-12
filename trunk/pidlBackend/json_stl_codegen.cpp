@@ -318,7 +318,7 @@ namespace PIDL
 					{
 						auto function = dynamic_cast<Language::Function*>(d.get());
 
-						ctx->writeTabs(code_deepness++) << "_functions[\"" << function->name() << "\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, error_collector & ec)->_InvokeStatus {" << std::endl;
+						ctx->writeTabs(code_deepness++) << "_functions[\"" << function->hash() << "\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, error_collector & ec)->_InvokeStatus {" << std::endl;
 						write_privs(dynamic_cast<Language::Method*>(d.get()) != nullptr);
 						for (auto & a : function->arguments())
 						{
@@ -630,7 +630,7 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "rapidjson::Value _r(rapidjson::kObjectType);" << std::endl;
 				ctx->writeTabs(code_deepness) << "_intf_p->_addValue(_doc, _r, \"object_id\", _p->__id);" << std::endl;
 				ctx->writeTabs(code_deepness) << "rapidjson::Value _v(rapidjson::kObjectType);" << std::endl;
-				ctx->writeTabs(code_deepness) << "_intf_p->_addValue(_doc, _v, \"name\", \"" << function->name() << "\");" << std::endl;
+				ctx->writeTabs(code_deepness) << "_intf_p->_addValue(_doc, _v, \"name\", \"" << function->hash() << "\");" << std::endl;
 				ctx->writeTabs(code_deepness) << "rapidjson::Value _aa(rapidjson::kObjectType);" << std::endl;
 
 				for (auto & a : function->in_arguments())
@@ -661,7 +661,7 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "rapidjson::Document _doc;" << std::endl;
 				ctx->writeTabs(code_deepness) << "_doc.SetObject();" << std::endl;
 				ctx->writeTabs(code_deepness) << "rapidjson::Value _v(rapidjson::kObjectType);" << std::endl;
-				ctx->writeTabs(code_deepness) << "_intf_p->_addValue(_doc, _v, \"name\", \"" << function->name() << "\");" << std::endl;
+				ctx->writeTabs(code_deepness) << "_intf_p->_addValue(_doc, _v, \"name\", \"" << function->hash() << "\");" << std::endl;
 				ctx->writeTabs(code_deepness) << "rapidjson::Value _aa(rapidjson::kObjectType);" << std::endl;
 
 				for (auto & a : function->in_arguments())

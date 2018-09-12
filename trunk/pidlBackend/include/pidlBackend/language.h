@@ -329,6 +329,7 @@ namespace PIDL { namespace Language {
 		virtual ~Function();
 
 		virtual const char * name() const;
+		const std::string & hash() const;
 		const std::vector<std::string> & scope() const;
 		const std::vector<Argument::Ptr> & arguments() const;
 		const std::vector<Argument::Ptr> & in_arguments() const;
