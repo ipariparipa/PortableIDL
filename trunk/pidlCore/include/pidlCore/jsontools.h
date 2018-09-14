@@ -32,25 +32,20 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, rapidjson::Value *& ret);
 
-//	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, std::string & ret);
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, std::string & ret);
 
-//	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, long long & ret);
+	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, int & ret);
+
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, long long & ret);
 
-//	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, double & ret);
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, double & ret);
 
-//	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, bool & ret);
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, bool & ret);
 
-//	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, tm & ret);
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, tm & ret);
 
-//	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, DateTime & ret);
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, DateTime & ret);
 
-//	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, std::vector<char> & ret);
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, std::vector<char> & ret);
 
 
@@ -85,25 +80,20 @@ namespace PIDL { namespace JSONTools {
 	extern PIDL_CORE__FUNCTION void addNull(rapidjson::Document & doc, rapidjson::Value & r, const char * name);
 	extern PIDL_CORE__FUNCTION rapidjson::Value createNull(rapidjson::Document & doc, rapidjson::Value & r);
 
-//	extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const char * str);
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const char * str);
 
-//	extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::string & str);
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const std::string & str);
 
-//	extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, long long num);
+	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, int num);
+
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, long long num);
 
-//	extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, double num);
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, double num);
 
-//	extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, bool b);
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, bool b);
 
-//	extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const tm & t);
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const tm & t);
 
-//	extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const DateTime & t);
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const DateTime & t);
 
 	template<typename T>

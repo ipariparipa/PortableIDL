@@ -35,6 +35,7 @@ namespace PIDL {
 		class TopLevel;
 		class Interface;
 		class Function;
+		class FunctionVariant;
 		class Type;
 		class Property;
 		class Object;
@@ -196,7 +197,7 @@ namespace PIDL {
 
 		virtual bool writeInvoke(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) = 0;
 		virtual bool writePrivateMembers(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) = 0;
-		virtual bool writeFunctionBody(Language::Function * function, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeFunctionBody(Language::FunctionVariant * function, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
 		virtual bool writeConstructorBody(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
 		virtual bool writeDestructorBody(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec);
 

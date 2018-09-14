@@ -113,6 +113,15 @@ namespace PIDL
 					return (T)(object)ret;
 				}
 			}
+			else if (typeof(T) == typeof(int))
+			{
+				if (t == Type.Number)
+				{
+					var ret = Convert.ToInt32(v.Value, new System.Globalization.NumberFormatInfo());
+					isOk = true;
+					return (T)(object)ret;
+				}
+			}
 			else if (typeof(T) == typeof(double))
 			{
 				if (t == Type.Number)
@@ -339,6 +348,8 @@ namespace PIDL
 			XElement v;
 
 			if (typeof(T) == typeof(long))
+				(v = addValue(r, name, Type.Number)).Add(Convert.ToString(val, new System.Globalization.NumberFormatInfo()));
+			else if (typeof(T) == typeof(int))
 				(v = addValue(r, name, Type.Number)).Add(Convert.ToString(val, new System.Globalization.NumberFormatInfo()));
 			else if (typeof(T) == typeof(double))
 				(v = addValue(r, name, Type.Number)).Add(Convert.ToString(val, new System.Globalization.NumberFormatInfo()));

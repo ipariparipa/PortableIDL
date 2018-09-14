@@ -33,5 +33,6 @@ namespace PIDL
 	{
 		void Add(int code, string msg);
 		void Add(PIDLError err);
+		void Clear();
 	}
 }

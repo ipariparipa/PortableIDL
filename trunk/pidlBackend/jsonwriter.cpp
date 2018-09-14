@@ -108,7 +108,7 @@ namespace PIDL
 				JSONTools::addValue(doc, r, "type", t->name());
 		}
 
-		static void addTypeDefinition(rapidjson::Document & doc, rapidjson::Value & v, const std::shared_ptr<Language::TypeDefinition> & t)
+		static void addTypeDefinition(rapidjson::Document & doc, rapidjson::Value & v, const Language::TypeDefinition::Ptr & t)
 		{
 			addNature(doc, v, "typedef");
 			addName(doc, v, t->name());
@@ -116,7 +116,7 @@ namespace PIDL
 			addDocumentation(doc, v, t->documentation());
 		}
 
-		static void addFunction(rapidjson::Document & doc, rapidjson::Value & v, const std::shared_ptr<Language::Function> & f)
+		static void addFunction(rapidjson::Document & doc, rapidjson::Value & v, const Language::Function::Variant::Ptr & f)
 		{
 			addNature(doc, v, "function");
 			addName(doc, v, f->name());
@@ -127,11 +127,11 @@ namespace PIDL
 				rapidjson::Value e(rapidjson::kObjectType);
 				switch (arg->direction())
 				{
-				case Language::Function::Argument::Direction::In:
+				case Language::Function::Variant::Argument::Direction::In:
 					JSONTools::addValue(doc, e, "direction", "in"); break;
-				case Language::Function::Argument::Direction::Out:
+				case Language::Function::Variant::Argument::Direction::Out:
 					JSONTools::addValue(doc, e, "direction", "out"); break;
-				case Language::Function::Argument::Direction::InOut:
+				case Language::Function::Variant::Argument::Direction::InOut:
 					JSONTools::addValue(doc, e, "direction", "in-out"); break;
 				}
 				addName(doc, e, arg->name());
@@ -143,7 +143,7 @@ namespace PIDL
 			addDocumentation(doc, v, f->documentation());
 		}
 
-		static void addMethod(rapidjson::Document & doc, rapidjson::Value & v, const std::shared_ptr<Language::Method> & f)
+		static void addMethod(rapidjson::Document & doc, rapidjson::Value & v, Language::Function::Variant::Ptr & f)
 		{
 			addNature(doc, v, "method");
 			addName(doc, v, f->name());
@@ -154,11 +154,11 @@ namespace PIDL
 				rapidjson::Value e(rapidjson::kObjectType);
 				switch (arg->direction())
 				{
-				case Language::Function::Argument::Direction::In:
+				case Language::Function::Variant::Argument::Direction::In:
 					JSONTools::addValue(doc, e, "direction", "in"); break;
-				case Language::Function::Argument::Direction::Out:
+				case Language::Function::Variant::Argument::Direction::Out:
 					JSONTools::addValue(doc, e, "direction", "out"); break;
-				case Language::Function::Argument::Direction::InOut:
+				case Language::Function::Variant::Argument::Direction::InOut:
 					JSONTools::addValue(doc, e, "direction", "in-out"); break;
 				}
 				addName(doc, e, arg->name());
@@ -190,9 +190,12 @@ namespace PIDL
 			{
 				if (dynamic_cast<Language::Method*>(d.get()))
 				{
-					rapidjson::Value e(rapidjson::kObjectType);
-					addMethod(doc, e, std::dynamic_pointer_cast<Language::Method>(d));
-					b.PushBack(e, doc.GetAllocator());
+					for (auto & v : dynamic_cast<Language::Method*>(d.get())->variants())
+					{
+						rapidjson::Value e(rapidjson::kObjectType);
+						addMethod(doc, e, v.second);
+						b.PushBack(e, doc.GetAllocator());
+					}
 				}
 				else if (dynamic_cast<Language::Property*>(d.get()))
 				{
@@ -222,9 +225,12 @@ namespace PIDL
 				}
 				else if (dynamic_cast<Language::Function*>(d.get()))
 				{
-					rapidjson::Value e(rapidjson::kObjectType);
-					addFunction(doc, e, std::dynamic_pointer_cast<Language::Function>(d));
-					b.PushBack(e, doc.GetAllocator());
+					for (auto & v : dynamic_cast<Language::Function*>(d.get())->variants())
+					{
+						rapidjson::Value e(rapidjson::kObjectType);
+						addFunction(doc, e, v.second);
+						b.PushBack(e, doc.GetAllocator());
+					}
 				}
 				else if (dynamic_cast<Language::Object*>(d.get()))
 				{

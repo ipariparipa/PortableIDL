@@ -95,7 +95,7 @@ namespace PIDL
 		switch (place)
 		{
 		case Place::Before:
-			if (!dynamic_cast<Language::Function::Argument*>(docprov))
+			if (!dynamic_cast<Language::FunctionVariant::Argument*>(docprov))
 			{
 				**ctx << std::endl;
 				ctx->writeTabs(code_deepness) << "/*" << std::endl;
@@ -114,7 +114,7 @@ namespace PIDL
 			}
 			break;
 		case Place::After:
-			if (dynamic_cast<Language::Function::Argument*>(docprov))
+			if (dynamic_cast<Language::FunctionVariant::Argument*>(docprov))
 			{
 				*ctx << " // " << clean(join(split(doc.brief, '\n'), ' ')) << std::endl;
 				ctx->writeTabs(code_deepness + 1);
@@ -170,7 +170,7 @@ namespace PIDL
 		switch (place)
 		{
 		case Place::Before:
-			if (!dynamic_cast<Language::Function::Argument*>(docprov))
+			if (!dynamic_cast<Language::FunctionVariant::Argument*>(docprov))
 			{
 				**ctx << std::endl;
 
@@ -188,7 +188,7 @@ namespace PIDL
 					ctx->writeTabs(code_deepness) << "/// </remarks>" << std::endl;
 				}
 
-				if (dynamic_cast<Language::Function*>(docprov))
+				if (dynamic_cast<Language::FunctionVariant*>(docprov))
 				{
 					if (doc.details.count(Language::DocumentationProvider::Documentation::Return))
 					{
@@ -197,7 +197,7 @@ namespace PIDL
 						ctx->writeTabs(code_deepness) << "/// </returns>" << std::endl;
 					}
 
-					for (auto & arg : dynamic_cast<Language::Function*>(docprov)->arguments())
+					for (auto & arg : dynamic_cast<Language::FunctionVariant*>(docprov)->arguments())
 					{
 						if ((long)arg->documentation().brief.find("\n") == -1)
 						{
@@ -278,7 +278,7 @@ namespace PIDL
 		switch (place)
 		{
 		case Place::Before:
-			if (!dynamic_cast<Language::Function::Argument*>(docprov))
+			if (!dynamic_cast<Language::FunctionVariant::Argument*>(docprov))
 			{
 				**ctx << std::endl;
 				ctx->writeTabs(code_deepness) << "/*!" << std::endl;
@@ -296,17 +296,17 @@ namespace PIDL
 						ctx->writeTabs(code_deepness) << " * @return " << clean(join(split(doc.details.at(Language::DocumentationProvider::Documentation::Return), '\n'), ' ')) << std::endl;
 					}
 
-					for (auto & arg : dynamic_cast<Language::Function*>(docprov)->arguments())
+					for (auto & arg : dynamic_cast<Language::FunctionVariant*>(docprov)->arguments())
 					{
 						auto & doc = arg->documentation();
 						ctx->writeTabs(code_deepness) << " * @param[";
 						switch (arg->direction())
 						{
-						case Language::Function::Argument::Direction::In:
+						case Language::FunctionVariant::Argument::Direction::In:
 							*ctx << "in"; break;
-						case Language::Function::Argument::Direction::Out:
+						case Language::FunctionVariant::Argument::Direction::Out:
 							*ctx << "out"; break;
-						case Language::Function::Argument::Direction::InOut:
+						case Language::FunctionVariant::Argument::Direction::InOut:
 							*ctx << "in,out"; break;
 						}
 						*ctx << "] " << arg->name() << " " << clean(join(split(doc.brief, '\n'), ' ')) << std::endl;

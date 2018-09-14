@@ -297,13 +297,15 @@ namespace PIDL { namespace Language {
 		virtual const char * name() const override { return "void"; }
 	};
 
-	class PIDL_BACKEND__CLASS Function : public Definition, public DocumentationProvider
+	class Function;
+
+	class PIDL_BACKEND__CLASS FunctionVariant : public Definition, public DocumentationProvider
 	{
-		PIDL_COPY_PROTECTOR(Function)
+		PIDL_COPY_PROTECTOR(FunctionVariant)
 		struct Priv;
 		Priv * priv;
 	public:
-		typedef std::shared_ptr<Function> Ptr;
+		typedef std::shared_ptr<FunctionVariant> Ptr;
 
 		class PIDL_BACKEND__CLASS Argument : public Variable, public DocumentationProvider
 		{
@@ -324,19 +326,38 @@ namespace PIDL { namespace Language {
 			virtual const Documentation & documentation() const override;
 		};
 
-		Function(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<Argument::Ptr> & arguments, const Documentation & doc);
-		Function(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<Argument::Ptr> & arguments, const Documentation & doc);
-		virtual ~Function();
+		FunctionVariant(const std::shared_ptr<Function> & function, const Type::Ptr & returnType, const std::string & name, const std::vector<Argument::Ptr> & arguments, const Documentation & doc);
+		FunctionVariant(const std::shared_ptr<Function> & function, const Type::Ptr & returnType, const std::string & name, const std::list<Argument::Ptr> & arguments, const Documentation & doc);
+		virtual ~FunctionVariant();
 
 		virtual const char * name() const;
-		const std::string & hash() const;
-		const std::vector<std::string> & scope() const;
+		const std::shared_ptr<Function> & function() const;
+		const std::string & variantId() const;
 		const std::vector<Argument::Ptr> & arguments() const;
 		const std::vector<Argument::Ptr> & in_arguments() const;
 		const std::vector<Argument::Ptr> & out_arguments() const;
 		Type::Ptr returnType() const;
 
 		virtual const Documentation & documentation() const override;
+	};
+
+	class PIDL_BACKEND__CLASS Function : public Definition
+	{
+		PIDL_COPY_PROTECTOR(Function)
+		struct Priv;
+		Priv * priv;
+	public:
+		typedef FunctionVariant Variant;
+		typedef std::shared_ptr<Function> Ptr;
+
+		Function(const std::vector<std::string> & scope, const std::string & name);
+		virtual ~Function();
+
+		virtual const char * name() const;
+		const std::vector<std::string> & scope() const;
+
+		std::map<std::string /*variantId*/, Variant::Ptr> & variants();
+		const std::map<std::string /*variantId*/, Variant::Ptr> & variants() const;
 	};
 
 	class PIDL_BACKEND__CLASS TopLevel : public Element
@@ -352,7 +373,6 @@ namespace PIDL { namespace Language {
 		virtual const std::vector<std::string> & scope() const;
 	};
 
-	
 	class PIDL_BACKEND__CLASS Interface : public TopLevel, public DocumentationProvider
 	{
 		PIDL_COPY_PROTECTOR(Interface)
@@ -370,17 +390,31 @@ namespace PIDL { namespace Language {
 		virtual const Documentation & documentation() const override;
 	};
 
+	class Method;
+
+	class PIDL_BACKEND__CLASS MethodVariant : public FunctionVariant
+	{
+		PIDL_COPY_PROTECTOR(MethodVariant)
+		struct Priv;
+		Priv * priv;
+	public:
+		typedef std::shared_ptr<MethodVariant> Ptr;
+		MethodVariant(const std::shared_ptr<Method> & function, const Type::Ptr & returnType, const std::string & name, const std::vector<Argument::Ptr> & arguments, const Documentation & doc);
+		MethodVariant(const std::shared_ptr<Method> & function, const Type::Ptr & returnType, const std::string & name, const std::list<Argument::Ptr> & arguments, const Documentation & doc);
+		virtual ~MethodVariant();
+	};
+
 	class PIDL_BACKEND__CLASS Method : public Function
 	{
 		PIDL_COPY_PROTECTOR(Method)
 		struct Priv;
 		Priv * priv;
 	public:
+		typedef MethodVariant Variant;
 		typedef std::shared_ptr<Method> Ptr;
-		Method(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<Argument::Ptr> & arguments, const Documentation & doc);
-		Method(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<Argument::Ptr> & arguments, const Documentation & doc);
-		virtual ~Method();
 
+		Method(const std::vector<std::string> & scope, const std::string & name);
+		virtual ~Method();
 	};
 
 	class PIDL_BACKEND__CLASS Property : public Definition, public DocumentationProvider

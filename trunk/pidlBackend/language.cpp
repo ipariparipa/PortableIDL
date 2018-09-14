@@ -259,7 +259,7 @@ namespace PIDL {
 		Void::~Void() = default;
 
 
-		struct Function::Argument::Priv
+		struct Function::Variant::Argument::Priv
 		{
 			Priv(Direction direction_, const Documentation & doc_) : direction(direction_), doc(doc_)
 			{ }
@@ -268,33 +268,32 @@ namespace PIDL {
 			Documentation doc;
 		};
 
-		Function::Argument::Argument(const Type::Ptr & type, const std::string & name, Direction direction, const Documentation & doc) :
+		Function::Variant::Argument::Argument(const Type::Ptr & type, const std::string & name, Direction direction, const Documentation & doc) :
 			Variable(type, name),
 			priv(new Priv(direction, doc))
 		{ }
 
-		Function::Argument::~Argument()
+		Function::Variant::Argument::~Argument()
 		{
 			delete priv;
 		}
 
-		Function::Argument::Direction Function::Argument::direction() const
+		Function::Variant::Argument::Direction Function::Variant::Argument::direction() const
 		{
 			return priv->direction;
 		}
 
-		const Function::Argument::Documentation & Function::Argument::documentation() const
+		const Function::Variant::Argument::Documentation & Function::Variant::Argument::documentation() const
 		{
 			return priv->doc;
 		}
 
 
-
-		struct Function::Priv
+		struct FunctionVariant::Priv
 		{
-			Priv(const Type::Ptr & returnType_, const std::vector<std::string> & scope_, const std::string & name_, const std::vector<Argument::Ptr> & arguments_, const Documentation & doc_) :
+			Priv(const Function::Ptr & function_, const Type::Ptr & returnType_, const std::string & name_, const std::vector<Argument::Ptr> & arguments_, const Documentation & doc_) :
+				function(function_),
 				returnType(returnType_), 
-				scope(scope_),
 				name(name_), 
 				arguments(arguments_),
 				doc(doc_)
@@ -303,9 +302,9 @@ namespace PIDL {
 				updateHash();
 			}
 
-			Priv(const Type::Ptr & returnType_, const std::vector<std::string> & scope_, const std::string & name_, const std::list<Argument::Ptr> & arguments_, const Documentation & doc_) :
+			Priv(const Function::Ptr & function_, const Type::Ptr & returnType_, const std::string & name_, const std::list<Argument::Ptr> & arguments_, const Documentation & doc_) :
+				function(function_),
 				returnType(returnType_),
-				scope(scope_),
 				name(name_),
 				doc(doc_)
 			{
@@ -315,18 +314,44 @@ namespace PIDL {
 				updateHash();
 			}
 
+			Function::Ptr function;
 			std::shared_ptr<Type> returnType;
-			std::vector<std::string> scope;
 			std::string name;
-			std::string hash;
+			std::string argumentHash, hash;
 			std::vector<std::shared_ptr<Argument>> arguments, in_arguments, out_arguments;
 			Documentation doc;
 
 			void updateHash()
 			{
-				hash = name;
-				for (auto & a : arguments)
-					hash +=std::string("|") + a->name();
+				argumentHash = "ARG:";
+				if (arguments.size())
+				{
+					std::map<std::string, Argument::Ptr> args;
+					for (auto & a : arguments)
+						args[a->name()] = a;
+
+					bool is_first = true;
+					for (auto & a : args)
+					{
+						if (!is_first)
+							argumentHash += "|";
+						else
+							is_first = false;
+						switch (a.second->direction())
+						{
+						case Argument::Direction::In:
+							argumentHash += "in:"; break;
+						case Argument::Direction::InOut:
+							argumentHash += "inout:"; break;
+						case Argument::Direction::Out:
+							argumentHash += "out:"; break;
+						}
+						argumentHash +=  a.first;
+					}
+				}
+				else
+					argumentHash += "void";
+				hash = name + "#" + argumentHash;
 			}
 		private:
 			void buildArguments()
@@ -348,14 +373,74 @@ namespace PIDL {
 			}
 		};
 
-		Function::Function(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<Argument::Ptr> & arguments, const Documentation & doc) :
+		FunctionVariant::FunctionVariant(const Function::Ptr & function, const Type::Ptr & returnType, const std::string & name, const std::vector<Argument::Ptr> & arguments, const Documentation & doc) :
 			Definition(),
-			priv(new Priv(returnType, scope, name, arguments, doc))
+			priv(new Priv(function, returnType, name, arguments, doc))
 		{ }
 
-		Function::Function(const Type::Ptr & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<Argument::Ptr> & arguments, const Documentation & doc) :
+		FunctionVariant::FunctionVariant(const Function::Ptr & function, const Type::Ptr & returnType, const std::string & name, const std::list<Argument::Ptr> & arguments, const Documentation & doc) :
 			Definition(),
-			priv(new Priv(returnType, scope, name, arguments, doc))
+			priv(new Priv(function, returnType, name, arguments, doc))
+		{ }
+
+		FunctionVariant::~FunctionVariant()
+		{
+			delete priv;
+		}
+
+		const char * FunctionVariant::name() const
+		{
+			return priv->name.c_str();
+		}
+
+		const Function::Ptr & FunctionVariant::function() const
+		{
+			return priv->function;
+		}
+
+		const std::string & FunctionVariant::variantId() const
+		{
+			return priv->argumentHash;
+		}
+
+		const std::vector<std::shared_ptr<Function::Variant::Argument>> & FunctionVariant::arguments() const
+		{
+			return priv->arguments;
+		}
+
+		const std::vector<std::shared_ptr<Function::Variant::Argument>> & FunctionVariant::in_arguments() const
+		{
+			return priv->in_arguments;
+		}
+
+		const std::vector<std::shared_ptr<Function::Variant::Argument>> & FunctionVariant::out_arguments() const
+		{
+			return priv->out_arguments;
+		}
+
+		std::shared_ptr<Type> FunctionVariant::returnType() const
+		{
+			return priv->returnType;
+		}
+
+		const FunctionVariant::Documentation & FunctionVariant::documentation() const
+		{
+			return priv->doc;
+		}
+
+		struct Function::Priv
+		{
+			Priv(const std::vector<std::string> & scope_, const std::string & name_) : 
+				scope(scope_), name(name_)
+			{ }
+
+			std::vector<std::string> scope;
+			std::string name;
+
+			std::map<std::string /*variantId*/, Variant::Ptr> variants;
+		};
+
+		Function::Function(const std::vector<std::string> & scope, const std::string & name) : Definition(), priv(new Priv(scope, name))
 		{ }
 
 		Function::~Function()
@@ -368,41 +453,20 @@ namespace PIDL {
 			return priv->name.c_str();
 		}
 
-		const std::string & Function::hash() const
-		{
-			return priv->hash;
-		}
-
-		const std::vector<std::shared_ptr<Function::Argument>> & Function::arguments() const
-		{
-			return priv->arguments;
-		}
-
-		const std::vector<std::shared_ptr<Function::Argument>> & Function::in_arguments() const
-		{
-			return priv->in_arguments;
-		}
-
-		const std::vector<std::shared_ptr<Function::Argument>> & Function::out_arguments() const
-		{
-			return priv->out_arguments;
-		}
-
-		std::shared_ptr<Type> Function::returnType() const
-		{
-			return priv->returnType;
-		}
-
 		const std::vector<std::string> & Function::scope() const
 		{
 			return priv->scope;
 		}
 
-		const Function::Documentation & Function::documentation() const
+		std::map<std::string /*variantId*/, Function::Variant::Ptr> & Function::variants()
 		{
-			return priv->doc;
+			return priv->variants;
 		}
 
+		const std::map<std::string /*variantId*/, Function::Variant::Ptr> & Function::variants() const
+		{
+			return priv->variants;
+		}
 
 
 		//struct TopLevel::Priv { };
@@ -472,14 +536,22 @@ namespace PIDL {
 		}
 
 
-		//struct Method::Priv { };
+		//struct MethodVariant::Priv { };
 
-		Method::Method(const std::shared_ptr<Type> & returnType, const std::vector<std::string> & scope, const std::string & name, const std::vector<Argument::Ptr> & arguments, const Documentation & doc) :
-				Function(returnType, scope, name, arguments, doc), priv(nullptr)
+		MethodVariant::MethodVariant(const Method::Ptr & function, const Type::Ptr & returnType, const std::string & name, const std::vector<Argument::Ptr> & arguments, const Documentation & doc) :
+			FunctionVariant(function, returnType, name, arguments, doc), priv(nullptr)
 		{ }
 
-		Method::Method(const std::shared_ptr<Type> & returnType, const std::vector<std::string> & scope, const std::string & name, const std::list<Argument::Ptr> & arguments, const Documentation & doc) :
-						Function(returnType, scope, name, arguments, doc), priv(nullptr)
+		MethodVariant::MethodVariant(const Method::Ptr & function, const Type::Ptr & returnType, const std::string & name, const std::list<Argument::Ptr> & arguments, const Documentation & doc) :
+			FunctionVariant(function, returnType, name, arguments, doc), priv(nullptr)
+		{ }
+
+		MethodVariant::~MethodVariant() = default;
+
+
+		//struct Method::Priv { };
+
+		Method::Method(const std::vector<std::string> & scope, const std::string & name) : Function(scope, name), priv(nullptr)
 		{ }
 
 		Method::~Method() = default;

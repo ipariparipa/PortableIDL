@@ -24,6 +24,9 @@ namespace PIDL
 		return toString(errorCode, errorText);
 	}
 
+	//virtual 
+	void ErrorCollector::clear()
+	{ }
 
 	//static
 	std::string ErrorCollector::toString(long errorCode, const std::string & errorText)

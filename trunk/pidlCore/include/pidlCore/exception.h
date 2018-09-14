@@ -74,6 +74,11 @@ namespace PIDL {
 			throw new Exception(_errors);
 		}
 
+		virtual void clear() override
+		{
+			_errors.clear();
+		}
+
 	protected:
 		virtual void append(long errorCode, const std::string & errorText) override
 		{
