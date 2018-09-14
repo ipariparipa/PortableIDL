@@ -278,7 +278,7 @@ namespace PIDL {
 			return true;
 		}
 
-		bool writeFunction(short code_deepness, CSCodeGenContext * ctx, Language::Function * function, ErrorCollector & ec)
+		bool writeFunction(short code_deepness, CSCodeGenContext * ctx, Language::FunctionVariant * function, ErrorCollector & ec)
 		{
 			if (!writeDocumentation(code_deepness, ctx, CStyleDocumentation::Before, function, ec))
 				return false;
@@ -307,16 +307,16 @@ namespace PIDL {
 
 				switch (arg->direction())
 				{
-				case Language::Function::Argument::Direction::In:
+				case Language::FunctionVariant::Argument::Direction::In:
 					addType(code_deepness, ctx, arg->type().get(), ec);
 					*ctx << " " << arg->name();
 					break;
-				case Language::Function::Argument::Direction::InOut:
+				case Language::FunctionVariant::Argument::Direction::InOut:
 					*ctx << "/*in-out*/ ref ";
 					addType(code_deepness, ctx, arg->type().get(), ec);
 					*ctx << " " << arg->name();
 					break;
-				case Language::Function::Argument::Direction::Out:
+				case Language::FunctionVariant::Argument::Direction::Out:
 					*ctx << "out ";
 					addType(code_deepness, ctx, arg->type().get(), ec);
 					*ctx << " " << arg->name();
@@ -485,8 +485,9 @@ namespace PIDL {
 			}
 			else if (dynamic_cast<Language::Function*>(definition))
 			{
-				if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::Function*>(definition), ec))
-					return false;
+				for (auto & v : dynamic_cast<Language::Function*>(definition)->variants())
+					if (!writeFunction(code_deepness, ctx, v.second.get(), ec))
+						return false;
 			}
 			else if (dynamic_cast<Language::Object*>(definition))
 			{
@@ -500,8 +501,9 @@ namespace PIDL {
 		{
 			if (dynamic_cast<Language::Method*>(definition))
 			{
-				if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::Function*>(definition), ec))
-					return false;
+				for (auto & v : dynamic_cast<Language::Method*>(definition)->variants())
+					if (!writeFunction(code_deepness, ctx, v.second.get(), ec))
+						return false;
 			}
 			else if (dynamic_cast<Language::Property*>(definition))
 			{
@@ -536,9 +538,9 @@ namespace PIDL {
 					if (!writeTypeDefinition(code_deepness, ctx, dynamic_cast<Language::TypeDefinition*>(definition.get()), ec))
 						return false;
 				}
-				else if (dynamic_cast<Language::Function*>(definition.get()))
+				else if (dynamic_cast<Language::FunctionVariant*>(definition.get()))
 				{
-					if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::Function*>(definition.get()), ec))
+					if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::FunctionVariant*>(definition.get()), ec))
 						return false;
 				}
 				else if (dynamic_cast<Language::Object*>(definition.get()))
@@ -553,9 +555,9 @@ namespace PIDL {
 		bool writeDefinitions(short code_deepness, CSCodeGenContext * ctx, Language::Object * intf, ErrorCollector & ec)
 		{
 			for (auto & definition : intf->definitions())
-				if (dynamic_cast<Language::Method*>(definition.get()))
+				if (dynamic_cast<Language::MethodVariant*>(definition.get()))
 				{
-					if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::Function*>(definition.get()), ec))
+					if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::MethodVariant*>(definition.get()), ec))
 						return false;
 				}
 				else if (dynamic_cast<Language::Property*>(definition.get()))

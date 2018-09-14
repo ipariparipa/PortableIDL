@@ -329,7 +329,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool readMethod(InterfaceElementRegistry & registry, ObjectElementRegistry & objectRegistry, const std::vector<std::string> & scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Method> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readMethod(InterfaceElementRegistry & registry, ObjectElementRegistry & objectRegistry, const std::vector<std::string> & scope, const std::string & name, const rapidxml::xml_node<> * v, Language::Method::Variant::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidxml::xml_base<> * r;
 			if (!getTypeElem(v, r))
@@ -342,7 +342,7 @@ namespace PIDL
 				return false;
 
 			rapidxml::xml_node<> * as;
-			std::list<std::shared_ptr<Language::Function::Argument>> arguments;
+			std::list<std::shared_ptr<Language::Function::Variant::Argument>> arguments;
 			if (getNode(v, "arguments", as))
 			{
 				size_t i(0);
@@ -368,7 +368,7 @@ namespace PIDL
 					std::shared_ptr<Language::Type> tmp;
 					if (!readType(registry, t, tmp, error_path + "." + "a_name", ec))
 						return false;
-					Language::Function::Argument::Direction direction;
+					Language::Function::Variant::Argument::Direction direction;
 					{
 						std::string direction_str;
 						if (!getOptionalStringAttr(a, "direction", direction_str))
@@ -379,11 +379,11 @@ namespace PIDL
 						if (direction_str.length())
 						{
 							if (direction_str == "in")
-								direction = Language::Function::Argument::Direction::In;
+								direction = Language::Function::Variant::Argument::Direction::In;
 							else if (direction_str == "out")
-								direction = Language::Function::Argument::Direction::Out;
+								direction = Language::Function::Variant::Argument::Direction::Out;
 							else if (direction_str == "in-out")
-								direction = Language::Function::Argument::Direction::InOut;
+								direction = Language::Function::Variant::Argument::Direction::InOut;
 							else
 							{
 								ec << (error_path + ": 'direction' of '" + a_name + "' is invalid: " + direction_str);
@@ -398,7 +398,7 @@ namespace PIDL
 								ec << (error_path + ": 'out' of '" + a_name + "' is invalid");
 								return false;
 							}
-							direction = is_out ? Language::Function::Argument::Direction::Out : Language::Function::Argument::Direction::In;
+							direction = is_out ? Language::Function::Variant::Argument::Direction::Out : Language::Function::Variant::Argument::Direction::In;
 						}
 					}
 
@@ -406,7 +406,7 @@ namespace PIDL
 					if (!readDocumentation(a, doc, error_path, ec))
 						return false;
 
-					arguments.push_back(std::make_shared<Language::Function::Argument>(tmp, a_name, direction, doc));
+					arguments.push_back(std::make_shared<Language::Function::Variant::Argument>(tmp, a_name, direction, doc));
 					++i;
 				}
 			}
@@ -415,16 +415,24 @@ namespace PIDL
 			if (!readDocumentation(v, doc, error_path, ec))
 				return false;
 
-			auto meth = std::make_shared<Language::Method>(ret_type, scope, name, arguments, doc);
-
-			if (objectRegistry.definitions.count(meth->hash()))
+			Language::Method::Ptr meth;
+			if (!objectRegistry.definitions.count(name))
+				objectRegistry.definitions[name] = meth = std::make_shared<Language::Method>(scope, name);
+			else if (!(meth = std::dynamic_pointer_cast<Language::Method>(objectRegistry.definitions[name])))
 			{
-				ec << (error_path + ": name '" + meth->hash() + "' is already registered");
+				ec << (error_path + ": unexpected: name '" + name + "' has different definition type");
 				return false;
 			}
 
-			objectRegistry.definitions[meth->hash()] = ret = meth;
-			objectRegistry.definitions_list.push_back(ret);
+			auto var = std::make_shared<Language::Method::Variant>(meth, ret_type, name, arguments, doc);
+
+			if (meth->variants().count(var->variantId()))
+			{
+				ec << (error_path + ": name '" + name + "' with variant ID '" + var->variantId() + "' is already registered");
+				return false;
+			}
+
+			objectRegistry.definitions_list.push_back(meth->variants()[var->variantId()] = ret = var);
 			return true;
 		}
 
@@ -502,7 +510,7 @@ namespace PIDL
 					}
 					else if (e_nature == "method")
 					{
-						std::shared_ptr<Language::Method> tmp;
+						Language::Method::Variant::Ptr tmp;
 						auto _scope = scope;
 						_scope.push_back(name);
 						if (!readMethod(interfaceRegistry, registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
@@ -528,7 +536,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool readFunction(InterfaceElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Function> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readFunction(InterfaceElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidxml::xml_node<> * v, Language::Function::Variant::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidxml::xml_base<> * r;
 			if (!getTypeElem(v, r))
@@ -541,7 +549,7 @@ namespace PIDL
 				return false;
 
 			rapidxml::xml_node<> * as;
-			std::list<std::shared_ptr<Language::Function::Argument>> arguments;
+			std::list<std::shared_ptr<Language::Function::Variant::Argument>> arguments;
 			if (getNode(v, "arguments", as))
 			{
 				size_t i(0);
@@ -567,7 +575,7 @@ namespace PIDL
 					std::shared_ptr<Language::Type> tmp;
 					if (!readType(registry, t, tmp, error_path + "." + "a_name", ec))
 						return false;
-					Language::Function::Argument::Direction direction;
+					Language::Function::Variant::Argument::Direction direction;
 					{
 						std::string direction_str;
 						if (!getOptionalStringAttr(a, "direction", direction_str))
@@ -578,11 +586,11 @@ namespace PIDL
 						if (direction_str.length())
 						{
 							if (direction_str == "in")
-								direction = Language::Function::Argument::Direction::In;
+								direction = Language::Function::Variant::Argument::Direction::In;
 							else if (direction_str == "out")
-								direction = Language::Function::Argument::Direction::Out;
+								direction = Language::Function::Variant::Argument::Direction::Out;
 							else if (direction_str == "in-out")
-								direction = Language::Function::Argument::Direction::InOut;
+								direction = Language::Function::Variant::Argument::Direction::InOut;
 							else
 							{
 								ec << (error_path + ": 'direction' of '" + a_name + "' is invalid: " + direction_str);
@@ -597,7 +605,7 @@ namespace PIDL
 								ec << (error_path + ": 'out' of '" + a_name + "' is invalid");
 								return false;
 							}
-							direction = is_out ? Language::Function::Argument::Direction::Out : Language::Function::Argument::Direction::In;
+							direction = is_out ? Language::Function::Variant::Argument::Direction::Out : Language::Function::Variant::Argument::Direction::In;
 						}
 					}
 
@@ -605,7 +613,7 @@ namespace PIDL
 					if (!readDocumentation(a, doc, error_path, ec))
 						return false;
 
-					arguments.push_back(std::make_shared<Language::Function::Argument>(tmp, a_name, direction, doc));
+					arguments.push_back(std::make_shared<Language::Function::Variant::Argument>(tmp, a_name, direction, doc));
 					++i;
 				}
 			}
@@ -614,17 +622,24 @@ namespace PIDL
 			if (!readDocumentation(v, doc, error_path, ec))
 				return false;
 
-			auto func = std::make_shared<Language::Function>(ret_type, scope, name, arguments, doc);
-
-			if (registry.definitions.count(func->hash()))
+			Language::Function::Ptr func;
+			if (!registry.definitions.count(name))
+				registry.definitions[name] = registry.functions[name] = func = std::make_shared<Language::Function>(scope, name);
+			else if (!(func = std::dynamic_pointer_cast<Language::Function>(registry.definitions[name])))
 			{
-				ec << (error_path + ": name '" + func->hash() + "' is already registered");
+				ec << (error_path + ": unexpected: name '" + name + "' has different definition type");
 				return false;
 			}
 
-			registry.functions[func->hash()] = ret = func;
-			registry.definitions[func->hash()] = ret;
-			registry.definitions_list.push_back(ret);
+			auto var = std::make_shared<Language::Function::Variant>(func, ret_type, name, arguments, doc);
+
+			if (func->variants().count(var->variantId()))
+			{
+				ec << (error_path + ": name '" + name + "' variant id '" + var->variantId() + "' is already registered");
+				return false;
+			}
+
+			registry.definitions_list.push_back(func->variants()[var->variantId()] = ret = var);
 			return true;
 		}
 
@@ -674,7 +689,7 @@ namespace PIDL
 					{
 						auto _scope = scope;
 						_scope.push_back(name);
-						std::shared_ptr<Language::Function> tmp;
+						Language::Function::Variant::Ptr tmp;
 						if (!readFunction(registry, _scope, e_name, e, tmp, name + "." + e_name, ec))
 							return false;
 					}

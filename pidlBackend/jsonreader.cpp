@@ -317,7 +317,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool readFunction(ElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, std::shared_ptr<Language::Function> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readFunction(ElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, Language::Function::Variant::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidjson::Value * as;
 
@@ -331,7 +331,7 @@ namespace PIDL
 			if (!readType(registry, *r, ret_type, error_path, ec))
 				return false;
 
-			std::vector<std::shared_ptr<Language::Function::Argument>> arguments;
+			std::vector<std::shared_ptr<Language::Function::Variant::Argument>> arguments;
 			if (JSONTools::getValue(v, "arguments", as) && !as->IsNull())
 			{
 				if (!as->IsArray())
@@ -363,7 +363,7 @@ namespace PIDL
 					std::shared_ptr<Language::Type> tmp;
 					if (!readType(registry, *t, tmp, error_path + "." + "a_name", ec))
 						return false;
-					Language::Function::Argument::Direction direction;
+					Language::Function::Variant::Argument::Direction direction;
 					{
 						std::string direction_str;
 						if (!getOptionalString(a, "direction", direction_str))
@@ -374,11 +374,11 @@ namespace PIDL
 						if (direction_str.length())
 						{
 							if (direction_str == "in")
-								direction = Language::Function::Argument::Direction::In;
+								direction = Language::Function::Variant::Argument::Direction::In;
 							else if (direction_str == "out")
-								direction = Language::Function::Argument::Direction::Out;
+								direction = Language::Function::Variant::Argument::Direction::Out;
 							else if (direction_str == "in-out")
-								direction = Language::Function::Argument::Direction::InOut;
+								direction = Language::Function::Variant::Argument::Direction::InOut;
 							else
 							{
 								ec << (error_path + ": 'direction' of '" + a_name + "' is invalid: " + direction_str);
@@ -393,7 +393,7 @@ namespace PIDL
 								ec << (error_path + ": 'out' of '" + a_name + "' is invalid");
 								return false;
 							}
-							direction = is_out ? Language::Function::Argument::Direction::Out : Language::Function::Argument::Direction::In;
+							direction = is_out ? Language::Function::Variant::Argument::Direction::Out : Language::Function::Variant::Argument::Direction::In;
 						}
 					}
 
@@ -401,7 +401,7 @@ namespace PIDL
 					if (!readDocumentation(a, doc, error_path, ec))
 						return false;
 
-					arguments[i] = std::make_shared<Language::Function::Argument>(tmp, a_name, direction, doc);
+					arguments[i] = std::make_shared<Language::Function::Variant::Argument>(tmp, a_name, direction, doc);
 				}
 			}
 
@@ -409,21 +409,28 @@ namespace PIDL
 			if (!readDocumentation(v, doc, error_path, ec))
 				return false;
 
-			auto func = std::make_shared<Language::Function>(ret_type, scope, name, arguments, doc);
-
-			if (registry.definitions.count(func->hash()))
+			Language::Function::Ptr func;
+			if (!registry.definitions.count(name))
+				registry.definitions[name] = registry.functions[name] = func = std::make_shared<Language::Function>(scope, name);
+			else if (!(func = std::dynamic_pointer_cast<Language::Function>(registry.definitions[name])))
 			{
-				ec << (error_path + ": name '" + name + "' is already registered");
+				ec << (error_path + ": unexpected: name '" + name + "' has different definition type");
 				return false;
 			}
 
-			registry.functions[func->hash()] = ret = func;
-			registry.definitions[func->hash()] = ret;
-			registry.definitions_list.push_back(ret);
+			auto var = std::make_shared<Language::Function::Variant>(func, ret_type, name, arguments, doc);
+
+			if (func->variants().count(var->variantId()))
+			{
+				ec << (error_path + ": name '" + name + "' variant id '" + var->variantId() + "' is already registered");
+				return false;
+			}
+
+			registry.definitions_list.push_back(func->variants()[var->variantId()] = ret = var);
 			return true;
 		}
 
-		bool readMethod(ElementRegistry & registry, ObjectElementRegistry & obj_registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, std::shared_ptr<Language::Method> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readMethod(ElementRegistry & registry, ObjectElementRegistry & obj_registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, Language::Method::Variant::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidjson::Value * as;
 
@@ -437,7 +444,7 @@ namespace PIDL
 			if (!readType(registry, *r, ret_type, error_path, ec))
 				return false;
 
-			std::vector<std::shared_ptr<Language::Function::Argument>> arguments;
+			std::vector<std::shared_ptr<Language::Function::Variant::Argument>> arguments;
 			if (JSONTools::getValue(v, "arguments", as) && !as->IsNull())
 			{
 				if (!as->IsArray())
@@ -469,7 +476,7 @@ namespace PIDL
 					std::shared_ptr<Language::Type> tmp;
 					if (!readType(registry, *t, tmp, error_path + "." + "a_name", ec))
 						return false;
-					Language::Function::Argument::Direction direction;
+					Language::Function::Variant::Argument::Direction direction;
 					{
 						std::string direction_str;
 						if (!getOptionalString(a, "direction", direction_str))
@@ -480,11 +487,11 @@ namespace PIDL
 						if (direction_str.length())
 						{
 							if (direction_str == "in")
-								direction = Language::Function::Argument::Direction::In;
+								direction = Language::Function::Variant::Argument::Direction::In;
 							else if (direction_str == "out")
-								direction = Language::Function::Argument::Direction::Out;
+								direction = Language::Function::Variant::Argument::Direction::Out;
 							else if (direction_str == "in-out")
-								direction = Language::Function::Argument::Direction::InOut;
+								direction = Language::Function::Variant::Argument::Direction::InOut;
 							else
 							{
 								ec << (error_path + ": 'direction' of '" + a_name + "' is invalid: " + direction_str);
@@ -499,7 +506,7 @@ namespace PIDL
 								ec << (error_path + ": 'out' of '" + a_name + "' is invalid");
 								return false;
 							}
-							direction = is_out ? Language::Function::Argument::Direction::Out : Language::Function::Argument::Direction::In;
+							direction = is_out ? Language::Function::Variant::Argument::Direction::Out : Language::Function::Variant::Argument::Direction::In;
 						}
 					}
 
@@ -507,7 +514,7 @@ namespace PIDL
 					if (!readDocumentation(a, doc, error_path, ec))
 						return false;
 
-					arguments[i] = std::make_shared<Language::Function::Argument>(tmp, a_name, direction, doc);
+					arguments[i] = std::make_shared<Language::Function::Variant::Argument>(tmp, a_name, direction, doc);
 				}
 			}
 
@@ -515,16 +522,24 @@ namespace PIDL
 			if (!readDocumentation(v, doc, error_path, ec))
 				return false;
 
-			auto meth = std::make_shared<Language::Method>(ret_type, scope, name, arguments, doc);
-
-			if (obj_registry.definitions.count(meth->hash()))
+			Language::Method::Ptr meth;
+			if (!obj_registry.definitions.count(name))
+				obj_registry.definitions[name] = meth = std::make_shared<Language::Method>(scope, name);
+			else if (!(meth = std::dynamic_pointer_cast<Language::Method>(obj_registry.definitions[name])))
 			{
-				ec << (error_path + ": name '" + meth->hash() + "' is already registered");
+				ec << (error_path + ": unexpected: name '" + name + "' has different definition type");
 				return false;
 			}
 
-			obj_registry.definitions[meth->hash()] = ret = meth;
-			obj_registry.definitions_list.push_back(ret);
+			auto var = std::make_shared<Language::Method::Variant>(meth, ret_type, name, arguments, doc);
+
+			if (meth->variants().count(var->variantId()))
+			{
+				ec << (error_path + ": name '" + name + "' with variant ID '" + var->variantId() + "' is already registered");
+				return false;
+			}
+
+			obj_registry.definitions_list.push_back(meth->variants()[var->variantId()] = ret = var);
 			return true;
 		}
 
@@ -558,7 +573,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool readObject(ElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, std::shared_ptr<Language::Object> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readObject(ElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, Language::Object::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			ObjectElementRegistry obj_registry;
 			obj_registry.path = registry.path + "." + name;
@@ -600,7 +615,7 @@ namespace PIDL
 						}
 						else if (e_nature == "method")
 						{
-							std::shared_ptr<Language::Method> tmp;
+							Language::Method::Variant::Ptr tmp;
 							auto _scope = scope;
 							_scope.push_back(name);
 							if (!readMethod(registry, obj_registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
@@ -677,7 +692,7 @@ namespace PIDL
 						}
 						else if (e_nature == "function")
 						{
-							std::shared_ptr<Language::Function> tmp;
+							Language::Function::Variant::Ptr tmp;
 							auto _scope = scope;
 							_scope.push_back(name);
 							if (!readFunction(registry, _scope, e_name, e, tmp, name + "." + e_name, ec))

@@ -34,6 +34,7 @@ namespace PIDL
 		virtual ~ErrorCollector();
 		ErrorCollector & operator << (const std::string & msg);
 		std::string add(long core, const std::string & msg);
+		virtual void clear();
 		static std::string toString(long errorCode, const std::string & errorText);
 	protected:
 		virtual void append(long errorCode, const std::string & errorText) = 0;

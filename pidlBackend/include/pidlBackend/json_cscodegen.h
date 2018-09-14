@@ -37,11 +37,11 @@ namespace PIDL
 		virtual bool writeUsings(short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
 		virtual bool writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) override;
 		virtual bool writeInvoke(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) override;
-		virtual bool writeFunctionBody(Language::Function * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeFunctionBody(Language::FunctionVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
 		virtual bool writeConstructorBody(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
 
 		virtual bool writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec) override;
-		virtual bool writeFunctionBody(Language::Method * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeFunctionBody(Language::MethodVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
 		virtual bool writeConstructorBody(Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
 		virtual bool writeDestructorBody(Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
 		virtual bool writeInvoke(short code_deepness, CSCodeGenContext * ctx, Language::Object * intf, ErrorCollector & ec) override;

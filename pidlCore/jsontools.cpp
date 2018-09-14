@@ -165,14 +165,13 @@ namespace PIDL { namespace JSONTools {
 		return true;
 	}
 
-	//extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, long long & ret)
-	//{
-	//	rapidjson::Value * v;
-	//	if (!getValue(r, name, v))
-	//		return false;
-
-	//	return getValue(*v, ret);
-	//}
+	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, int & ret)
+	{
+		if (v.IsNull() || !v.IsNumber())
+			return false;
+		ret = v.GetInt();
+		return true;
+	}
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, long long & ret)
 	{
@@ -182,33 +181,6 @@ namespace PIDL { namespace JSONTools {
 		return true;
 	}
 
-
-	//extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, int & ret)
-	//{
-	//	if (v.IsNull() || !v.IsNumber())
-	//		return false;
-	//	ret = v.GetInt();
-	//	return true;
-	//}
-
-	//extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, int & ret)
-	//{
-	//	rapidjson::Value * v;
-	//	if (!getValue(r, name, v))
-	//		return false;
-
-	//	return getValue(*v, ret);
-	//}
-
-	//extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, double & ret)
-	//{
-	//	rapidjson::Value * v;
-	//	if (!getValue(r, name, v))
-	//		return false;
-
-	//	return getValue(*v, ret);
-	//}
-
 	extern PIDL_CORE__FUNCTION  bool getValue(const rapidjson::Value & v, double & ret)
 	{
 		if (v.IsNull() || !v.IsNumber())
@@ -216,14 +188,6 @@ namespace PIDL { namespace JSONTools {
 		ret = v.GetDouble();
 		return true;
 	}
-
-	//extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, bool & ret)
-	//{
-	//	rapidjson::Value * v;
-	//	if (!getValue(r, name, v))
-	//		return false;
-	//	return getValue(*v, ret);
-	//}
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, bool & ret)
 	{
@@ -309,15 +273,6 @@ namespace PIDL { namespace JSONTools {
 		return true;
 	}
 
-	//extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, tm & ret)
-	//{
-	//	rapidjson::Value * v;
-	//	if (!getValue(r, name, v))
-	//		return false;
-
-	//	return getValue(*v, ret);
-	//}
-
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, std::vector<char> & ret)
 	{
 		if (v.IsNull() || !v.IsString())
@@ -325,17 +280,6 @@ namespace PIDL { namespace JSONTools {
 		base64::decode(v.GetString(), ret);
 		return true;
 	}
-
-	//extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, std::vector<char> & ret)
-	//{
-	//	rapidjson::Value * v;
-	//	if (!getValue(r, name, v))
-	//		return false;
-
-	//	return getValue(*v, ret);
-	//}
-
-
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value setString(rapidjson::Document & doc, const char * str)
 	{
@@ -353,21 +297,11 @@ namespace PIDL { namespace JSONTools {
 	{
 		return setString(doc, str);
 	}
-	//extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const char * str)
-	//{
-	//	auto v = createValue(doc, str);
-	//	addValue(doc, r, name, v);
-	//}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const std::string & str)
 	{
 		return setString(doc, str.c_str());
 	}
-	//extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::string & str)
-	//{
-	//	auto v = createValue(doc, str);
-	//	addValue(doc, r, name, v);
-	//}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, long long num)
 	{
@@ -375,11 +309,6 @@ namespace PIDL { namespace JSONTools {
 		v.SetInt64(num);
 		return v;
 	}
-	//extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, long long num)
-	//{
-	//	auto v = createValue(doc, num);
-	//	addValue(doc, r, name, v);
-	//}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, int num)
 	{
@@ -387,11 +316,6 @@ namespace PIDL { namespace JSONTools {
 		v.SetInt(num);
 		return v;
 	}
-	//extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, int num)
-	//{
-	//	auto v = createValue(doc, num);
-	//	addValue(doc, r, name, v);
-	//}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, double num)
 	{
@@ -399,11 +323,6 @@ namespace PIDL { namespace JSONTools {
 		v.SetDouble(num);
 		return v;
 	}
-	//extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, double num)
-	//{
-	//	auto v = createValue(doc, num);
-	//	addValue(doc, r, name, v);
-	//}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createNull(rapidjson::Document & doc)
 	{
@@ -415,21 +334,10 @@ namespace PIDL { namespace JSONTools {
 		addValue(doc, r, name, v);
 	}
 
-	//extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, bool b)
-	//{
-	//	auto v = createValue(doc, b);
-	//	addValue(doc, r, name, v);
-	//}
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, bool b)
 	{
 		return rapidjson::Value(b ? rapidjson::kTrueType : rapidjson::kFalseType);
 	}
-
-	//extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const tm & t)
-	//{
-	//	auto v = createValue(doc, t);
-	//	addValue(doc, r, name, v);
-	//}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const tm & t, short millisecond)
 	{
@@ -453,12 +361,6 @@ namespace PIDL { namespace JSONTools {
 	{
 		return createValue(doc, t, 0);
 	}
-
-	//extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const DateTime & t)
-	//{
-	//	auto v = createValue(doc, t);
-	//	addValue(doc, r, name, v);
-	//}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const DateTime & dt)
 	{

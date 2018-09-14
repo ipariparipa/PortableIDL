@@ -33,6 +33,16 @@ namespace PIDL
 			Errors = errs;
 		}
 
+		public PIDLException(int code, string message, System.Exception inner = null)
+			: base(null, inner)
+		{
+			var errs = new PIDLError[1];
+			errs[0] = new PIDLError();
+			errs[0].code = code;
+			errs[0].msg = message;
+			Errors = errs;
+		}
+
 		public PIDLException(IEnumerable<PIDLError> errs, System.Exception inner = null)
 			: base(null, inner)
 		{
@@ -72,6 +82,11 @@ namespace PIDL
 		public void Add(PIDLError err)
 		{
 			_errors.Add(err);
+		}
+
+		public void Clear()
+		{
+			_errors.Clear();
 		}
 
 		List<PIDLError> _errors = new List<PIDLError>();
