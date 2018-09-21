@@ -921,6 +921,18 @@ namespace PIDL
 			}
 
 			auto & o = ctx->writeTabs(code_deepness++) << "namespace " << that->helper()->getName(module) << " {" << std::endl;
+
+			switch (ctx->mode())
+			{
+			case Mode::AllInOne:
+			case Mode::Declaration:
+				if (!that->writeAliases(code_deepness, ctx, ec))
+					return false;
+				break;
+			case Mode::Implementatinon:
+				break;
+			}
+
 			for (auto & element : module->elements())
 			{
 				o << std::endl;
@@ -1032,17 +1044,6 @@ namespace PIDL
 		template<class Class_T>
 		bool writePublicSection(short code_deepness, CPPCodeGenContext * ctx, Class_T * cl, ErrorCollector & ec)
 		{
-			switch (ctx->mode())
-			{
-			case Mode::AllInOne:
-			case Mode::Declaration:
-				if (dynamic_cast<Language::Interface*>(cl) && !that->writeAliases(code_deepness, ctx, ec))
-					return false;
-				break;
-			case Mode::Implementatinon:
-				break;
-			}
-
 			switch (ctx->role())
 			{
 			case Role::Client:

@@ -74,7 +74,7 @@ namespace PIDL {
 			throw new Exception(_errors);
 		}
 
-		virtual void clear() override
+		virtual void clear()
 		{
 			_errors.clear();
 		}
