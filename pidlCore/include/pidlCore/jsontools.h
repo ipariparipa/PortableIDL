@@ -27,6 +27,7 @@
 #include <vector>
 
 namespace PIDL { namespace JSONTools {
+	enum class InvokeStatus { Ok, NotImplemented, Error, MarshallingError, NotSupportedMarshaklingVersion, FatalError };
 
 	extern PIDL_CORE__FUNCTION std::string getErrorText(rapidjson::ParseErrorCode code);
 
@@ -66,11 +67,12 @@ namespace PIDL { namespace JSONTools {
 		ret.resize(v.Size());
 
 		size_t i(0);
+		bool has_error = false;
 		for (auto it = v.Begin(); it != v.End(); ++it)
 			if (!getValue(*it, ret[i++]))
-				return false;
+				has_error = true;
 
-		return true;
+		return !has_error;
 	}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value setString(rapidjson::Document & doc, const char * str);
