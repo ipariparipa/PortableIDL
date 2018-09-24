@@ -80,7 +80,7 @@
   <ItemGroup>
     <ClCompile Include="codegencontext.cpp" />
     <ClCompile Include="cppcodegen.cpp" />
-    <ClCompile Include="cpppwriter.cpp" />
+    <ClCompile Include="cppwriter.cpp" />
     <ClCompile Include="cscodegen.cpp" />
     <ClCompile Include="cstyledocumentation.cpp" />
     <ClCompile Include="cswriter.cpp" />
