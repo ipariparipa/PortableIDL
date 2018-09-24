@@ -180,6 +180,16 @@ namespace PIDL
 			ctx->writeTabs(code_deepness) << "return _getValue(*v, ret, ec);" << std::endl;
 			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
+			ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & v, blob & ret, _error_collector & ec)" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
+			ctx->writeTabs(code_deepness) << "return _getValue<blob>(v, ret, ec);" << std::endl;
+			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+			ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & r, const char * name, blob & ret, _error_collector & ec)" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
+			ctx->writeTabs(code_deepness) << "return _getValue<blob>(r, name, ret, ec);" << std::endl;
+			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
 			for (auto & d : cl->definitions())
 			{
 
