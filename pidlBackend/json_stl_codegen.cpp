@@ -1099,8 +1099,8 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "PIDL::JSONTools::addValue(_doc, _doc, \"function\", _v);" << std::endl;
 				ctx->writeTabs(code_deepness) << "rapidjson::Document _ret;" << std::endl;
 				ctx->writeTabs(code_deepness) << "if (!_p->_invokeCall(_doc, _ret, _ec))" << std::endl;
-				ctx->writeTabs(code_deepness) << "_ec.throwException();" << std::endl;
-				ctx->writeTabs(code_deepness) << "}" << std::endl << std::endl;
+				ctx->writeTabs(code_deepness + 1) << "_ec.throwException();" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 				break;
 			}
 			break;
