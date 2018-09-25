@@ -349,7 +349,7 @@ namespace PIDL
 
 			if (typeof(T) == typeof(int))
 				(v = addValue(r, name, Type.Number)).Add(Convert.ToString(val, new System.Globalization.NumberFormatInfo()));
-			if (typeof(T) == typeof(long))
+			else if (typeof(T) == typeof(long))
 				(v = addValue(r, name, Type.Number)).Add(Convert.ToString(val, new System.Globalization.NumberFormatInfo()));
 			else if (typeof(T) == typeof(int))
 				(v = addValue(r, name, Type.Number)).Add(Convert.ToString(val, new System.Globalization.NumberFormatInfo()));
