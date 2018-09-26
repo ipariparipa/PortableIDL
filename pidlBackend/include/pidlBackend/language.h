@@ -367,13 +367,17 @@ namespace PIDL { namespace Language {
 		Priv * priv;
 	public:
 		typedef std::shared_ptr<TopLevel> Ptr;
+		typedef std::map<std::string /*name*/, std::string /*value*/> Info;
+ 
 		TopLevel();
+		TopLevel(const Info & info);
 		virtual ~TopLevel();
 		virtual const char * name() const = 0;
 		virtual const std::vector<std::string> & scope() const;
 
-		void setJsonPIDL(const std::string & pidl);
-		const std::string & jsonPIDL() const;
+		void setInfo(const std::string & name, const std::string & value);
+		void setInfo(const Info & info);
+		const Info & info() const;
 	};
 
 	class PIDL_BACKEND__CLASS Interface : public TopLevel, public DocumentationProvider
@@ -462,6 +466,7 @@ namespace PIDL { namespace Language {
 		Priv * priv;
 	public:
 		typedef std::shared_ptr<Module> Ptr;
+		Module(const std::string & name, const std::vector<TopLevel::Ptr> & elements, const Documentation & doc, const Info & info);
 		Module(const std::string & name, const std::vector<TopLevel::Ptr> & elements, const Documentation & doc);
 		virtual ~Module();
 		virtual const char * name() const override;

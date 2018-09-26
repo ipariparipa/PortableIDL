@@ -471,8 +471,14 @@ namespace PIDL {
 
 		struct TopLevel::Priv 
 		{
-			std::string json_pidl;
+			Priv(const Info & info_) : info(info_) { }
+			Priv() { }
+
+			Info info;
 		};
+
+		TopLevel::TopLevel(const Info & info) : priv(new Priv(info))
+		{ }
 
 		TopLevel::TopLevel() : priv(new Priv)
 		{ }
@@ -488,14 +494,19 @@ namespace PIDL {
 			return empty;
 		}
 
-		void TopLevel::setJsonPIDL(const std::string & pidl)
+		void TopLevel::setInfo(const std::string & name, const std::string & value)
 		{
-			priv->json_pidl = pidl;
+			priv->info[name] = value;
 		}
 
-		const std::string & TopLevel::jsonPIDL() const
+		void TopLevel::setInfo(const Info & info)
 		{
-			return priv->json_pidl;
+			priv->info = info;
+		}
+
+		const TopLevel::Info & TopLevel::info() const
+		{
+			return priv->info;
 		}
 
 
@@ -693,6 +704,11 @@ namespace PIDL {
 
 		Module::Module(const std::string & name, const std::vector<TopLevel::Ptr> & elements, const Documentation & doc) :
 			TopLevel(),
+			priv(new Priv(name, elements, doc))
+		{ }
+
+		Module::Module(const std::string & name, const std::vector<TopLevel::Ptr> & elements, const Documentation & doc, const Info & info) :
+			TopLevel(info),
 			priv(new Priv(name, elements, doc))
 		{ }
 

@@ -249,6 +249,21 @@ namespace PIDL
 			addNature(doc, v, "module");
 			addName(doc, v, mod->name());
 
+			if (mod->info().size())
+			{
+				rapidjson::Value i(rapidjson::kArrayType);
+				for (auto & e : mod->info())
+				{
+					rapidjson::Value t(rapidjson::kObjectType);
+					JSONTools::addValue(doc, t, "name", e.first);
+					if (e.first.length() && e.first.front() != '_')
+						JSONTools::addValue(doc, t, "value", e.second);
+					i.PushBack(t, doc.GetAllocator());
+				}
+				JSONTools::addValue(doc, v, "info", i);
+				addDocumentation(doc, v, mod->documentation());
+			}
+
 			rapidjson::Value b(rapidjson::kArrayType);
 
 			for (auto & e : mod->elements())

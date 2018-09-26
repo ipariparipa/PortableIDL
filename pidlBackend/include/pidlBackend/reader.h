@@ -52,6 +52,9 @@ namespace PIDL
 		virtual std::vector<std::shared_ptr<Language::TopLevel>> topLevels() const = 0;
 
 		static bool readFromFile(const std::string & filename, std::string & str, ErrorCollector & ec);
+
+	protected:
+		bool completeInfo(ErrorCollector & ec);
 	};
 
 }
