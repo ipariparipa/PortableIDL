@@ -469,13 +469,33 @@ namespace PIDL {
 		}
 
 
-		//struct TopLevel::Priv { };
-		TopLevel::TopLevel() : priv(nullptr) { }
-		TopLevel::~TopLevel() = default;
+		struct TopLevel::Priv 
+		{
+			std::string json_pidl;
+		};
+
+		TopLevel::TopLevel() : priv(new Priv)
+		{ }
+
+		TopLevel::~TopLevel()
+		{
+			delete priv;
+		}
+
 		const std::vector<std::string> & TopLevel::scope() const
 		{
 			static const std::vector<std::string> empty;
 			return empty;
+		}
+
+		void TopLevel::setJsonPIDL(const std::string & pidl)
+		{
+			priv->json_pidl = pidl;
+		}
+
+		const std::string & TopLevel::jsonPIDL() const
+		{
+			return priv->json_pidl;
 		}
 
 

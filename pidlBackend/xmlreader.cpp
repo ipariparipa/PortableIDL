@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include "rapidxml/rapidxml.hpp"
+#include "include/pidlBackend/jsonwriter.h"
 
 namespace PIDL
 {
@@ -793,7 +794,7 @@ namespace PIDL
 				std::string name;
 				if (!getName(n, name))
 				{
-					ec << "name of interface is not toplevel element";
+					ec << "name of module is not toplevel element";
 					return false;
 				}
 
@@ -843,7 +844,16 @@ namespace PIDL
 
 	bool XMLReader::read(ErrorCollector & ec)
 	{
-		return priv->read(priv->xml_stream, ec);
+		if (!priv->read(priv->xml_stream, ec))
+			return false;
+		auto ss = std::make_shared<std::stringstream>();
+		JSONWriter wr(ss, false);
+		if (!wr.write(this, ec))
+			return false;
+		for (auto & i : priv->topLevels)
+			i.second->setJsonPIDL(ss->str());
+
+		return true;
 	}
 
 	std::vector<std::shared_ptr<Language::TopLevel>> XMLReader::topLevels() const

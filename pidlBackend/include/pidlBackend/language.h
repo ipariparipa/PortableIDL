@@ -371,6 +371,9 @@ namespace PIDL { namespace Language {
 		virtual ~TopLevel();
 		virtual const char * name() const = 0;
 		virtual const std::vector<std::string> & scope() const;
+
+		void setJsonPIDL(const std::string & pidl);
+		const std::string & jsonPIDL() const;
 	};
 
 	class PIDL_BACKEND__CLASS Interface : public TopLevel, public DocumentationProvider
