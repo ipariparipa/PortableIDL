@@ -16,6 +16,8 @@
  */
 
 #include "include/pidlBackend/reader.h"
+#include "include/pidlBackend/language.h"
+#include "include/pidlBackend/jsonwriter.h"
 #include <pidlCore/errorcollector.h>
 
 #include <fstream>
@@ -46,6 +48,34 @@ namespace PIDL
 		}
 
 		str = ss.str();
+		return true;
+	}
+
+	bool _completeInfo(Reader * r, const Language::TopLevel::Ptr topLevel, ErrorCollector & ec)
+	{
+		if (topLevel->info().count("_jsonPIDL"))
+		{
+			auto ss = std::make_shared<std::stringstream>();
+			JSONWriter wr(ss, false);
+			if (!wr.write(r, ec))
+				return false;
+			topLevel->setInfo("_jsonPIDL", ss->str());
+		}
+
+		auto module = std::dynamic_pointer_cast<Language::Module>(topLevel);
+		if (module)
+			for (auto & e : module->elements())
+				if (!_completeInfo(r, e, ec))
+					return false;
+
+		return true;
+	}
+
+	bool Reader::completeInfo(ErrorCollector & ec)
+	{
+		for (auto & tl : topLevels())
+			if (!_completeInfo(this, tl, ec))
+				return false;
 		return true;
 	}
 

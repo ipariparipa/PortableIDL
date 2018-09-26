@@ -603,27 +603,31 @@ namespace PIDL {
 			return true;
 		}
 
-		bool writeLongString(short code_deepness, CSCodeGenContext * ctx, const std::string & str_, ErrorCollector & ec)
+		bool writeLongString(short code_deepness, CSCodeGenContext * ctx, const std::string & str, ErrorCollector & ec)
 		{
-			if (!str_.length())
+			if (!str.length())
 			{
 				*ctx << "\"\"";
 				return true;
 			}
 
-			auto replace_all = [](std::string & str, const std::string & from, const std::string & to) -> std::string &
+			auto normalize = [](std::string str) -> std::string
 			{
-				for (size_t start_pos = 0; (start_pos = str.find(from, start_pos)) != std::string::npos; start_pos += to.length())
-					str.replace(start_pos, from.length(), to);
+				auto replace_all = [](std::string & str, const std::string & from, const std::string & to) -> std::string &
+				{
+					for (size_t start_pos = 0; (start_pos = str.find(from, start_pos)) != std::string::npos; start_pos += to.length())
+						str.replace(start_pos, from.length(), to);
+					return str;
+				};
+
+				replace_all(str, "\\", "\\\\");
+				replace_all(str, "\n", "\\n");
+				replace_all(str, "\r", "\\r");
+				replace_all(str, "\t", "\\t");
+				replace_all(str, "\"", "\\\"");
+
 				return str;
 			};
-
-			std::string str = str_;
-			replace_all(str, "\\", "\\\\");
-			replace_all(str, "\n", "\\n");
-			replace_all(str, "\r", "\\r");
-			replace_all(str, "\t", "\\t");
-			replace_all(str, "\"", "\\\"");
 
 			bool is_first = true;
 			for (size_t i = 0; i < str.length(); i += 512)
@@ -636,9 +640,9 @@ namespace PIDL {
 					ctx->writeTabs(code_deepness + 2);
 				}
 				if (i + 512 > str.length())
-					*ctx << "\"" << str.substr(i, str.length() - i) << "\"";
+					*ctx << "\"" << normalize(str.substr(i, str.length() - i)) << "\"";
 				else
-					*ctx << "\"" << str.substr(i, 512) << "\"";
+					*ctx << "\"" << normalize(str.substr(i, 512)) << "\"";
 			}
 
 			return true;
@@ -655,16 +659,19 @@ namespace PIDL {
 			case Role::Client:
 				break;
 			case Role::Server:
-				if (module->jsonPIDL().length())
+				if (module->info().size())
 				{
-					ctx->writeTabs(code_deepness) << "static class _Globals" << std::endl;
+					ctx->writeTabs(code_deepness) << "static class _Info" << std::endl;
 					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					ctx->writeTabs(code_deepness++) << "public static string jsonPIDL { get {" << std::endl;
-					ctx->writeTabs(code_deepness) << "return ";
-					if (!writeLongString(code_deepness, ctx, module->jsonPIDL(), ec))
-						return false;
-					*ctx << ";" << std::endl;
-					ctx->writeTabs(--code_deepness) << "} }" << std::endl;
+					for (auto & i : module->info())
+					{
+						ctx->writeTabs(code_deepness++) << "public static string " << i.first << " { get {" << std::endl;
+						ctx->writeTabs(code_deepness) << "return ";
+						if (!writeLongString(code_deepness, ctx, i.second, ec))
+							return false;
+						*ctx << ";" << std::endl;
+						ctx->writeTabs(--code_deepness) << "} }" << std::endl << std::endl;
+					}
 					ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				}
 				break;

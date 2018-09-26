@@ -32,8 +32,6 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/prettywriter.h>
 
-#include "include/pidlBackend/jsonwriter.h"
-
 namespace PIDL
 {
 
@@ -723,19 +721,46 @@ namespace PIDL
 			ElementRegistry registry;
 			registry.path = name;
 
+			Language::TopLevel::Info info;
+
+			rapidjson::Value * info_v;
+			if (JSONTools::getValue(v, "info", info_v))
+			{
+				if (!info_v->IsArray())
+				{
+					ec << ("info of module '" + name + "' is not array");
+					return false;
+				}
+				for (rapidjson::SizeType i(0), l(info_v->Size()); i < l; ++i)
+				{
+					auto & e = (*info_v)[i];
+					if (!e.IsNull())
+					{
+						std::string e_name;
+						if (!getName(e, e_name))
+						{
+							ec << ("name of info #" + std::to_string(i) + " of module '" + name + "' is not specified");
+							return false;
+						}
+
+						JSONTools::getValue(e, "value", info[e_name]);
+					}
+				}
+			}
+
 			std::map<std::string, Language::TopLevel::Ptr> elements;
 
-			rapidjson::Value * b;
-			if (JSONTools::getValue(v, "body", b))
+			rapidjson::Value * body_v;
+			if (JSONTools::getValue(v, "body", body_v))
 			{
-				if (!b->IsArray())
+				if (!body_v->IsArray())
 				{
 					ec << ("body of module '" + name + "' is not array");
 					return false;
 				}
-				for (rapidjson::SizeType i(0), l(b->Size()); i < l; ++i)
+				for (rapidjson::SizeType i(0), l(body_v->Size()); i < l; ++i)
 				{
-					auto & e = (*b)[i];
+					auto & e = (*body_v)[i];
 					if (!e.IsNull())
 					{
 						std::string e_name;
@@ -764,7 +789,7 @@ namespace PIDL
 			if (!readDocumentation(v, doc, name, ec))
 				return false;
 
-			ret = std::make_shared<Language::Module>(name, _elements, doc);
+			ret = std::make_shared<Language::Module>(name, _elements, doc, info);
 
 			return true;
 		}
@@ -857,13 +882,8 @@ namespace PIDL
 	{
 		if (!priv->read(priv->json_stream, ec))
 			return false;
-		auto ss = std::make_shared<std::stringstream>();
-		JSONWriter wr(ss, false);
-		wr.write(this, ec);
-		for (auto & i : priv->topLevels)
-			i.second->setJsonPIDL(ss->str());
 
-		return true;
+		return completeInfo(ec);
 	}
 
 	std::vector<std::shared_ptr<Language::TopLevel>> JSONReader::topLevels() const

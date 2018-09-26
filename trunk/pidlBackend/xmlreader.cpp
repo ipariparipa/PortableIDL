@@ -29,7 +29,6 @@
 #include <string.h>
 
 #include "rapidxml/rapidxml.hpp"
-#include "include/pidlBackend/jsonwriter.h"
 
 namespace PIDL
 {
@@ -713,24 +712,32 @@ namespace PIDL
 
 		bool readModule(const std::string name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Module> & ret, ErrorCollector & ec)
 		{
-			rapidxml::xml_node<> * b;
+			Language::Module::Info info;
+
+			rapidxml::xml_node<> * info_n;
+			if (getNode(v, "info", info_n))
+			{
+				for (auto n = info_n->first_node(); n; n = n->next_sibling())
+					info[n->name()] = n->value();
+			}
 
 			std::map<std::string, std::shared_ptr<Language::TopLevel>> elements;
 
-			if (getNode(v, "body", b))
+			rapidxml::xml_node<> * body_n;
+			if (getNode(v, "body", body_n))
 			{
 				size_t i(0);
-				for (auto e = b->first_node(); e; e = e->next_sibling())
+				for (auto n = body_n->first_node(); n; n = n->next_sibling())
 				{
 					std::string e_name;
-					if (!getName(e, e_name))
+					if (!getName(n, e_name))
 					{
 						ec << ("name of element #" + std::to_string(i + 1) + " of module '" + name + "' is not specified");
 						return false;
 					}
 
 					std::shared_ptr<Language::TopLevel> tmp;
-					if (!readTopLevel(e_name, e, tmp, ec))
+					if (!readTopLevel(e_name, n, tmp, ec))
 						return false;
 					elements[e_name] = tmp;
 
@@ -749,7 +756,7 @@ namespace PIDL
 			if (!readDocumentation(v, doc, name, ec))
 				return false;
 
-			ret = std::make_shared<Language::Module>(name, _elements, doc);
+			ret = std::make_shared<Language::Module>(name, _elements, doc, info);
 
 			return true;
 		}
@@ -846,14 +853,7 @@ namespace PIDL
 	{
 		if (!priv->read(priv->xml_stream, ec))
 			return false;
-		auto ss = std::make_shared<std::stringstream>();
-		JSONWriter wr(ss, false);
-		if (!wr.write(this, ec))
-			return false;
-		for (auto & i : priv->topLevels)
-			i.second->setJsonPIDL(ss->str());
-
-		return true;
+		return completeInfo(ec);
 	}
 
 	std::vector<std::shared_ptr<Language::TopLevel>> XMLReader::topLevels() const
