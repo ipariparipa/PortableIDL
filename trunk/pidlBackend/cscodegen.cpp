@@ -521,14 +521,14 @@ namespace PIDL {
 				ctx->writeTabs(code_deepness) << "public interface _IObject" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << "string _id { get; }" << std::endl;
-				ctx->writeTabs(--code_deepness) << "}" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 				break;
 			case Role::Server:
 				ctx->writeTabs(code_deepness) << "protected interface _IObject" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << "string _id { get; }" << std::endl;
 				ctx->writeTabs(code_deepness) << "_InvokeStatus _invoke(XElement root, out XElement ret, PIDL.IPIDLErrorCollector ec);" << std::endl;
-				ctx->writeTabs(--code_deepness) << "}" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 				break;
 			}
 

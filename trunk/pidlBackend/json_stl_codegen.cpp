@@ -36,6 +36,16 @@ namespace PIDL
 			return "priv->logger";
 		}
 
+		bool hasObjects(Language::Interface * intf)
+		{
+			for (auto & d : intf->definitions())
+			{
+				if (std::dynamic_pointer_cast<Language::Object>(d))
+					return true;
+			}
+			return false;
+		}
+
 		template<class T>
 		std::string getScope(const T * t)
 		{
@@ -489,7 +499,7 @@ namespace PIDL
 						}
 					}
 				}
-				if (dynamic_cast<Language::Interface*>(cl))
+				if (dynamic_cast<Language::Interface*>(cl) && hasObjects(dynamic_cast<Language::Interface*>(cl)))
 				{
 					ctx->writeTabs(code_deepness++) << "_functions[\"_dispose_object\"].data[std::string()] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
 					write_privs(false);
@@ -631,16 +641,21 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "ec.clear();" << std::endl;
 				ctx->writeTabs(code_deepness) << "return _p->_callFunction(name, variant, *v, ret, ec);" << std::endl;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl;
-				ctx->writeTabs(code_deepness) << "else if (PIDL::JSONTools::getValue(root, \"object_call\", v) && v->IsObject())" << std::endl;
-				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				ctx->writeTabs(code_deepness) << "std::string object_id;" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!_p->_getValue(*v, \"object_id\", object_id, ec))" << std::endl;
-				ctx->writeTabs(code_deepness + 1) << "return _invoke_status::MarshallingError;" << std::endl;
-				ctx->writeTabs(code_deepness) << "auto obj = _get_object(object_id, ec);" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!obj)" << std::endl;
-				ctx->writeTabs(code_deepness + 1) << "return _invoke_status::Error;" << std::endl;
-				ctx->writeTabs(code_deepness) << "return obj->_invoke(*v, ret, ec);" << std::endl;
-				ctx->writeTabs(--code_deepness) << "}" << std::endl;
+
+				if (priv->hasObjects(intf))
+				{
+					ctx->writeTabs(code_deepness) << "else if (PIDL::JSONTools::getValue(root, \"object_call\", v) && v->IsObject())" << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					ctx->writeTabs(code_deepness) << "std::string object_id;" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (!_p->_getValue(*v, \"object_id\", object_id, ec))" << std::endl;
+					ctx->writeTabs(code_deepness + 1) << "return _invoke_status::MarshallingError;" << std::endl;
+					ctx->writeTabs(code_deepness) << "auto obj = _get_object(object_id, ec);" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (!obj)" << std::endl;
+					ctx->writeTabs(code_deepness + 1) << "return _invoke_status::Error;" << std::endl;
+					ctx->writeTabs(code_deepness) << "return obj->_invoke(*v, ret, ec);" << std::endl;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl;
+				}
+
 				ctx->writeTabs(code_deepness) << "return _invoke_status::MarshallingError;" << std::endl;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 				break;
@@ -998,21 +1013,24 @@ namespace PIDL
 
 	bool JSON_STL_CodeGen::writeObjectBase(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		ctx->writeTabs(code_deepness) << "class _Object" << std::endl;
-		ctx->writeTabs(code_deepness++) << "{" << std::endl;
-		ctx->writeTabs(code_deepness - 1) << "public:" << std::endl;
-		ctx->writeTabs(code_deepness) << "typedef std::shared_ptr<_Object> Ptr;" << std::endl;
-		ctx->writeTabs(code_deepness) << "virtual ~_Object() = default;" << std::endl;
-		switch (ctx->role())
+		if (priv->hasObjects(intf))
 		{
-		case Role::Client:
-			break;
-		case Role::Server:
-			ctx->writeTabs(code_deepness) << "virtual _invoke_status _invoke(const rapidjson::Value & root, rapidjson::Document & ret, _error_collector & ec) = 0;" << std::endl;
-			break;
+			ctx->writeTabs(code_deepness) << "class _Object" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
+			ctx->writeTabs(code_deepness - 1) << "public:" << std::endl;
+			ctx->writeTabs(code_deepness) << "typedef std::shared_ptr<_Object> Ptr;" << std::endl;
+			ctx->writeTabs(code_deepness) << "virtual ~_Object() = default;" << std::endl;
+			switch (ctx->role())
+			{
+			case Role::Client:
+				break;
+			case Role::Server:
+				ctx->writeTabs(code_deepness) << "virtual _invoke_status _invoke(const rapidjson::Value & root, rapidjson::Document & ret, _error_collector & ec) = 0;" << std::endl;
+				break;
+			}
+			ctx->writeTabs(code_deepness) << "virtual std::string _id() const = 0;" << std::endl;
+			ctx->writeTabs(--code_deepness) << "};" << std::endl << std::endl;
 		}
-		ctx->writeTabs(code_deepness) << "virtual std::string _id() const = 0;" << std::endl;
-		ctx->writeTabs(--code_deepness) << "};" << std::endl << std::endl;
 		return true;
 	}
 
@@ -1029,16 +1047,19 @@ namespace PIDL
 			case Role::Client:
 				break;
 			case Role::Server:
-				ctx->writeTabs(code_deepness) << "virtual _Object::Ptr _get_object(const std::string & object_id, _error_collector & ec) = 0;" << std::endl;
-				ctx->writeTabs(code_deepness) << "template<class Object_T> typename Object_T::Ptr _get_object(const std::string & object_id, _error_collector & ec)" << std::endl;
-				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				ctx->writeTabs(code_deepness) << "auto o = _get_object(object_id, ec);" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!o) return nullptr;" << std::endl;
-				ctx->writeTabs(code_deepness) << "auto ret = std::dynamic_pointer_cast<Object_T, _Object>(o);" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!ret) ec.add(-1, \"unexpected: invalid object type for id '\" + object_id + \"'\");" << std::endl;
-				ctx->writeTabs(code_deepness) << "return ret;" << std::endl;
-				ctx->writeTabs(--code_deepness) << "}" << std::endl;
-				ctx->writeTabs(code_deepness) << "virtual void _dispose_object(const std::string & object_id) = 0;" << std::endl;
+				if (priv->hasObjects(intf))
+				{
+					ctx->writeTabs(code_deepness) << "virtual _Object::Ptr _get_object(const std::string & object_id, _error_collector & ec) = 0;" << std::endl;
+					ctx->writeTabs(code_deepness) << "template<class Object_T> typename Object_T::Ptr _get_object(const std::string & object_id, _error_collector & ec)" << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					ctx->writeTabs(code_deepness) << "auto o = _get_object(object_id, ec);" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (!o) return nullptr;" << std::endl;
+					ctx->writeTabs(code_deepness) << "auto ret = std::dynamic_pointer_cast<Object_T, _Object>(o);" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (!ret) ec.add(-1, \"unexpected: invalid object type for id '\" + object_id + \"'\");" << std::endl;
+					ctx->writeTabs(code_deepness) << "return ret;" << std::endl;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl;
+					ctx->writeTabs(code_deepness) << "virtual void _dispose_object(const std::string & object_id) = 0;" << std::endl;
+				}
 				break;
 			}
 			break;
@@ -1055,53 +1076,56 @@ namespace PIDL
 		switch (ctx->role())
 		{
 		case Role::Client:
-			switch (ctx->mode())
+			if (priv->hasObjects(intf))
 			{
-			case Mode::AllInOne:
-			case Mode::Declaration:
-				ctx->writeTabs(code_deepness) << "void _dispose_object(const std::string & object_id)";
-				break;
-			case Mode::Implementatinon:
-				ctx->writeTabs(code_deepness) << "void " << priv->getScope(intf) << intf->name() << "::_dispose_object(const std::string & object_id)";
-				break;
-			}
-			switch (ctx->mode())
-			{
-			case Mode::Declaration:
-				*ctx << ";" << std::endl;
-				break;
-			case Mode::AllInOne:
-			case Mode::Implementatinon:
-				ctx->stream() << std::endl;
-				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				switch (ctx->mode())
+				{
+				case Mode::AllInOne:
+				case Mode::Declaration:
+					ctx->writeTabs(code_deepness) << "void _dispose_object(const std::string & object_id)";
+					break;
+				case Mode::Implementatinon:
+					ctx->writeTabs(code_deepness) << "void " << priv->getScope(intf) << intf->name() << "::_dispose_object(const std::string & object_id)";
+					break;
+				}
 				switch (ctx->mode())
 				{
 				case Mode::Declaration:
-				case Mode::AllInOne:
-					ctx->writeTabs(code_deepness) << "auto _p = this;" << std::endl << std::endl;
+					*ctx << ";" << std::endl;
 					break;
+				case Mode::AllInOne:
 				case Mode::Implementatinon:
-					ctx->writeTabs(code_deepness) << "auto _p = _priv;" << std::endl << std::endl;
+					ctx->stream() << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					switch (ctx->mode())
+					{
+					case Mode::Declaration:
+					case Mode::AllInOne:
+						ctx->writeTabs(code_deepness) << "auto _p = this;" << std::endl << std::endl;
+						break;
+					case Mode::Implementatinon:
+						ctx->writeTabs(code_deepness) << "auto _p = _priv;" << std::endl << std::endl;
+						break;
+					}
+
+					ctx->writeTabs(code_deepness) << "PIDL::ExceptionErrorCollector<_error_collector> _ec;" << std::endl;
+					ctx->writeTabs(code_deepness) << "rapidjson::Document _doc;" << std::endl;
+					ctx->writeTabs(code_deepness) << "_doc.SetObject();" << std::endl;
+
+					ctx->writeTabs(code_deepness) << "_p->_addValue(_doc, _doc, \"version\", " << PIDL_JSON_MARSHALLING_VERSION << ");" << std::endl;
+
+					ctx->writeTabs(code_deepness) << "rapidjson::Value _v(rapidjson::kObjectType);" << std::endl;
+					ctx->writeTabs(code_deepness) << "_p->_addValue(_doc, _v, \"name\", \"_dispose_object\");" << std::endl;
+					ctx->writeTabs(code_deepness) << "rapidjson::Value _aa(rapidjson::kObjectType);" << std::endl;
+					ctx->writeTabs(code_deepness) << "_p->_addValue(_doc, _aa, \"object_id\", object_id);" << std::endl;
+					ctx->writeTabs(code_deepness) << "PIDL::JSONTools::addValue(_doc, _v, \"arguments\", _aa);" << std::endl;
+					ctx->writeTabs(code_deepness) << "PIDL::JSONTools::addValue(_doc, _doc, \"function\", _v);" << std::endl;
+					ctx->writeTabs(code_deepness) << "rapidjson::Document _ret;" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (!_p->_invokeCall(_doc, _ret, _ec))" << std::endl;
+					ctx->writeTabs(code_deepness + 1) << "_ec.throwException();" << std::endl;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 					break;
 				}
-
-				ctx->writeTabs(code_deepness) << "PIDL::ExceptionErrorCollector<_error_collector> _ec;" << std::endl;
-				ctx->writeTabs(code_deepness) << "rapidjson::Document _doc;" << std::endl;
-				ctx->writeTabs(code_deepness) << "_doc.SetObject();" << std::endl;
-
-				ctx->writeTabs(code_deepness) << "_p->_addValue(_doc, _doc, \"version\", " << PIDL_JSON_MARSHALLING_VERSION << ");" << std::endl;
-
-				ctx->writeTabs(code_deepness) << "rapidjson::Value _v(rapidjson::kObjectType);" << std::endl;
-				ctx->writeTabs(code_deepness) << "_p->_addValue(_doc, _v, \"name\", \"_dispose_object\");" << std::endl;
-				ctx->writeTabs(code_deepness) << "rapidjson::Value _aa(rapidjson::kObjectType);" << std::endl;
-				ctx->writeTabs(code_deepness) << "_p->_addValue(_doc, _aa, \"object_id\", object_id);" << std::endl;
-				ctx->writeTabs(code_deepness) << "PIDL::JSONTools::addValue(_doc, _v, \"arguments\", _aa);" << std::endl;
-				ctx->writeTabs(code_deepness) << "PIDL::JSONTools::addValue(_doc, _doc, \"function\", _v);" << std::endl;
-				ctx->writeTabs(code_deepness) << "rapidjson::Document _ret;" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!_p->_invokeCall(_doc, _ret, _ec))" << std::endl;
-				ctx->writeTabs(code_deepness + 1) << "_ec.throwException();" << std::endl;
-				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
-				break;
 			}
 			break;
 		case Role::Server:
