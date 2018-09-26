@@ -30,6 +30,7 @@ namespace PIDL
 
 	Reader::~Reader() = default;
 
+	//static
 	bool Reader::readFromFile(const std::string & filename, std::string & str, ErrorCollector & ec)
 	{
 		std::ifstream file(filename);

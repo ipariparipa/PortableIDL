@@ -32,6 +32,8 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/prettywriter.h>
 
+#include "include/pidlBackend/jsonwriter.h"
+
 namespace PIDL
 {
 
@@ -853,7 +855,15 @@ namespace PIDL
 
 	bool JSONReader::read(ErrorCollector & ec)
 	{
-		return priv->read(priv->json_stream, ec);
+		if (!priv->read(priv->json_stream, ec))
+			return false;
+		auto ss = std::make_shared<std::stringstream>();
+		JSONWriter wr(ss, false);
+		wr.write(this, ec);
+		for (auto & i : priv->topLevels)
+			i.second->setJsonPIDL(ss->str());
+
+		return true;
 	}
 
 	std::vector<std::shared_ptr<Language::TopLevel>> JSONReader::topLevels() const
@@ -873,6 +883,5 @@ namespace PIDL
 
 		return writer->write(&p, ec);
 	}
-
 
 }

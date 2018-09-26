@@ -907,6 +907,47 @@ namespace PIDL
 			return true;
 		}
 
+		bool writeLongString(short code_deepness, CPPCodeGenContext * ctx, const std::string & str_, ErrorCollector & ec)
+		{
+			if (!str_.length())
+			{
+				*ctx << "\"\"";
+				return true;
+			}
+
+			auto replace_all = [](std::string & str, const std::string & from, const std::string & to) -> std::string &
+			{
+				for (size_t start_pos = 0; (start_pos = str.find(from, start_pos)) != std::string::npos; start_pos += to.length())
+					str.replace(start_pos, from.length(), to);
+				return str;
+			};
+
+			std::string str = str_;
+			replace_all(str, "\\", "\\\\");
+			replace_all(str, "\n", "\\n");
+			replace_all(str, "\r", "\\r");
+			replace_all(str, "\t", "\\t");
+			replace_all(str, "\"", "\\\"");
+
+			bool is_first = true;
+			for (size_t i = 0; i < str.length(); i += 512)
+			{
+				if (is_first)
+					is_first = false;
+				else
+				{
+					ctx->stream() << std::endl;
+					ctx->writeTabs(code_deepness + 2);
+				}
+				if (i + 512 > str.length())
+					*ctx << "\"" << str.substr(i, str.length() - i) << "\"";
+				else
+					*ctx << "\"" << str.substr(i, 512) << "\"";
+			}
+
+			return true;
+		}
+
 		bool writeModule(short code_deepness, CPPCodeGenContext * ctx, Language::Module * module, ErrorCollector & ec)
 		{
 			switch (ctx->mode())
@@ -921,6 +962,30 @@ namespace PIDL
 			}
 
 			auto & o = ctx->writeTabs(code_deepness++) << "namespace " << that->helper()->getName(module) << " {" << std::endl;
+
+			switch (ctx->role())
+			{
+			case Role::Client:
+				break;
+			case Role::Server:
+				switch (ctx->mode())
+				{
+				case Mode::AllInOne:
+				case Mode::Implementatinon:
+					if (module->jsonPIDL().length())
+					{
+						ctx->writeTabs(code_deepness) << "const char * _jsonPIDL =";
+						if (!writeLongString(code_deepness, ctx, module->jsonPIDL(), ec))
+							return false;
+						*ctx << ";" << std::endl << std::endl;
+					}
+					break;
+				case Mode::Declaration:
+					ctx->writeTabs(code_deepness) << "extern const char * _jsonPIDL;" << std::endl << std::endl;
+					break;
+				}
+				break;
+			}
 
 			switch (ctx->mode())
 			{

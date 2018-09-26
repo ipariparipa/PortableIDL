@@ -31,7 +31,7 @@ namespace PIDL
 		struct Priv;
 		Priv * priv;
 	public:
-		JSONWriter(const std::shared_ptr<std::ostream> & s);
+		JSONWriter(const std::shared_ptr<std::ostream> & s, bool hr = true);
 		virtual ~JSONWriter();
 		virtual bool write(Reader * reader, ErrorCollector & ec);
 	};
