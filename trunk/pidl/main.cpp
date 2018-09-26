@@ -15,7 +15,7 @@
     along with pidl.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#include "job.h"
+#include <pidlBackend/job_json.h>
 
 #include <string>
 #include <iostream>
@@ -94,11 +94,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	std::shared_ptr<Job> job;
+	std::shared_ptr<Job_JSON> job;
 
 	std::stringstream ss;
 	ss << in->rdbuf();
-	if (!Job::build(ss.str(), job, ec))
+	if (!Job_JSON::build(ss.str(), job, ec))
 		return 1;
 
 	if (!job->run(ec))

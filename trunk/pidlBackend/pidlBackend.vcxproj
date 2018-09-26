@@ -84,6 +84,7 @@
     <ClCompile Include="cscodegen.cpp" />
     <ClCompile Include="cstyledocumentation.cpp" />
     <ClCompile Include="cswriter.cpp" />
+    <ClCompile Include="job_json.cpp" />
     <ClCompile Include="jsonreader.cpp" />
     <ClCompile Include="jsonwriter.cpp" />
     <ClCompile Include="json_cscodegen.cpp" />
@@ -107,6 +108,7 @@
     <ClInclude Include="include\pidlBackend\cstyledocumentation.h" />
     <ClInclude Include="include\pidlBackend\cstyledocumentationfactory_json.h" />
     <ClInclude Include="include\pidlBackend\cswriter.h" />
+    <ClInclude Include="include\pidlBackend\job_json.h" />
     <ClInclude Include="include\pidlBackend\jsonreader.h" />
     <ClInclude Include="include\pidlBackend\jsonwriter.h" />
     <ClInclude Include="include\pidlBackend\json_cscodegen.h" />
