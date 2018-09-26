@@ -143,7 +143,7 @@ namespace PIDL
 			addDocumentation(doc, v, f->documentation());
 		}
 
-		static void addMethod(rapidjson::Document & doc, rapidjson::Value & v, Language::Method::Variant::Ptr & f)
+		static void addMethod(rapidjson::Document & doc, rapidjson::Value & v, const Language::Method::Variant::Ptr & f)
 		{
 			addNature(doc, v, "method");
 			addName(doc, v, f->name());
