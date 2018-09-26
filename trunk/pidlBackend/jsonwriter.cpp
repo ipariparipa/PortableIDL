@@ -281,9 +281,15 @@ namespace PIDL
 
 				rapidjson::StringBuffer sb;
 				if (hr)
-					doc.Accept(rapidjson::PrettyWriter<rapidjson::StringBuffer>(sb));
+				{
+					rapidjson::PrettyWriter<rapidjson::StringBuffer> w(sb);
+					doc.Accept(w);
+				}
 				else
-					doc.Accept(rapidjson::Writer<rapidjson::StringBuffer>(sb));
+				{
+					rapidjson::Writer<rapidjson::StringBuffer> w(sb);
+					doc.Accept(w);
+				}
 
 				*o << sb.GetString() << std::endl;
 			}
