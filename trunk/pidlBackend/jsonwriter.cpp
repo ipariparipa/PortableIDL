@@ -143,7 +143,7 @@ namespace PIDL
 			addDocumentation(doc, v, f->documentation());
 		}
 
-		static void addMethod(rapidjson::Document & doc, rapidjson::Value & v, Language::Function::Variant::Ptr & f)
+		static void addMethod(rapidjson::Document & doc, rapidjson::Value & v, Language::Method::Variant::Ptr & f)
 		{
 			addNature(doc, v, "method");
 			addName(doc, v, f->name());
@@ -154,11 +154,11 @@ namespace PIDL
 				rapidjson::Value e(rapidjson::kObjectType);
 				switch (arg->direction())
 				{
-				case Language::Function::Variant::Argument::Direction::In:
+				case Language::Method::Variant::Argument::Direction::In:
 					JSONTools::addValue(doc, e, "direction", "in"); break;
-				case Language::Function::Variant::Argument::Direction::Out:
+				case Language::Method::Variant::Argument::Direction::Out:
 					JSONTools::addValue(doc, e, "direction", "out"); break;
-				case Language::Function::Variant::Argument::Direction::InOut:
+				case Language::Method::Variant::Argument::Direction::InOut:
 					JSONTools::addValue(doc, e, "direction", "in-out"); break;
 				}
 				addName(doc, e, arg->name());
@@ -188,14 +188,11 @@ namespace PIDL
 
 			for (auto & d : o->definitions())
 			{
-				if (dynamic_cast<Language::Method*>(d.get()))
+				if (dynamic_cast<Language::MethodVariant*>(d.get()))
 				{
-					for (auto & v : dynamic_cast<Language::Method*>(d.get())->variants())
-					{
-						rapidjson::Value e(rapidjson::kObjectType);
-						addMethod(doc, e, v.second);
-						b.PushBack(e, doc.GetAllocator());
-					}
+					rapidjson::Value e(rapidjson::kObjectType);
+					addMethod(doc, e, std::dynamic_pointer_cast<Language::MethodVariant>(d));
+					b.PushBack(e, doc.GetAllocator());
 				}
 				else if (dynamic_cast<Language::Property*>(d.get()))
 				{
@@ -223,14 +220,11 @@ namespace PIDL
 					addTypeDefinition(doc, e, std::dynamic_pointer_cast<Language::TypeDefinition>(d));
 					b.PushBack(e, doc.GetAllocator());
 				}
-				else if (dynamic_cast<Language::Function*>(d.get()))
+				else if (dynamic_cast<Language::FunctionVariant*>(d.get()))
 				{
-					for (auto & v : dynamic_cast<Language::Function*>(d.get())->variants())
-					{
-						rapidjson::Value e(rapidjson::kObjectType);
-						addFunction(doc, e, v.second);
-						b.PushBack(e, doc.GetAllocator());
-					}
+					rapidjson::Value e(rapidjson::kObjectType);
+					addFunction(doc, e, std::dynamic_pointer_cast<Language::FunctionVariant>(d));
+					b.PushBack(e, doc.GetAllocator());
 				}
 				else if (dynamic_cast<Language::Object*>(d.get()))
 				{
