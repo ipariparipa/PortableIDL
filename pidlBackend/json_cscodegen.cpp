@@ -724,8 +724,7 @@ namespace PIDL
 		ctx->writeTabs(--code_deepness) << "}" << std::endl;
 		ctx->writeTabs(code_deepness) << "var elems = v.Elements(\"item\");" << std::endl;
 		ctx->writeTabs(code_deepness) << "int i = 0;" << std::endl;
-		ctx->writeTabs(code_deepness) << "foreach(var e in elems)" << std::endl;
-		ctx->writeTabs(code_deepness) << "++i;" << std::endl;
+		ctx->writeTabs(code_deepness) << "foreach(var e in elems) ++i;" << std::endl;
 		ctx->writeTabs(code_deepness) << "ret = new T[i];" << std::endl;
 		ctx->writeTabs(code_deepness) << "i = 0;" << std::endl;
 		ctx->writeTabs(code_deepness) << "bool isOk = true;" << std::endl;
@@ -784,32 +783,28 @@ namespace PIDL
 			ctx->writeTabs(code_deepness) << "else" << std::endl;
 			ctx->writeTabs(code_deepness + 1) << "PIDL.JSONTools.addValue<T>(r, name, val);" << std::endl;
 		}
+		else
+			ctx->writeTabs(code_deepness) << "PIDL.JSONTools.addValue<T>(r, name, val);" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
 		ctx->writeTabs(code_deepness) << "void _addValue<T>(XElement r, string name, Nullable<T> val)" << std::endl;
 		ctx->writeTabs(code_deepness + 1) << "where T : struct //, IComparable" << std::endl;
 		ctx->writeTabs(code_deepness++) << "{" << std::endl;
 		ctx->writeTabs(code_deepness) << "if (val == null)" << std::endl;
-		ctx->writeTabs(code_deepness) << "PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Null);" << std::endl;
+		ctx->writeTabs(code_deepness + 1) << "PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Null);" << std::endl;
 		ctx->writeTabs(code_deepness) << "else" << std::endl;
-		ctx->writeTabs(code_deepness) << "_addValue(r, name, val.Value);" << std::endl;
+		ctx->writeTabs(code_deepness + 1) << "_addValue(r, name, val.Value);" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl;
 
 		ctx->writeTabs(code_deepness) << "void _addValue<T>(XElement r, string name, T[] val)" << std::endl;
 		ctx->writeTabs(code_deepness++) << "{" << std::endl;
 		ctx->writeTabs(code_deepness) << "if (val == null)" << std::endl;
-		ctx->writeTabs(code_deepness++) << "{" << std::endl;
-		ctx->writeTabs(code_deepness) << "PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Null);" << std::endl;
-		ctx->writeTabs(code_deepness) << "return;" << std::endl;
-		ctx->writeTabs(--code_deepness) << "}" << std::endl;
+		ctx->writeTabs(code_deepness) << "{ PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Null); return; }" << std::endl;
 		ctx->writeTabs(code_deepness) << "if (typeof(T) == typeof(byte))" << std::endl;
-		ctx->writeTabs(code_deepness++) << "{" << std::endl;
-		ctx->writeTabs(code_deepness) << "_addValue(r, name, Convert.ToBase64String((byte[])(object)val));" << std::endl;
-		ctx->writeTabs(code_deepness) << "return;" << std::endl;
-		ctx->writeTabs(--code_deepness) << "}" << std::endl;
+		ctx->writeTabs(code_deepness) << "{ _addValue(r, name, Convert.ToBase64String((byte[])(object)val)); return; }" << std::endl;
 		ctx->writeTabs(code_deepness) << "var v = PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Array);" << std::endl;
 		ctx->writeTabs(code_deepness) << "foreach(var it in val)" << std::endl;
-		ctx->writeTabs(code_deepness) << "_addValue(v, \"item\", it);" << std::endl;
+		ctx->writeTabs(code_deepness + 1) << "_addValue(v, \"item\", it);" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl;
 		ctx->writeTabs(code_deepness) << "#endregion marshallers" << std::endl << std::endl;
 
