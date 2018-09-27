@@ -131,9 +131,11 @@ namespace PIDL { namespace Language {
 		Priv * priv;
 	public:
 		typedef std::shared_ptr<Generic> Ptr;
-		Generic(const Type::Ptr & type);
 		virtual ~Generic();
-		std::shared_ptr<Type> type() const;
+		std::vector<Type::Ptr> types() const;
+	protected:
+		Generic(const std::vector<Type::Ptr> & types);
+		Generic(const Type::Ptr & type);
 	};
 
 	class PIDL_BACKEND__CLASS Nullable : public Generic
@@ -157,6 +159,17 @@ namespace PIDL { namespace Language {
 		Array(const Type::Ptr & type);
 		virtual ~Array();
 		virtual const char * name() const override { return "array"; }
+	};
+
+	class PIDL_BACKEND__CLASS Tuple : public Generic
+	{
+		PIDL_COPY_PROTECTOR(Tuple)
+		struct Priv;
+		Priv * priv;
+	public:
+		Tuple(const std::vector<Type::Ptr> & type);
+		virtual ~Tuple();
+		virtual const char * name() const override { return "tuple"; }
 	};
 
 	class PIDL_BACKEND__CLASS Structure : public ComplexType

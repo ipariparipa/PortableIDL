@@ -158,7 +158,25 @@ namespace PIDL
 			return true;
 		}
 
-		bool readType(ElementRegistry & registry, const rapidjson::Value & v, std::shared_ptr<Language::Type> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readType(ElementRegistry & registry, const rapidjson::Value & v, std::vector<Language::Type::Ptr> & ret, const std::string & error_path, ErrorCollector & ec)
+		{
+			if (v.IsNull() || !v.IsArray())
+			{
+				ec << (error_path + ": value of 'types' is not array or null");
+				return false;
+			}
+			ret.resize(v.Size());
+			bool has_error = false;
+			for (rapidjson::SizeType i = 0, l = v.Size(); i < l; ++i)
+			{
+				if (!readType(registry, v[i], ret[i], error_path, ec))
+					has_error = true;
+			}
+
+			return !has_error;
+		}
+
+		bool readType(ElementRegistry & registry, const rapidjson::Value & v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (v.IsNull())
 			{
@@ -197,11 +215,11 @@ namespace PIDL
 			return false;
 		}
 
-		bool readType(ElementRegistry & registry, const std::string & name, const rapidjson::Value & v, std::shared_ptr<Language::Type> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readType(ElementRegistry & registry, const std::string & name, const rapidjson::Value & v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (v.IsNull() || !v.IsObject())
 			{
-				ec << (error_path + ": value of 'type' is not object");
+				ec << (error_path + ": value of 'type' is not object or null");
 				return false;
 			}
 
@@ -213,7 +231,7 @@ namespace PIDL
 					ec << (error_path + ": type of '" + name + "' is not specified");
 					return false;
 				}
-				std::shared_ptr<Language::Type> tmp;
+				Language::Type::Ptr tmp;
 				if (!readType(registry, *t, tmp, error_path, ec))
 					return false;
 				ret = std::make_shared<Language::Nullable>(tmp);
@@ -271,10 +289,23 @@ namespace PIDL
 					ec << (error_path + ": type is not specified");
 					return false;
 				}
-				std::shared_ptr<Language::Type> tmp;
+				Language::Type::Ptr tmp;
 				if (!readType(registry, *t, tmp, error_path, ec))
 					return false;
 				ret = std::make_shared<Language::Array>(tmp);
+			}
+			else if (name == "tuple")
+			{
+				rapidjson::Value * t;
+				if (!JSONTools::getValue(v, "types", t) || t->IsNull())
+				{
+					ec << (error_path + ": types are not specified");
+					return false;
+				}
+				std::vector<Language::Type::Ptr> tmp;
+				if (!readType(registry, *t, tmp, error_path, ec))
+					return false;
+				ret = std::make_shared<Language::Tuple>(tmp);
 			}
 			else
 			{

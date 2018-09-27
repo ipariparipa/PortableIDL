@@ -70,7 +70,21 @@ namespace PIDL
 			}
 		}
 
-		static void addType(rapidjson::Document & doc, rapidjson::Value & r, const std::shared_ptr<Language::Type> & t)
+		static void addType(rapidjson::Document & doc, rapidjson::Value & r, const std::vector<Language::Type::Ptr> & types)
+		{
+			rapidjson::Value v(rapidjson::kArrayType);
+			for (auto & t : types)
+				v.PushBack(createType(doc, t), doc.GetAllocator());
+			JSONTools::addValue(doc, r, "types", v);
+		}
+
+		static void addType(rapidjson::Document & doc, rapidjson::Value & r, const Language::Type::Ptr & t)
+		{
+			auto v = createType(doc, t);
+			JSONTools::addValue(doc, r, "type", v);
+		}
+
+		static rapidjson::Value createType(rapidjson::Document & doc, const Language::Type::Ptr & t)
 		{
 			if (dynamic_cast<Language::Structure*>(t.get()))
 			{
@@ -88,24 +102,33 @@ namespace PIDL
 				}
 
 				JSONTools::addValue(doc, v, "members", m);
-				JSONTools::addValue(doc, r, "type", v);
+				return v;
 			}
 			else if (dynamic_cast<Language::Array*>(t.get()))
 			{
 				rapidjson::Value v(rapidjson::kObjectType);
 				addName(doc, v, t->name());
-				addType(doc, v, dynamic_cast<Language::Array*>(t.get())->type());
-				JSONTools::addValue(doc, r, "type", v);
+				addType(doc, v, dynamic_cast<Language::Array*>(t.get())->types().front());
+				return v;
 			}
 			else if (dynamic_cast<Language::Nullable*>(t.get()))
 			{
 				rapidjson::Value v(rapidjson::kObjectType);
 				addName(doc, v, t->name());
-				addType(doc, v, dynamic_cast<Language::Nullable*>(t.get())->type());
-				JSONTools::addValue(doc, r, "type", v);
+				addType(doc, v, dynamic_cast<Language::Nullable*>(t.get())->types().front());
+				return v;
 			}
-			else
-				JSONTools::addValue(doc, r, "type", t->name());
+			else if (dynamic_cast<Language::Tuple*>(t.get()))
+			{
+				rapidjson::Value v(rapidjson::kObjectType);
+				addName(doc, v, t->name());
+				addType(doc, v, dynamic_cast<Language::Tuple*>(t.get())->types());
+				return v;
+			}
+
+			rapidjson::Value v(rapidjson::kStringType);
+			v.SetString(t->name(), doc.GetAllocator());
+			return v;
 		}
 
 		static void addTypeDefinition(rapidjson::Document & doc, rapidjson::Value & v, const Language::TypeDefinition::Ptr & t)

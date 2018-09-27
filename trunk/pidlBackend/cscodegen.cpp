@@ -180,31 +180,46 @@ namespace PIDL {
 
 		bool addGeneric(short code_deepness, CSCodeGenContext * ctx, Language::Generic * generic, ErrorCollector & ec)
 		{
-			auto fn_type = generic->type()->finalType().get();
-			if (dynamic_cast<Language::Nullable*>(generic))
+			if (dynamic_cast<Language::Array*>(generic))
 			{
+				if (!addType(code_deepness, ctx, generic->types().front().get(), ec))
+					return false;
+				*ctx << "[]";
+			}
+			else if (dynamic_cast<Language::Nullable*>(generic))
+			{
+				auto fn_type = generic->types().front()->finalType().get();
 				if (dynamic_cast<Language::NativeType*>(fn_type) ||
 					dynamic_cast<Language::DateTime*>(fn_type) ||
 					dynamic_cast<Language::Structure*>(fn_type))
 				{
 					*ctx << "Nullable<";
-					if (!addType(code_deepness, ctx, generic->type().get(), ec))
+					if (!addType(code_deepness, ctx, generic->types().front().get(), ec))
 						return false;
 					*ctx << ">";
 				}
 				else
 				{
 					*ctx << "/*nullable*/ ";
-					if (!addType(code_deepness, ctx, generic->type().get(), ec))
+					if (!addType(code_deepness, ctx, generic->types().front().get(), ec))
 						return false;
 				}
 			}
-			else if (dynamic_cast<Language::Array*>(generic))
+			else if (dynamic_cast<Language::Tuple *>(generic)) 
 			{
-				if (!addType(code_deepness, ctx, generic->type().get(), ec))
-					return false;
-				*ctx << "[]";
+				*ctx << "System.Tuple<";
+				bool is_first = true;
+				for (auto & t : generic->types())
+				{
+					if (is_first)
+						is_first = false;
+					else *ctx << ", ";
+					if (!addType(code_deepness, ctx, t.get(), ec))
+						return false;
+				}
+				*ctx << ">";
 			}
+
 			return true;
 		}
 

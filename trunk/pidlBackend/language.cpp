@@ -135,11 +135,21 @@ namespace PIDL {
 
 		struct Generic::Priv
 		{
-			Priv(const Type::Ptr & t) : type(t)
+			Priv(const std::vector<Type::Ptr> & t) : types(t)
 			{ }
 
-			std::shared_ptr<Type> type;
+			Priv(const Type::Ptr & t)
+			{
+				types.push_back(t);
+			}
+
+			std::vector<Type::Ptr> types;
 		};
+
+		Generic::Generic(const std::vector<Type::Ptr> & types) :
+			ComplexType(),
+			priv(new Priv(types))
+		{ }
 
 		Generic::Generic(const Type::Ptr & type) :
 			ComplexType(),
@@ -151,9 +161,9 @@ namespace PIDL {
 			delete priv;
 		}
 
-		std::shared_ptr<Type> Generic::type() const
+		std::vector<Type::Ptr> Generic::types() const
 		{
-			return priv->type;
+			return priv->types;
 		}
 
 
@@ -164,6 +174,11 @@ namespace PIDL {
 		//struct Array::Priv { };
 		Array::Array(const Type::Ptr & type) : Generic(type), priv(nullptr) { }
 		Array::~Array() = default;
+
+
+		//struct Tuple::Priv { };
+		Tuple::Tuple(const std::vector<Type::Ptr> & types) : Generic(types), priv(nullptr) { }
+		Tuple::~Tuple() = default;
 
 
 		struct Structure::Member::Priv 
