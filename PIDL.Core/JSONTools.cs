@@ -104,7 +104,12 @@ namespace PIDL
 				return default(T);
 			}
 
-			if (typeof(T) == typeof(long))
+			if (typeof(T) == typeof(XElement))
+			{
+				isOk = true;
+				return (T)(object)v;
+			}
+			else if (typeof(T) == typeof(long))
 			{
 				if (t == Type.Number)
 				{
@@ -171,7 +176,7 @@ namespace PIDL
 
 						DateTimeKind kind = DateTimeKind.Unspecified;
 						string kind_str;
-						if(getValue(v, "kind", out kind_str))
+						if (getValue(v, "kind", out kind_str))
 						{
 							if (kind_str == "local")
 								kind = DateTimeKind.Local;
@@ -207,55 +212,66 @@ namespace PIDL
 			where T : struct, IComparable
 		{
 			XElement v;
-			PIDL.JSONTools.Type t;
-			if (!PIDL.JSONTools.getValue(r, name, out v) || (t = PIDL.JSONTools.getType(v)) == PIDL.JSONTools.Type.None)
+			if (!PIDL.JSONTools.getValue(r, name, out v))
 			{
 				ret = null;
 				return false;
 			}
+			return getValue<T>(v, out ret);
+		}
 
+		public static bool getValue<T>(XElement v, out Nullable<T> ret)
+			where T : struct, IComparable
+		{
+			ret = null;
+
+			var t = PIDL.JSONTools.getType(v);
+			if (t == PIDL.JSONTools.Type.None)
+				return false;
 			if (t == PIDL.JSONTools.Type.Null)
-			{
-				ret = null;
 				return true;
-			}
 
-			return getValue(v, out ret);
+			T _ret;
+			if(!getValue(v, out _ret))
+				return false;
+
+			ret = new Nullable<T>(_ret);
+			return true;
 		}
 
 		public static bool getValue<T>(XElement r, string name, out T[] ret)
 		{
 			XElement v;
 			PIDL.JSONTools.Type t;
-			if (!PIDL.JSONTools.getValue(r, name, out v) || (t = PIDL.JSONTools.getType(v)) == Type.None)
+			if (!PIDL.JSONTools.getValue(r, name, out v))
 			{
 				ret = null;
 				return false;
 			}
 
+			return getValue<T>(v, out ret);
+		}
+
+		public static bool getValue<T>(XElement v, out T[] ret)
+		{
+			ret = null;
+			var t = PIDL.JSONTools.getType(v);
+			if (t == PIDL.JSONTools.Type.None)
+				return false;
 			if (t == PIDL.JSONTools.Type.Null)
-			{
-				ret = null;
 				return true;
-			}
 
 			if (typeof(T) == typeof(byte))
 			{
 				string tmp;
 				if (!getValue(v, out tmp))
-				{
-					ret = null;
 					return false;
-				}
 				ret = (T[])(object)Convert.FromBase64String(tmp);
 				return true;
 			}
 
 			if (t != PIDL.JSONTools.Type.Array)
-			{
-				ret = null;
 				return false;
-			}
 
 			var elems = v.Elements("item");
 			int i = 0;
@@ -350,8 +366,6 @@ namespace PIDL
 			if (typeof(T) == typeof(int))
 				(v = addValue(r, name, Type.Number)).Add(Convert.ToString(val, new System.Globalization.NumberFormatInfo()));
 			else if (typeof(T) == typeof(long))
-				(v = addValue(r, name, Type.Number)).Add(Convert.ToString(val, new System.Globalization.NumberFormatInfo()));
-			else if (typeof(T) == typeof(int))
 				(v = addValue(r, name, Type.Number)).Add(Convert.ToString(val, new System.Globalization.NumberFormatInfo()));
 			else if (typeof(T) == typeof(double))
 				(v = addValue(r, name, Type.Number)).Add(Convert.ToString(val, new System.Globalization.NumberFormatInfo()));
