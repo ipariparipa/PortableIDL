@@ -228,8 +228,20 @@ namespace PIDL
 				o << "nullable<";
 			else if (dynamic_cast<Language::Array*>(generic))
 				o << "array<";
-			if (!addType(code_deepness, ctx, generic->type().get(), ec))
-				return false;
+			else if (dynamic_cast<Language::Tuple*>(generic))
+				o << "tuple<";
+
+			bool is_first = true;
+			for (auto & t : generic->types())
+			{
+				if (is_first)
+					is_first = false;
+				else
+					*ctx << ", ";
+				if (!addType(code_deepness, ctx, t.get(), ec))
+					return false;
+			}
+
 			o << ">";
 			return true;
 		}

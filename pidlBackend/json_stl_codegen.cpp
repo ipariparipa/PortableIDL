@@ -173,7 +173,8 @@ namespace PIDL
 
 			ctx->writeTabs(code_deepness) << "template <typename T> bool _getValue(const rapidjson::Value & v, array<T> & ret, _error_collector & ec)" << std::endl;
 			ctx->writeTabs(code_deepness++) << "{" << std::endl;
-			ctx->writeTabs(code_deepness) << "if (!v.IsArray()) return false;" << std::endl;
+			ctx->writeTabs(code_deepness) << "if (!v.IsArray())" << std::endl;
+			ctx->writeTabs(code_deepness) << "{ ec << \"value is not array\"; return false; }" << std::endl;
 			ctx->writeTabs(code_deepness) << "ret.resize(v.Size());" << std::endl;
 			ctx->writeTabs(code_deepness) << "size_t i(0);" << std::endl;
 			ctx->writeTabs(code_deepness) << "bool has_error = false;" << std::endl;
@@ -198,6 +199,35 @@ namespace PIDL
 			ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & r, const char * name, blob & ret, _error_collector & ec)" << std::endl;
 			ctx->writeTabs(code_deepness++) << "{" << std::endl;
 			ctx->writeTabs(code_deepness) << "return _getValue<blob>(r, name, ret, ec);" << std::endl;
+			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+			//tuple
+			ctx->writeTabs(code_deepness) << "struct _tuple_getValue_functor" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
+			ctx->writeTabs(code_deepness) << "_tuple_getValue_functor(_Priv * priv_, const rapidjson::Value & r_, bool & has_error_, _error_collector & ec_) : priv(priv_), r(r_), has_error(has_error_), ec(ec_) { }" << std::endl;
+			ctx->writeTabs(code_deepness) << "_Priv * priv;" << std::endl;
+			ctx->writeTabs(code_deepness) << "const rapidjson::Value & r;" << std::endl;
+			ctx->writeTabs(code_deepness) << "bool & has_error;" << std::endl;
+			ctx->writeTabs(code_deepness) << "_error_collector & ec;" << std::endl;
+			ctx->writeTabs(code_deepness) << "rapidjson::SizeType idx = 0;" << std::endl;
+			ctx->writeTabs(code_deepness) << "template<typename T> void operator () (T && v)" << std::endl;
+			ctx->writeTabs(code_deepness) << "{ if (!priv->_getValue(r[idx++], v, ec)) has_error = true; }" << std::endl;
+			ctx->writeTabs(--code_deepness) << "};" << std::endl << std::endl;
+
+			ctx->writeTabs(code_deepness) << "template<typename ...T> bool _getValue(const rapidjson::Value & v, tuple<T...> & ret, _error_collector & ec)" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
+			ctx->writeTabs(code_deepness) << "bool has_error = false;" << std::endl;
+			ctx->writeTabs(code_deepness) << "PIDL::JSONTools::for_each_in_tuple(ret, _tuple_getValue_functor(this, v, has_error, ec));" << std::endl;
+			ctx->writeTabs(code_deepness) << "if (has_error) ec << \"invalid marshaling when tuple value\";" << std::endl;
+			ctx->writeTabs(code_deepness) << "return !has_error;" << std::endl;
+			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+			ctx->writeTabs(code_deepness) << "template<typename ...T> bool _getValue(const rapidjson::Value & r, const char * name, tuple<T...> & ret, _error_collector & ec)" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
+			ctx->writeTabs(code_deepness) << "rapidjson::Value * v;" << std::endl;
+			ctx->writeTabs(code_deepness) << "if (!PIDL::JSONTools::getValue(r, name, v))" << std::endl;
+			ctx->writeTabs(code_deepness) << "{ ec << std::string() + \"value '\" + name + \"' is not found\"; return false; }" << std::endl;
+			ctx->writeTabs(code_deepness) << "return _getValue(*v, ret, ec);" << std::endl;
 			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
 			for (auto & d : cl->definitions())
@@ -345,6 +375,27 @@ namespace PIDL
 			ctx->writeTabs(code_deepness) << "if (v.isNull()) PIDL::JSONTools::addNull(doc, r, name);" << std::endl;
 			ctx->writeTabs(code_deepness) << "else _addValue(doc, r, name, *v);" << std::endl;
 			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+			//tuple
+			ctx->writeTabs(code_deepness) << "struct _tuple_createValue_functor" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
+			ctx->writeTabs(code_deepness) << "_tuple_createValue_functor(_Priv * priv_, rapidjson::Document & doc_, rapidjson::Value & r_) : priv(priv_), doc(doc_), r(r_) { }" << std::endl;
+			ctx->writeTabs(code_deepness) << "_Priv * priv;" << std::endl;
+			ctx->writeTabs(code_deepness) << "rapidjson::Document & doc;" << std::endl;
+			ctx->writeTabs(code_deepness) << "rapidjson::Value & r;" << std::endl;
+			ctx->writeTabs(code_deepness) << "template<typename T> void operator () (T && v)" << std::endl;
+			ctx->writeTabs(code_deepness) << "{ r.PushBack(priv->_createValue(doc, v), doc.GetAllocator()); }" << std::endl;
+			ctx->writeTabs(--code_deepness) << "};" << std::endl;
+
+			ctx->writeTabs(code_deepness) << "template<typename ...T> rapidjson::Value _createValue(rapidjson::Document & doc, const tuple<T...> & values)" << std::endl;
+			ctx->writeTabs(code_deepness++) << "{" << std::endl;
+			ctx->writeTabs(code_deepness) << "rapidjson::Value v(rapidjson::kArrayType);" << std::endl;
+			ctx->writeTabs(code_deepness) << "PIDL::JSONTools::for_each_in_tuple(values, _tuple_createValue_functor(this, doc, v));" << std::endl;
+			ctx->writeTabs(code_deepness) << "return v;" << std::endl;
+			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+			ctx->writeTabs(code_deepness) << "template<typename ...T> void _addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const tuple<T...> & values)" << std::endl;
+			ctx->writeTabs(code_deepness) << "{ auto tmp = _createValue(doc, values); PIDL::JSONTools::addValue(doc, r, name, tmp); }" << std::endl << std::endl;
 
 			return true;
 		}
@@ -556,6 +607,7 @@ namespace PIDL
 		}
 		return
 			writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "vector"), ec) &&
+			writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "tuple"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "string"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "memory"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/datetime.h" : "datetime.h"), ec) &&
@@ -570,6 +622,7 @@ namespace PIDL
 		ctx->writeTabs(code_deepness) << "template<typename T> using nullable = PIDL::Nullable<T>;" << std::endl;
 		ctx->writeTabs(code_deepness) << "template<typename T> using nullable_const_ref = PIDL::NullableConstRef<T>;" << std::endl;
 		ctx->writeTabs(code_deepness) << "template<typename T> using array = std::vector<T>;" << std::endl;
+		ctx->writeTabs(code_deepness) << "template<typename ...T> using tuple = std::tuple<T...>;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using string = std::string;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using datetime = PIDL::DateTime;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using blob = std::vector<char>;" << std::endl;

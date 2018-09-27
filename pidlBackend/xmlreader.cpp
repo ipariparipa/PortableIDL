@@ -189,7 +189,30 @@ namespace PIDL
 			return true;
 		}
 
-		bool readType(InterfaceElementRegistry & registry, const rapidxml::xml_base<> * v, std::shared_ptr<Language::Type> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readType(InterfaceElementRegistry & registry, const rapidxml::xml_base<> * v, std::vector<Language::Type::Ptr> & ret, const std::string & error_path, ErrorCollector & ec)
+		{
+			if (!dynamic_cast<const rapidxml::xml_node<>*>(v))
+			{
+				ec << "unxpected: 'types' is not node";
+				return false;
+			}
+
+			size_t cnt = 0;
+			for (auto n = dynamic_cast<const rapidxml::xml_node<>*>(v)->first_node("type"); n; n = n->next_sibling("type")) ++cnt;
+
+			ret.resize(cnt);
+			size_t i = 0;
+			bool has_error = false;
+			for (auto n = dynamic_cast<const rapidxml::xml_node<>*>(v)->first_node("type"); n; n = n->next_sibling("type"))
+			{
+				if (!readType(registry, n, ret[i++], error_path, ec))
+					has_error = true;
+			}
+
+			return !has_error;
+		}
+
+		bool readType(InterfaceElementRegistry & registry, const rapidxml::xml_base<> * v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (dynamic_cast<const rapidxml::xml_attribute<>*>(v))
 			{
@@ -225,7 +248,7 @@ namespace PIDL
 			return false;
 		}
 
-		bool readType(InterfaceElementRegistry & registry, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Type> & ret, const std::string & error_path, ErrorCollector & ec)
+		bool readType(InterfaceElementRegistry & registry, const std::string & name, const rapidxml::xml_node<> * v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (name == "nullable")
 			{
@@ -235,7 +258,7 @@ namespace PIDL
 					ec << (error_path + ": type of '" + name + "' is not specified");
 					return false;
 				}
-				std::shared_ptr<Language::Type> tmp;
+				Language::Type::Ptr tmp;
 				if (!readType(registry, t, tmp, error_path, ec))
 					return false;
 				ret = std::make_shared<Language::Nullable>(tmp);
@@ -288,15 +311,35 @@ namespace PIDL
 					ec << (error_path + ": type is not specified");
 					return false;
 				}
-				std::shared_ptr<Language::Type> tmp;
+				Language::Type::Ptr tmp;
 				if (!readType(registry, t, tmp, error_path, ec))
 					return false;
 				ret = std::make_shared<Language::Array>(tmp);
 			}
-			else
+			else if (name == "tuple")
 			{
-				ec << ("name '" + name + "' of type '" + error_path + "' is invalid");
-				return false;
+				rapidxml::xml_base<> * t;
+				if (!(t = getNode(v, "types")))
+				{
+					ec << (error_path + ": types are not specified");
+					return false;
+				}
+				std::vector<Language::Type::Ptr> tmp;
+				if (!readType(registry, t, tmp, error_path, ec))
+					return false;
+				ret = std::make_shared<Language::Tuple>(tmp);
+			}
+			else 
+			{
+				if (registry.embedded_types.count(name))
+					ret = registry.embedded_types[name];
+				else if (!registry.types.count(name))
+				{
+					ec << (error_path + ": type '" + name + "' is not found in '" + registry.path + "'");
+					return false;
+				}
+				else
+					ret = registry.types[name];
 			}
 			return true;
 		}

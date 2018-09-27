@@ -27,6 +27,37 @@
 #include <vector>
 
 namespace PIDL { namespace JSONTools {
+
+	namespace _internal
+	{
+		template<int... Is>
+		struct seq { };
+
+		template<int N, int... Is>
+		struct gen_seq : gen_seq<N - 1, N - 1, Is...> { };
+
+		template<int... Is>
+		struct gen_seq<0, Is...> : seq<Is...>{};
+
+		template<typename T, typename F, int... Is>
+		void for_each(T&& t, F f, seq<Is...>)
+		{
+			auto l = { (f(std::get<Is>(t)), 0)... };
+		}
+	}
+
+	template<typename... Ts, typename F>
+	void for_each_in_tuple(std::tuple<Ts...> const& t, F f)
+	{
+		_internal::for_each(t, f, _internal::gen_seq<sizeof...(Ts)>());
+	}
+
+	template<typename... Ts, typename F>
+	void for_each_in_tuple(std::tuple<Ts...> & t, F f)
+	{
+		_internal::for_each(t, f, _internal::gen_seq<sizeof...(Ts)>());
+	}
+
 	enum class InvokeStatus { Ok, NotImplemented, Error, MarshallingError, NotSupportedMarshaklingVersion, FatalError };
 
 	extern PIDL_CORE__FUNCTION std::string getErrorText(rapidjson::ParseErrorCode code);
@@ -72,6 +103,37 @@ namespace PIDL { namespace JSONTools {
 			if (!getValue(*it, ret[i++]))
 				has_error = true;
 
+		return !has_error;
+	}
+
+	namespace _internal {
+
+		struct tuple_getValue_functor
+		{
+			tuple_getValue_functor(const rapidjson::Value & r_, bool & has_error_) :
+				r(r_), has_error(has_error_)
+			{ }
+
+			const rapidjson::Value & r;
+			bool & has_error;
+			rapidjson::SizeType idx = 0;
+
+			template<typename T>
+			void operator () (T && v)
+			{
+				if (!getValue(r[idx++], v))
+					has_error = true;
+			}
+		};
+
+	}
+
+	template<typename ...T>
+	bool getValue(const rapidjson::Value & v, std::tuple<T...> & ret)
+	{
+		rapidjson::SizeType idx = 0;
+		bool has_error = false;
+		for_each_in_tuple(ret, _internal::tuple_getValue_functor(v, has_error));
 		return !has_error;
 	}
 
@@ -149,6 +211,39 @@ namespace PIDL { namespace JSONTools {
 	void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::vector<T> & values)
 	{
 		auto tmp = createValue<T>(doc, values);
+		addValue(doc, r, name, tmp);
+	}
+
+	namespace _internal
+	{
+		struct tuple_createValue_functor
+		{
+			tuple_createValue_functor(rapidjson::Document & doc_, rapidjson::Value & r_) : doc(doc_), r(r_)
+			{ }
+
+			rapidjson::Document & doc;
+			rapidjson::Value & r;
+
+			template<typename T>
+			void operator () (T && v)
+			{
+				r.PushBack(createValue(doc, v), doc.GetAllocator());
+			}
+		};
+	}
+
+	template<typename ...T>
+	rapidjson::Value createValue(rapidjson::Document & doc, const std::tuple<T...> & values)
+	{
+		rapidjson::Value v(rapidjson::kArrayType);
+		for_each_in_tuple(values, _internal::tuple_createValue_functor(doc, v));
+		return v;
+	}
+
+	template<typename ...T>
+	void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::tuple<T...> & values)
+	{
+		auto tmp = createValue(doc, values);
 		addValue(doc, r, name, tmp);
 	}
 
