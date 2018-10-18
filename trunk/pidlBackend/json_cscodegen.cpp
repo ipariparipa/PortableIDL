@@ -48,7 +48,7 @@ namespace PIDL
 			const std::map<size_t /*hash*/, Language::Type*> & prebuilt_types(Language::Interface * intf) const
 			{
 				static const std::map<size_t /*hash*/, Language::Type*> empty;
-				auto & it = _prebuilt_types.find(to_interface_path(intf));
+				const auto & it = _prebuilt_types.find(to_interface_path(intf));
 				return it != _prebuilt_types.end() ? it->second : empty;
 			}
 
@@ -864,8 +864,7 @@ namespace PIDL
 				if (!writeType(tt, code_deepness, ctx, ec))
 					return false;
 				*ctx << "(";
-				i = 0;
-				for (auto & t : tt->types())
+				for (size_t i = 0, l = tt->types().size(); i < l; ++i)
 				{
 					if (i) *ctx << ", ";
 					*ctx << "_t" << ++i;
@@ -948,7 +947,6 @@ namespace PIDL
 				ctx->writeTabs(code_deepness + 1) << "return true;" << std::endl;
 				ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.None || t != PIDL.JSONTools.Type.Array)" << std::endl;
 				ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value is invalid\"); return false; }" << std::endl;
-				size_t i = 0;
 
 				ctx->writeTabs(code_deepness) << "bool has_error = false;" << std::endl;
 				ctx->writeTabs(code_deepness) << "int i = 0;" << std::endl;
