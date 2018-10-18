@@ -34,12 +34,21 @@ namespace PIDL
 			Context(short tab_length, char tab_char, std::ostream & o, Role role) : CSCodeGenContext(tab_length, tab_char, o, role) { }
 			virtual ~Context() = default;
 
-			std::map<std::vector<std::string> /*interface_path*/, std::map<size_t /*hash*/, Language::Type*>> _prebuilt_types;
+			std::map<std::string /*interface_path*/, std::map<size_t /*hash*/, Language::Type*>> _prebuilt_types;
+
+			static std::string to_interface_path(Language::Interface * intf)
+			{
+				std::string ret;
+				for (auto & s : intf->scope())
+					ret += s + ".";
+				ret += intf->name();
+				return ret;
+			}
 
 			const std::map<size_t /*hash*/, Language::Type*> & prebuilt_types(Language::Interface * intf) const
 			{
 				static const std::map<size_t /*hash*/, Language::Type*> empty;
-				auto & it = _prebuilt_types.find(intf->scope());
+				auto & it = _prebuilt_types.find(to_interface_path(intf));
 				return it != _prebuilt_types.end() ? it->second : empty;
 			}
 
@@ -81,7 +90,7 @@ namespace PIDL
 				 
 			void prebuild(Language::Interface * intf)
 			{
-				auto & _prebuilt_types = this->_prebuilt_types[intf->scope()];
+				auto & _prebuilt_types = this->_prebuilt_types[to_interface_path(intf)];
 
 				auto _addPrebuiltType = [&](Language::Type * t)
 				{
@@ -946,7 +955,7 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "var elems = v.Elements(\"item\");" << std::endl;
 				ctx->writeTabs(code_deepness) << "foreach(var e in elems) ++i;" << std::endl;
 				ctx->writeTabs(code_deepness) << "ret = new ";
-				if (!writeType(at->types().front()->finalType().get(), code_deepness, ctx, ec))
+				if (!writeType(at->types().front().get(), code_deepness, ctx, ec))
 					return false;
 				*ctx << "[i];" << std::endl;
 				ctx->writeTabs(code_deepness) << "i = 0;" << std::endl;
