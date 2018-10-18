@@ -17,7 +17,9 @@
 
 #include "include/pidlBackend/json_cscodegen.h"
 #include "include/pidlBackend/language.h"
+#include <pidlCore/errorcollector.h>
 
+#include <functional>
 #include <assert.h>
 
 #define MAX_DOTNET_TUPLE_ARG_NUM 7
@@ -27,6 +29,149 @@ namespace PIDL
 
 	struct JSON_CSCodeGen::Priv
 	{
+		struct Context : public CSCodeGenContext
+		{
+			Context(short tab_length, char tab_char, std::ostream & o, Role role) : CSCodeGenContext(tab_length, tab_char, o, role) { }
+			virtual ~Context() = default;
+
+			std::map<std::vector<std::string> /*interface_path*/, std::map<size_t /*hash*/, Language::Type*>> _prebuilt_types;
+
+			const std::map<size_t /*hash*/, Language::Type*> & prebuilt_types(Language::Interface * intf) const
+			{
+				static const std::map<size_t /*hash*/, Language::Type*> empty;
+				auto & it = _prebuilt_types.find(intf->scope());
+				return it != _prebuilt_types.end() ? it->second : empty;
+			}
+
+			static size_t /*hash*/ calculate_hash(Language::Type * t)
+			{
+				std::function<void(Language::Type * t, std::string & ret)> _calculateHash_str;
+				_calculateHash_str = [&](Language::Type * t, std::string & ret)
+				{
+					if (ret.length())
+						ret += ",";
+
+					auto ft = t->finalType().get();
+					if (dynamic_cast<Language::Generic*>(ft))
+					{
+						std::string _str;
+						for (auto & t : dynamic_cast<Language::Generic*>(ft)->types())
+							_calculateHash_str(t.get(), _str);
+						ret += std::string(ft->name()) + "<" + _str + ">";
+					}
+					else if (dynamic_cast<Language::TypeDefinition*>(t) && dynamic_cast<Language::Structure*>(ft))
+					{
+						ret += t->name();
+					}
+					else if (dynamic_cast<Language::Structure*>(ft))
+					{
+						std::string _str;
+						for (auto & m : dynamic_cast<Language::Structure*>(ft)->members())
+							_calculateHash_str(m->type().get(), _str);
+						ret += std::string(ft->name()) + "{" + _str + "}";
+					}
+					else
+						ret += ft->name();
+				};
+
+				std::string hash_str;
+				_calculateHash_str(t, hash_str);
+				return std::hash<std::string>()(hash_str);
+			}
+				 
+			void prebuild(Language::Interface * intf)
+			{
+				auto & _prebuilt_types = this->_prebuilt_types[intf->scope()];
+
+				auto _addPrebuiltType = [&](Language::Type * t)
+				{
+					auto h = calculate_hash(t);
+					if (!_prebuilt_types.count(h))
+						_prebuilt_types[h] = t;
+				};
+
+				std::function<void(Language::Type * t)> _handleType;
+				_handleType = [&](Language::Type * t)
+				{
+					auto ft = t->finalType().get();
+
+					if (dynamic_cast<Language::Structure*>(ft))
+					{
+						_addPrebuiltType(ft);
+						for (auto & m : dynamic_cast<Language::Structure*>(ft)->members())
+							_handleType(m->type().get());
+					}
+					if (dynamic_cast<Language::TypeDefinition*>(t) && dynamic_cast<Language::Structure*>(ft))
+					{
+						_addPrebuiltType(t);
+					}
+					else if (dynamic_cast<Language::Generic*>(ft))
+					{
+						_addPrebuiltType(ft);
+						for (auto & t : dynamic_cast<Language::Generic*>(ft)->types())
+							_handleType(t.get());
+					}
+				};
+
+				std::function<void(Language::DefinitionProvider * dp)> _handleDefinitions;
+				_handleDefinitions = [&](Language::DefinitionProvider* dp)
+				{
+					for (auto & d : dp->definitions())
+					{
+						if (std::dynamic_pointer_cast<Language::TypeDefinition>(d))
+						{
+							_handleType(std::dynamic_pointer_cast<Language::TypeDefinition>(d)->type().get());
+						}
+						else if (std::dynamic_pointer_cast<Language::FunctionVariant>(d))
+						{
+							for (auto & a : std::dynamic_pointer_cast<Language::FunctionVariant>(d)->arguments())
+								_handleType(a->type().get());
+							_handleType(std::dynamic_pointer_cast<Language::FunctionVariant>(d)->returnType().get());
+						}
+						else if (std::dynamic_pointer_cast<Language::DefinitionProvider>(d))
+						{
+							_handleDefinitions(std::dynamic_pointer_cast<Language::DefinitionProvider>(d).get());
+						}
+					}
+				};
+
+				_handleDefinitions(intf);
+			}
+
+			virtual bool prebuild(Language::TopLevel *tl, ErrorCollector & ec) final override
+			{
+				bool has_error = false;
+				if (dynamic_cast<Language::Module*>(tl))
+				{
+					auto m = dynamic_cast<Language::Module*>(tl);
+					for (auto e : m->elements())
+						if (!prebuild(dynamic_cast<Language::TopLevel*>(e.get()), ec)) 
+							has_error = true;
+				}
+				else if (dynamic_cast<Language::Interface*>(tl))
+					prebuild(dynamic_cast<Language::Interface*>(tl));
+				return !has_error;
+			}
+
+
+			std::string mashaller_function_str(Language::Interface * intf, Language::Type * t, const std::string & func_name)
+			{
+				auto _t_hash = calculate_hash(t);
+				return prebuilt_types(intf).count(_t_hash) ? func_name + "_" + std::to_string(_t_hash) : func_name;
+			}
+
+			std::string getValue_str(Language::Interface * intf, Language::Type * t)
+			{
+				return mashaller_function_str(intf, t, "_getValue");
+			}
+
+			std::string addValue_str(Language::Interface * intf, Language::Type * t)
+			{
+				return mashaller_function_str(intf, t, "_addValue");
+			}
+
+		};
+
 		Priv(JSON_CSCodeGen * that_, const std::shared_ptr<CSCodeGenHelper> & helper_) : that(that_), helper(helper_)
 		{ }
 
@@ -44,7 +189,7 @@ namespace PIDL
 		}
 
 		template<class Class_T>
-		bool writeMembers(short code_deepness, CSCodeGenContext * ctx, Class_T * cl, ErrorCollector & ec)
+		bool writeMembers(Language::Interface * intf, short code_deepness, Context * ctx, Class_T * cl, ErrorCollector & ec)
 		{
 			switch (ctx->role())
 			{
@@ -114,9 +259,8 @@ namespace PIDL
 		}
 
 		template<class Class_T>
-		bool writeConstructorBody(Class_T * cl, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+		bool writeConstructorBody(Language::Interface * intf, Class_T * cl, short code_deepness, Context * ctx, ErrorCollector & ec)
 		{
-
 			switch (ctx->role())
 			{
 			case Role::Client:
@@ -159,7 +303,7 @@ namespace PIDL
 								if (!is_first)
 									o << "| ";
 								is_first = false;
-								o << "!_intf._getValue(aa, \"" << a->name() << "\", out _arg_" << a->name() << ", ec)" << std::endl;
+								o << "!_intf." << ctx->getValue_str(intf, a->type().get()) << "(aa, \"" << a->name() << "\", out _arg_" << a->name() << ", ec)" << std::endl;
 							}
 							ctx->writeTabs(--code_deepness) << ")" << std::endl;
 							ctx->writeTabs(code_deepness) << "{ ret.status = _InvokeStatus.MarshallingError; return ret; }" << std::endl;
@@ -217,7 +361,7 @@ namespace PIDL
 							ctx->writeTabs(code_deepness) << "var out_v = PIDL.JSONTools.addValue(ret.ret, \"output\", PIDL.JSONTools.Type.Object);" << std::endl;
 
 							for (auto & a : out_args)
-								ctx->writeTabs(code_deepness) << "_intf._addValue(out_v, \"" << a->name() << "\", _arg_" << a->name() << ");" << std::endl;
+								ctx->writeTabs(code_deepness) << "_intf." << ctx->addValue_str(intf, a->type().get()) << "(out_v, \"" << a->name() << "\", _arg_" << a->name() << ");" << std::endl;
 						}
 
 						ctx->writeTabs(code_deepness) << "ret.status = _InvokeStatus.Ok;" << std::endl;
@@ -248,7 +392,7 @@ namespace PIDL
 
 						ctx->writeTabs(code_deepness) << "ret.ret = PIDL.JSONTools.createValue(\"root\", PIDL.JSONTools.Type.Object);" << std::endl;
 
-						ctx->writeTabs(code_deepness) << "_intf._addValue(ret.ret, \"retval\", retval);" << std::endl;
+						ctx->writeTabs(code_deepness) << "_intf." << ctx->addValue_str(intf, property->type().get()) << "(ret.ret, \"retval\", retval);" << std::endl;
 
 						ctx->writeTabs(code_deepness) << "return ret;" << std::endl;
 						ctx->writeTabs(--code_deepness) << "};" << std::endl << std::endl;
@@ -265,7 +409,7 @@ namespace PIDL
 							if (!that->writeType(property->type().get(), code_deepness, ctx, ec))
 								return false;
 							o << ");" << std::endl;
-							ctx->writeTabs(code_deepness) << "if (!_intf._getValue(root, \"value\", out value, ec))" << std::endl;
+							ctx->writeTabs(code_deepness) << "if (!_intf." << ctx->getValue_str(intf, property->type().get()) << "(root, \"value\", out value, ec))" << std::endl;
 							ctx->writeTabs(code_deepness) << "{ ret.status = _InvokeStatus.MarshallingError; return ret; }" << std::endl;
 
 							ctx->writeTabs(code_deepness) << "ec.Clear();" << std::endl;
@@ -281,7 +425,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool writeFunctionBody(Language::FunctionVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+		bool writeFunctionBody(Language::Interface * intf, Language::FunctionVariant * function, short code_deepness, Context * ctx, ErrorCollector & ec)
 		{
 			switch (ctx->role())
 			{
@@ -311,7 +455,7 @@ namespace PIDL
 					{
 						ctx->writeTabs(code_deepness) << "var _aa = PIDL.JSONTools.addValue(_v, \"arguments\", PIDL.JSONTools.Type.Object);" << std::endl;
 						for (const auto & a : in_args)
-							ctx->writeTabs(code_deepness) << "_intf._addValue(_aa, \"" << a->name() << "\", " << a->name() << ");" << std::endl;
+							ctx->writeTabs(code_deepness) << "_intf." << ctx->addValue_str(intf, a->type().get()) << "(_aa, \"" << a->name() << "\", " << a->name() << ");" << std::endl;
 					}
 
 					ctx->writeTabs(code_deepness) << "XElement _ret;" << std::endl;
@@ -360,7 +504,7 @@ namespace PIDL
 							}
 							else
 								o << "| ";
-							o << "!_getValue(_out_v, \"" << a->name() << "\", out " << a->name() << ", _ec)" << std::endl;
+							o << "!" << ctx->getValue_str(intf, a->type().get()) << "(_out_v, \"" << a->name() << "\", out " << a->name() << ", _ec)" << std::endl;
 						}
 						ctx->writeTabs(--code_deepness) << ")" << std::endl;
 						ctx->writeTabs(code_deepness + 1) << "_ec.ThrowException();" << std::endl;
@@ -377,7 +521,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool writePropertyGetterBody(Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+		bool writePropertyGetterBody(Language::Interface * intf, Language::Property * prop, short code_deepness, Context * ctx, ErrorCollector & ec)
 		{
 			switch (ctx->role())
 			{
@@ -402,7 +546,7 @@ namespace PIDL
 				if (!that->writeType(ret_type, code_deepness, ctx, ec))
 					return false;
 				*ctx << " _retval;" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!_intf._getValue(_ret, \"retval\", out _retval, _ec))" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (!_intf." << ctx->getValue_str(intf, ret_type) << "(_ret, \"retval\", out _retval, _ec))" << std::endl;
 				ctx->writeTabs(code_deepness + 1) << "_ec.ThrowException();" << std::endl;
 
 				ctx->writeTabs(code_deepness) << "return _retval;" << std::endl;
@@ -415,7 +559,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool writePropertySetterBody(Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+		bool writePropertySetterBody(Language::Interface * intf, Language::Property * prop, short code_deepness, Context * ctx, ErrorCollector & ec)
 		{
 			switch (ctx->role())
 			{
@@ -431,7 +575,7 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "var _v = PIDL.JSONTools.addValue(_r, \"property_set\", PIDL.JSONTools.Type.Object);" << std::endl;
 				ctx->writeTabs(code_deepness) << "_intf._addValue(_v, \"name\", \"" << prop->name() << "\");" << std::endl;
 
-				ctx->writeTabs(code_deepness) << "_intf._addValue(_v, \"value\", value);" << std::endl;
+				ctx->writeTabs(code_deepness) << "_intf." << ctx->addValue_str(intf, prop->type().get()) << "(_v, \"value\", value);" << std::endl;
 
 				ctx->writeTabs(code_deepness) << "XElement _ret;" << std::endl;
 				ctx->writeTabs(code_deepness) << "if (!_intf._invokeCall(_root, out _ret, _ec))" << std::endl;
@@ -467,6 +611,11 @@ namespace PIDL
 		return priv->helper.get();
 	}
 
+	CSCodeGenContext * JSON_CSCodeGen::createContext(short tab_length, char tab_char, std::ostream & o, Role role) const //final override
+	{
+		return new Priv::Context(tab_length, tab_char, o, role);
+	}
+
 	bool JSON_CSCodeGen::writeUsings(short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
 	{
 		ctx->writeTabs(code_deepness) << "using System;" << std::endl;
@@ -478,62 +627,23 @@ namespace PIDL
 		return true;
 	}
 
-	bool JSON_CSCodeGen::writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
+	bool JSON_CSCodeGen::writeMembers(short code_deepness, CSCodeGenContext * _ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		if (!priv->writeMembers(code_deepness, ctx, intf, ec))
+		auto ctx = dynamic_cast<Priv::Context*>(_ctx);
+		assert(ctx);
+
+		if (!priv->writeMembers(intf, code_deepness, ctx, intf, ec))
 			return false;
+
+		ctx->stream() << std::endl;
 
 		ctx->writeTabs(code_deepness) << "#region marshallers" << std::endl;
 
 		for (auto & d : intf->definitions())
 		{
-			bool is_first;
 			if (dynamic_cast<Language::TypeDefinition*>(d.get()))
 			{
-				auto td = dynamic_cast<Language::TypeDefinition*>(d.get());
-				auto s = dynamic_cast<Language::Structure*>(td->finalType().get());
-				if (s)
-				{
-					ctx->writeTabs(code_deepness) << td->name() << " _getValue_" << td->name() << "(XElement v, out bool isOk, PIDL.IPIDLErrorCollector ec)" << std::endl;
-					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					ctx->writeTabs(code_deepness) << "var ret = new " << td->name() << "();" << std::endl;
-					ctx->writeTabs(code_deepness) << "if(!PIDL.JSONTools.checkType(v, PIDL.JSONTools.Type.Object))" << std::endl;
-					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					ctx->writeTabs(code_deepness) << "ec.Add(-1, \"value of '" << td->name() << "'is not object\");" << std::endl;
-					ctx->writeTabs(code_deepness) << "isOk = false; return ret;" << std::endl;
-					ctx->writeTabs(--code_deepness) << "}" << std::endl;
-
-					auto & members = s->members();
-					if (members.size())
-					{
-						ctx->writeTabs(code_deepness) << "isOk =" << std::endl;
-						is_first = true;
-						for (auto & m : members)
-						{
-							if (is_first)
-							{
-								is_first = false;
-								ctx->writeTabs(code_deepness + 1) << "  ";
-							}
-							else
-								ctx->writeTabs(code_deepness + 1) << "& ";
-							*ctx << "_getValue(v, \"" << m->name() << "\", out ret." << m->name() << ", ec)" << std::endl;
-						}
-						ctx->writeTabs(code_deepness + 1) << ";" << std::endl;
-					}
-					ctx->writeTabs(code_deepness) << "return ret;" << std::endl;
-					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
-
-					ctx->writeTabs(code_deepness) << td->name() << " _getValue_" << td->name() << "(XElement r, string name, out bool isOk, PIDL.IPIDLErrorCollector ec)" << std::endl;
-					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					ctx->writeTabs(code_deepness) << "var ret = new " << td->name() << "();" << std::endl;
-					ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
-					ctx->writeTabs(code_deepness) << "if (!_getValue(r, name, PIDL.JSONTools.Type.Object, out v, ec))" << std::endl;
-					ctx->writeTabs(code_deepness) << "{ isOk = false; return ret; }" << std::endl;
-					ctx->writeTabs(code_deepness) << "return _getValue_" << td->name() << "(v, out isOk, ec);" << std::endl;
-					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
-				}
-			}
+			} 
 			else if (dynamic_cast<Language::Object*>(d.get()))
 			{
 				auto object = dynamic_cast<Language::Object*>(d.get());
@@ -590,7 +700,7 @@ namespace PIDL
 		ctx->writeTabs(code_deepness) << "if(!PIDL.JSONTools.getValue(r, name, type, out ret))" << std::endl;
 		ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value '\" + name + \"' is not found or invalid\"); return false; }" << std::endl;
 		ctx->writeTabs(code_deepness) << "return true;" << std::endl;
-		ctx->writeTabs(--code_deepness) << "}" << std::endl;
+		ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
 
 		ctx->writeTabs(code_deepness) << "bool _getValue<T>(XElement r, string name, out T ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
@@ -601,20 +711,6 @@ namespace PIDL
 		{
 			if (dynamic_cast<Language::TypeDefinition*>(d.get()))
 			{
-				auto td = dynamic_cast<Language::TypeDefinition*>(d.get());
-				auto s = dynamic_cast<Language::Structure*>(td->type().get());
-				if (s)
-				{
-					if (is_first)
-					{
-						is_first = false;
-						ctx->writeTabs(code_deepness);
-					}
-					else
-						ctx->writeTabs(code_deepness) << "else ";
-					*ctx << "if (typeof(T) == typeof(" << td->name() << "))" << std::endl;
-					ctx->writeTabs(code_deepness + 1) << "ret = (T)(object)_getValue_" << td->name() << "(r, name, out isOk, ec);" << std::endl;
-				}
 			}
 			else if (dynamic_cast<Language::Object*>(d.get()))
 			{
@@ -649,17 +745,6 @@ namespace PIDL
 		{
 			if (dynamic_cast<Language::TypeDefinition*>(d.get()))
 			{
-				auto td = dynamic_cast<Language::TypeDefinition*>(d.get());
-				auto s = dynamic_cast<Language::Structure*>(td->type().get());
-				if (s)
-				{
-					ctx->writeTabs(code_deepness) << "if (typeof(T) == typeof(" << td->name() << "))" << std::endl;
-					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					ctx->writeTabs(code_deepness) << "bool isOk;" << std::endl;
-					ctx->writeTabs(code_deepness) << "ret = (T)(object)_getValue_" << td->name() << "(v, out isOk, ec);" << std::endl;
-					ctx->writeTabs(code_deepness) << "return isOk;" << std::endl;
-					ctx->writeTabs(--code_deepness) << "}" << std::endl;
-				}
 			}
 			else if (dynamic_cast<Language::Object*>(d.get()))
 			{
@@ -681,47 +766,16 @@ namespace PIDL
 		ctx->writeTabs(code_deepness) << "return true;" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
-		//getter for nullable
-		ctx->writeTabs(code_deepness) << "bool _getValue<T>(XElement r, string name, out Nullable<T> ret, PIDL.IPIDLErrorCollector ec)";
-		*ctx << "where T:struct";
-		ctx->stream() << std::endl;
+		//getter for blob
+		ctx->writeTabs(code_deepness) << "bool _getValue(XElement r, string name, out byte[] ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
 		ctx->writeTabs(code_deepness++) << "{" << std::endl;
 		ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
 		ctx->writeTabs(code_deepness) << "if (!PIDL.JSONTools.getValue(r, name, out v))" << std::endl;
 		ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value '\" + name + \"' is not found\"); ret = null; return false; }" << std::endl;
-		ctx->writeTabs(code_deepness) << "return _getValue<T>(v, out ret, ec);" << std::endl;
+		ctx->writeTabs(code_deepness) << "return _getValue(v, out ret, ec);" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
-		ctx->writeTabs(code_deepness) << "bool _getValue<T>(XElement v, out Nullable<T> ret, PIDL.IPIDLErrorCollector ec)";
-		*ctx << "where T:struct";
-		ctx->stream() << std::endl;
-		ctx->writeTabs(code_deepness++) << "{" << std::endl;
-		ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;
-		ctx->writeTabs(code_deepness) << "var t = PIDL.JSONTools.getType(v);" << std::endl;
-		ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.None)" << std::endl;
-		ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value is invalid\"); return false; }" << std::endl;
-		ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.Null)" << std::endl;
-		ctx->writeTabs(code_deepness + 1) << "return true;" << std::endl;
-		ctx->writeTabs(code_deepness) << "T _ret;" << std::endl;
-		ctx->writeTabs(code_deepness) << "if (!_getValue(v, out _ret, ec))" << std::endl;
-		ctx->writeTabs(code_deepness + 1) << "return false;" << std::endl;
-		ctx->writeTabs(code_deepness) << "ret = new Nullable<T>(_ret);" << std::endl;
-		ctx->writeTabs(code_deepness) << "return true;" << std::endl;
-		ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
-		
-		//getter for array & blob
-		ctx->writeTabs(code_deepness) << "bool _getValue<T>(XElement r, string name, out T[] ret, PIDL.IPIDLErrorCollector ec)";
-		//*ctx << "where T:struct";
-		ctx->stream() << std::endl;
-		ctx->writeTabs(code_deepness++) << "{" << std::endl;
-		ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
-		ctx->writeTabs(code_deepness) << "if (!PIDL.JSONTools.getValue(r, name, out v))" << std::endl;
-		ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value '\" + name + \"' is not found\"); ret = null; return false; }" << std::endl;
-		ctx->writeTabs(code_deepness) << "return _getValue<T>(v, out ret, ec);" << std::endl;
-		ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;;
-
-		ctx->writeTabs(code_deepness) << "bool _getValue<T>(XElement v, out T[] ret, PIDL.IPIDLErrorCollector ec)";
-		//*ctx << where T:struct";
+		ctx->writeTabs(code_deepness) << "bool _getValue(XElement v, out byte[] ret, PIDL.IPIDLErrorCollector ec)";
 		ctx->stream() << std::endl;
 		ctx->writeTabs(code_deepness++) << "{" << std::endl;
 		ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;
@@ -730,109 +784,244 @@ namespace PIDL
 		ctx->writeTabs(code_deepness) << "return true;" << std::endl;
 		ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.None)" << std::endl;
 		ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value is invalid\"); return false; }" << std::endl;
-		ctx->writeTabs(code_deepness) << "if (typeof(T) == typeof(byte))" << std::endl;
-		ctx->writeTabs(code_deepness++) << "{" << std::endl;
 		ctx->writeTabs(code_deepness) << "string tmp;" << std::endl;
 		ctx->writeTabs(code_deepness) << "if (!_getValue(v, out tmp, ec))" << std::endl;
 		ctx->writeTabs(code_deepness) << "{ ret = null; return false; }" << std::endl;
-		ctx->writeTabs(code_deepness) << "ret = (T[])(object)Convert.FromBase64String(tmp);" << std::endl;
+		ctx->writeTabs(code_deepness) << "ret = Convert.FromBase64String(tmp);" << std::endl;
 		ctx->writeTabs(code_deepness) << "return true;" << std::endl;
-		ctx->writeTabs(--code_deepness) << "}" << std::endl;
-		ctx->writeTabs(code_deepness) << "if (t != PIDL.JSONTools.Type.Array)" << std::endl;
-		ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value is not array\"); return false; }" << std::endl;
-		ctx->writeTabs(code_deepness) << "var elems = v.Elements(\"item\");" << std::endl;
-		ctx->writeTabs(code_deepness) << "int i = 0;" << std::endl;
-		ctx->writeTabs(code_deepness) << "foreach(var e in elems) ++i;" << std::endl;
-		ctx->writeTabs(code_deepness) << "ret = new T[i];" << std::endl;
-		ctx->writeTabs(code_deepness) << "i = 0;" << std::endl;
-		ctx->writeTabs(code_deepness) << "bool isOk = true;" << std::endl;
-		ctx->writeTabs(code_deepness) << "foreach(var e in elems)" << std::endl;
-		ctx->writeTabs(code_deepness++) << "{" << std::endl;
-		ctx->writeTabs(code_deepness) << "if (!_getValue(e, out ret[i++], ec))" << std::endl;
-		ctx->writeTabs(code_deepness + 1) << "isOk = false;" << std::endl;
-		ctx->writeTabs(--code_deepness) << "}" << std::endl;
-		ctx->writeTabs(code_deepness) << "return isOk;" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
-		//getter for tuple
-
-		for (int cnt = 1; cnt <= MAX_DOTNET_TUPLE_ARG_NUM; ++cnt)
+		//getter for prebuilt types
+		for (auto & ct : ctx->prebuilt_types(intf))
 		{
-			ctx->writeTabs(code_deepness) << "bool _getValue<";
-			for (int i = 0; i < cnt; ++i)
+			if (dynamic_cast<Language::Tuple*>(ct.second))
 			{
-				if (i) *ctx << ", ";
-				*ctx << "T" << i + 1;
-			}
-			*ctx << ">(XElement r, string name, out System.Tuple<";
-			for (int i = 0; i < cnt; ++i)
-			{
-				if (i) *ctx << ", ";
-				*ctx << "T" << i + 1;
-			}
-			*ctx << "> ret, PIDL.IPIDLErrorCollector ec)";
-			//for (int i = 0; i < cnt; ++i)
-			//	*ctx << " where T" << i + 1 << ":struct";
-			ctx->stream() << std::endl;
-			ctx->writeTabs(code_deepness++) << "{" << std::endl;
-			ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
-			ctx->writeTabs(code_deepness) << "if (!PIDL.JSONTools.getValue(r, name, out v))" << std::endl;
-			ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value '\" + name + \"' is not found\"); ret = null; return false; }" << std::endl;
-			ctx->writeTabs(code_deepness) << "return _getValue(v, out ret, ec);" << std::endl;
-			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+				auto tt = dynamic_cast<Language::Tuple*>(ct.second);
+				ctx->writeTabs(code_deepness) << "bool _getValue_" << ct.first << "(XElement r, string name, out ";
+				if (!writeType(tt, code_deepness, ctx, ec))
+					return false;
+				*ctx << " ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (!PIDL.JSONTools.getValue(r, name, out v))" << std::endl;
+				ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value '\" + name + \"' is not found\"); ret = null; return false; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "return _getValue_" << ct.first << "(v, out ret, ec);" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
-			ctx->writeTabs(code_deepness) << "bool _getValue<";
-			for (int i = 0; i < cnt; ++i)
-			{
-				if (i) *ctx << ", ";
-				*ctx << "T" << i + 1;
+				ctx->writeTabs(code_deepness) << "bool _getValue_" << ct.first << "(XElement v, out ";
+				if (!writeType(tt, code_deepness, ctx, ec))
+					return false;
+				*ctx << " ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;
+				ctx->writeTabs(code_deepness) << "var t = PIDL.JSONTools.getType(v);" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.Null)" << std::endl;
+				ctx->writeTabs(code_deepness + 1) << "return true;" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.None || t != PIDL.JSONTools.Type.Array)" << std::endl;
+				ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value is invalid\"); return false; }" << std::endl;
+				size_t i = 0;
+				for (auto & t : tt->types())
+				{
+					if (i > MAX_DOTNET_TUPLE_ARG_NUM)
+					{
+						ec << "more then 7 types of tuple cannot ba handled by .net";
+						return false;
+					}
+
+					ctx->writeTabs(code_deepness);
+					if (!writeType(t.get(), code_deepness, ctx, ec))
+						return false;
+					*ctx << " _t" << ++i << " = default(";
+					if (!writeType(t.get(), code_deepness, ctx, ec))
+						return false;
+					*ctx << ");" << std::endl;
+				}
+				ctx->writeTabs(code_deepness) << "bool has_error = false;" << std::endl;
+				ctx->writeTabs(code_deepness) << "int i = 0;" << std::endl;
+				ctx->writeTabs(code_deepness) << "foreach(var e in v.Elements(\"item\"))" << std::endl;
+				ctx->writeTabs(++code_deepness) << "switch (++i)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				i = 0;
+				for (auto & t : tt->types())
+				{
+					ctx->writeTabs(code_deepness - 1) << "case " << ++i << ":" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (!" << ctx->getValue_str(intf, t.get()) << "(e, out _t" << i << ", ec)) has_error = true;" << std::endl;
+					ctx->writeTabs(code_deepness) << "break;" << std::endl;
+				}
+				ctx->writeTabs((--code_deepness)--) << "}" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (has_error) return false;" << std::endl;
+
+				ctx->writeTabs(code_deepness) << "ret = new ";
+				if (!writeType(tt, code_deepness, ctx, ec))
+					return false;
+				*ctx << "(";
+				i = 0;
+				for (auto & t : tt->types())
+				{
+					if (i) *ctx << ", ";
+					*ctx << "_t" << ++i;
+				}
+				*ctx << ");" << std::endl;
+				ctx->writeTabs(code_deepness) << "return true;" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 			}
-			*ctx << ">(XElement v, out System.Tuple<";
-			for (int i = 0; i < cnt; ++i)
+			else if (dynamic_cast<Language::Nullable*>(ct.second))
 			{
-				if (i) *ctx << ", ";
-				*ctx << "T" << i + 1;
+				auto nt = dynamic_cast<Language::Nullable*>(ct.second);
+				ctx->writeTabs(code_deepness) << "bool _getValue_" << ct.first << "(XElement r, string name, out ";
+				if (!writeType(nt, code_deepness, ctx, ec))
+					return false;
+				*ctx << " ret, PIDL.IPIDLErrorCollector ec)";
+				ctx->stream() << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (!PIDL.JSONTools.getValue(r, name, out v))" << std::endl;
+				ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value '\" + name + \"' is not found\"); ret = null; return false; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "return _getValue_" << ct.first << "(v, out ret, ec);" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+				ctx->writeTabs(code_deepness) << "bool _getValue_" << ct.first << "(XElement v, out ";
+				if (!writeType(nt, code_deepness, ctx, ec))
+					return false;
+				*ctx << " ret, PIDL.IPIDLErrorCollector ec)";
+				ctx->stream() << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;
+				ctx->writeTabs(code_deepness) << "var t = PIDL.JSONTools.getType(v);" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.None)" << std::endl;
+				ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value is invalid\"); return false; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.Null)" << std::endl;
+				ctx->writeTabs(code_deepness + 1) << "return true;" << std::endl;
+				ctx->writeTabs(code_deepness);
+				auto t = nt->types().front().get();
+				auto fn_type = t->finalType().get();
+				if (dynamic_cast<Language::NativeType*>(fn_type) ||
+					dynamic_cast<Language::DateTime*>(fn_type) ||
+					dynamic_cast<Language::Structure*>(fn_type))
+				{
+					if (!writeType(nt->types().front().get(), code_deepness, ctx, ec))
+						return false;
+					*ctx << " tmp;" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (!" << ctx->getValue_str(intf, nt->types().front().get()) << "(v, out tmp, ec)) return false;" << std::endl;
+					ctx->writeTabs(code_deepness) << "ret = new ";
+					if (!writeType(nt, code_deepness, ctx, ec))
+						return false;
+					*ctx << "( tmp);" << std::endl;
+					ctx->writeTabs(code_deepness) << "return true;" << std::endl;
+				}
+				else
+					ctx->writeTabs(code_deepness) << "return " << ctx->getValue_str(intf, nt->types().front().get()) << "(v, out ret, ec);" << std::endl;
+
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 			}
-			*ctx << "> ret, PIDL.IPIDLErrorCollector ec)";
-			//for (int i = 0; i < cnt; ++i)
-			//	*ctx << " where T" << i + 1 << ":struct";
-			ctx->stream() << std::endl;
-			ctx->writeTabs(code_deepness++) << "{" << std::endl;
-			ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;
-			ctx->writeTabs(code_deepness) << "var t = PIDL.JSONTools.getType(v);" << std::endl;
-			ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.Null)" << std::endl;
-			ctx->writeTabs(code_deepness) << "return true;" << std::endl;
-			ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.None || t != PIDL.JSONTools.Type.Array)" << std::endl;
-			ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value is invalid\"); return false; }" << std::endl;
-			for (int i = 0; i < cnt; ++i)
-				ctx->writeTabs(code_deepness) << "T" << i + 1 << " _t" << i + 1 << " = default(T" << i + 1 <<");" << std::endl;
-			ctx->writeTabs(code_deepness) << "int i = 0;" << std::endl;
-			ctx->writeTabs(code_deepness) << "foreach(var e in v.Elements(\"item\"))" << std::endl;
-			ctx->writeTabs(code_deepness++) << "switch (++i)" << std::endl;
-			ctx->writeTabs(code_deepness++) << "{" << std::endl;
-			for (int i = 0; i < cnt; ++i)
+			else if (dynamic_cast<Language::Array*>(ct.second))
 			{
-				ctx->writeTabs(code_deepness - 1) << "case " << i + 1 << ":" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!_getValue(e, out _t" << i + 1 << ", ec)) return false;" << std::endl;
-				ctx->writeTabs(code_deepness) << "break;" << std::endl;
+				auto at = dynamic_cast<Language::Array*>(ct.second);
+				ctx->writeTabs(code_deepness) << "bool _getValue_" << ct.first << "(XElement r, string name, out ";
+				if (!writeType(at, code_deepness, ctx, ec))
+					return false;
+				*ctx << " ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (!PIDL.JSONTools.getValue(r, name, out v))" << std::endl;
+				ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value '\" + name + \"' is not found\"); ret = null; return false; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "return _getValue_" << ct.first << "(v, out ret, ec);" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+				ctx->writeTabs(code_deepness) << "bool _getValue_" << ct.first << "(XElement v, out ";
+				if (!writeType(at, code_deepness, ctx, ec))
+					return false;
+				*ctx << " ret, PIDL.IPIDLErrorCollector ec)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;
+				ctx->writeTabs(code_deepness) << "var t = PIDL.JSONTools.getType(v);" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.Null)" << std::endl;
+				ctx->writeTabs(code_deepness + 1) << "return true;" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (t == PIDL.JSONTools.Type.None || t != PIDL.JSONTools.Type.Array)" << std::endl;
+				ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value is invalid\"); return false; }" << std::endl;
+				size_t i = 0;
+
+				ctx->writeTabs(code_deepness) << "bool has_error = false;" << std::endl;
+				ctx->writeTabs(code_deepness) << "int i = 0;" << std::endl;
+				ctx->writeTabs(code_deepness) << "var elems = v.Elements(\"item\");" << std::endl;
+				ctx->writeTabs(code_deepness) << "foreach(var e in elems) ++i;" << std::endl;
+				ctx->writeTabs(code_deepness) << "ret = new ";
+				if (!writeType(at->types().front()->finalType().get(), code_deepness, ctx, ec))
+					return false;
+				*ctx << "[i];" << std::endl;
+				ctx->writeTabs(code_deepness) << "i = 0;" << std::endl;
+				ctx->writeTabs(code_deepness) << "foreach (var e in elems)" << std::endl;
+				ctx->writeTabs(code_deepness + 1) << "if (!" << ctx->getValue_str(intf, at->types().front().get()) << "(e, out ret[i++], ec)) has_error = true;" << std::endl;
+
+				ctx->writeTabs(code_deepness) << "return !has_error;" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 			}
-			ctx->writeTabs((--code_deepness)--) << "}" << std::endl;
-			ctx->writeTabs(code_deepness) << "ret = new System.Tuple<";
-			for (int i = 0; i < cnt; ++i)
+			else if (dynamic_cast<Language::TypeDefinition*>(ct.second))
 			{
-				if (i) *ctx << ", ";
-				*ctx << "T" << i + 1;
+				auto td = dynamic_cast<Language::TypeDefinition*>(ct.second);
+				auto s = dynamic_cast<Language::Structure*>(td->type().get());
+				if (s)
+				{
+					ctx->writeTabs(code_deepness) << "bool _getValue_" << ct.first << "(XElement r, string name, out ";
+					if (!writeType(td, code_deepness, ctx, ec))
+						return false;
+					*ctx << " ret, PIDL.IPIDLErrorCollector ec)";
+					ctx->stream() << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					ctx->writeTabs(code_deepness) << "ret = default(";
+					if (!writeType(td, code_deepness, ctx, ec))
+						return false;
+					*ctx << ");" << std::endl;
+					ctx->writeTabs(code_deepness) << "XElement v;" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (!PIDL.JSONTools.getValue(r, name, out v))" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value '\" + name + \"' is not found\"); return false; }" << std::endl;
+					ctx->writeTabs(code_deepness) << "return _getValue_" << ct.first << "(v, out ret, ec);" << std::endl;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+					ctx->writeTabs(code_deepness) << "bool _getValue_" << ct.first << "(XElement v, out ";
+					if (!writeType(td, code_deepness, ctx, ec))
+						return false;
+					*ctx << " ret, PIDL.IPIDLErrorCollector ec)";
+					ctx->stream() << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					ctx->writeTabs(code_deepness) << "ret = default(";
+					if (!writeType(td, code_deepness, ctx, ec))
+						return false;
+					*ctx << ");" << std::endl;
+					ctx->writeTabs(code_deepness) << "var t = PIDL.JSONTools.getType(v);" << std::endl;
+					ctx->writeTabs(code_deepness) << "if (t != PIDL.JSONTools.Type.Object)" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"value is invalid\"); return false; }" << std::endl;
+
+					ctx->writeTabs(code_deepness) << "ret = new ";
+					if (!writeType(td, code_deepness, ctx, ec))
+						return false;
+					*ctx << "();" << std::endl;
+					bool is_first = true;
+					for (auto & m : s->members())
+					{
+						if (is_first)
+						{
+							ctx->writeTabs(code_deepness) << "if (";
+							is_first = false;
+						}
+						else
+						{
+							*ctx << " |" << std::endl;
+							ctx->writeTabs(code_deepness) << "    ";
+						}
+						*ctx << "!" << ctx->getValue_str(intf, m->type().get()) << "(v, \"" << m->name() << "\", out ret." << m->name() << ", ec)";
+					}
+					if (!is_first)
+					{
+						*ctx << ")" << std::endl;
+						ctx->writeTabs(code_deepness + 1) << "return false;" << std::endl;
+					}
+					ctx->writeTabs(code_deepness) << "return true;" << std::endl;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+				}
 			}
-			*ctx << ">(";
-			for (int i = 0; i < cnt; ++i)
-			{
-				if (i) *ctx << ", ";
-				*ctx << "_t" << i + 1;
-			}
-			*ctx << ");" << std::endl;
-			ctx->writeTabs(code_deepness) << "return true;" << std::endl;
-			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 		}
+
 		ctx->writeTabs(code_deepness) << "void _addValue<T>(XElement r, string name, T val)" << std::endl;
 		ctx->writeTabs(code_deepness++) << "{" << std::endl;
 		is_first = true;
@@ -840,23 +1029,6 @@ namespace PIDL
 		{
 			if (dynamic_cast<Language::TypeDefinition*>(d.get()))
 			{
-				auto td = dynamic_cast<Language::TypeDefinition*>(d.get());
-				auto s = dynamic_cast<Language::Structure*>(td->type().get());
-				if (s)
-				{
-					if (is_first)
-					{
-						ctx->writeTabs(code_deepness) << "if (typeof(T) == typeof(" << td->name() << "))" << std::endl;
-						is_first = false;
-					}
-					else
-						ctx->writeTabs(code_deepness) << "else if (typeof(T) == typeof(" << td->name() << "))" << std::endl;
-					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					ctx->writeTabs(code_deepness) << "var v = PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Object);" << std::endl;
-					for (auto & m : s->members())
-						ctx->writeTabs(code_deepness) << "_addValue(v, \"" << m->name() << "\", ((" << td->name() << ")(object)val)." << m->name() << ");" << std::endl;
-					ctx->writeTabs(--code_deepness) << "}" << std::endl;
-				}
 			}
 			else if (dynamic_cast<Language::Object*>(d.get()))
 			{
@@ -905,29 +1077,71 @@ namespace PIDL
 		ctx->writeTabs(code_deepness + 1) << "_addValue(v, \"item\", it);" << std::endl;
 		ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
-		//setters for tuple
-		for (int cnt = 1; cnt <= MAX_DOTNET_TUPLE_ARG_NUM; ++cnt)
+		//setters for prebuilt types
+		for (auto & ct : ctx->prebuilt_types(intf))
 		{
-			ctx->writeTabs(code_deepness) << "void _addValue<";
-			for (int i = 0; i < cnt; ++i)
+			if (dynamic_cast<Language::Tuple*>(ct.second))
 			{
-				if (i) *ctx << ", ";
-				*ctx << "T" << i + 1;
+				auto tt = dynamic_cast<Language::Tuple*>(ct.second);
+				ctx->writeTabs(code_deepness) << "void _addValue_" << ct.first << "(XElement r, string name, ";
+				if (!writeType(tt, code_deepness, ctx, ec))
+					return false;
+				*ctx << " val)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (val == null)" << std::endl;
+				ctx->writeTabs(code_deepness) << "{ PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Null); return; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "var v = PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Array);" << std::endl;
+				size_t i = 0;
+				for (auto & t : tt->types())
+					ctx->writeTabs(code_deepness) << ctx->addValue_str(intf, t.get()) << "(v, \"item\", val.Item" << ++i << ");" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 			}
-			*ctx << "> (XElement r, string name, System.Tuple<";
-			for (int i = 0; i < cnt; ++i)
+			else if (dynamic_cast<Language::Nullable*>(ct.second))
 			{
-				if (i) *ctx << ", ";
-				*ctx << "T" << i + 1;
+				auto nt = dynamic_cast<Language::Nullable*>(ct.second);
+				ctx->writeTabs(code_deepness) << "void _addValue_" << ct.first << "(XElement r, string name, ";
+				if (!writeType(nt, code_deepness, ctx, ec))
+					return false;
+				*ctx << " val)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (val == null)" << std::endl;
+				ctx->writeTabs(code_deepness + 1) << "PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Null);" << std::endl;
+				ctx->writeTabs(code_deepness) << "else" << std::endl;
+				ctx->writeTabs(code_deepness + 1) << ctx->addValue_str(intf, nt->types().front().get()) << "(r, name, val);" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 			}
-			*ctx << "> val)" << std::endl;
-			ctx->writeTabs(code_deepness++) << "{" << std::endl;
-			ctx->writeTabs(code_deepness) << "if (val == null)" << std::endl;
-			ctx->writeTabs(code_deepness) << "{ PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Null); return; }" << std::endl;
-			ctx->writeTabs(code_deepness) << "var v = PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Array);" << std::endl;
-			for (int i = 0; i < cnt; ++i)
-				ctx->writeTabs(code_deepness) << "_addValue(v, \"item\", val.Item" << i + 1 << ");" << std::endl;
-			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+			else if (dynamic_cast<Language::Array*>(ct.second))
+			{
+				auto at = dynamic_cast<Language::Array*>(ct.second);
+				ctx->writeTabs(code_deepness) << "void _addValue_" << ct.first << "(XElement r, string name, ";
+				if (!writeType(at, code_deepness, ctx, ec))
+					return false;
+				*ctx << " val)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (val == null)" << std::endl;
+				ctx->writeTabs(code_deepness) << "{ PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Null); return; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "var v = PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Array);" << std::endl;
+				ctx->writeTabs(code_deepness) << "foreach(var it in val)" << std::endl;
+				ctx->writeTabs(code_deepness + 1) << ctx->addValue_str(intf, at->types().front().get()) << "(v, \"item\", it);" << std::endl;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+			}
+			else if (dynamic_cast<Language::TypeDefinition*>(ct.second))
+			{
+				auto td = dynamic_cast<Language::TypeDefinition*>(ct.second);
+				auto s = dynamic_cast<Language::Structure*>(td->type().get());
+				if (s)
+				{
+					ctx->writeTabs(code_deepness) << "void _addValue_" << ct.first << "(XElement r, string name, ";
+					if (!writeType(td, code_deepness, ctx, ec))
+						return false;
+					*ctx << " val)" << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					ctx->writeTabs(code_deepness) << "var v = PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Object);" << std::endl;
+					for (auto & m : s->members())
+						ctx->writeTabs(code_deepness) << ctx->addValue_str(intf, m->type().get()) << "(v, \"" << m->name() << "\", val." << m->name() << ");" << std::endl;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+				}
+			}
 		}
 
 		ctx->writeTabs(code_deepness) << "#endregion marshallers" << std::endl << std::endl;
@@ -1018,22 +1232,28 @@ namespace PIDL
 		return true;
 	}
 
-	bool JSON_CSCodeGen::writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
+	bool JSON_CSCodeGen::writeMembers(Language::Interface * intf, short code_deepness, CSCodeGenContext * _ctx, Language::Object * obj, ErrorCollector & ec)
 	{
-		if (!priv->writeMembers(code_deepness, ctx, obj, ec))
+		auto ctx = dynamic_cast<Priv::Context*>(_ctx);
+		assert(ctx);
+		if (!priv->writeMembers(intf, code_deepness, ctx, obj, ec))
 			return false;
 
 		return true;
 	}
 
-	bool JSON_CSCodeGen::writeFunctionBody(Language::FunctionVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_CSCodeGen::writeFunctionBody(Language::Interface * intf, Language::FunctionVariant * function, short code_deepness, CSCodeGenContext * _ctx, ErrorCollector & ec)
 	{
-		return priv->writeFunctionBody(function, code_deepness, ctx, ec);
+		auto ctx = dynamic_cast<Priv::Context*>(_ctx);
+		assert(ctx);
+		return priv->writeFunctionBody(intf, function, code_deepness, ctx, ec);
 	}
 
-	bool JSON_CSCodeGen::writeConstructorBody(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_CSCodeGen::writeConstructorBody(Language::Interface * intf, short code_deepness, CSCodeGenContext * _ctx, ErrorCollector & ec)
 	{
-		if (!priv->writeConstructorBody(intf, code_deepness, ctx, ec))
+		auto ctx = dynamic_cast<Priv::Context*>(_ctx);
+		assert(ctx);
+		if (!priv->writeConstructorBody(intf, intf, code_deepness, ctx, ec))
 			return false;
 
 		switch (ctx->role())
@@ -1066,17 +1286,21 @@ namespace PIDL
 		return true;
 	}
 
-	bool JSON_CSCodeGen::writeFunctionBody(Language::MethodVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_CSCodeGen::writeFunctionBody(Language::Interface * intf, Language::MethodVariant * function, short code_deepness, CSCodeGenContext * _ctx, ErrorCollector & ec)
 	{
-		return priv->writeFunctionBody(function, code_deepness, ctx, ec);
+		auto ctx = dynamic_cast<Priv::Context*>(_ctx);
+		assert(ctx);
+		return priv->writeFunctionBody(intf, function, code_deepness, ctx, ec);
 	}
 
-	bool JSON_CSCodeGen::writeConstructorBody(Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_CSCodeGen::writeConstructorBody(Language::Interface * intf, Language::Object * obj, short code_deepness, CSCodeGenContext * _ctx, ErrorCollector & ec)
 	{
-		return priv->writeConstructorBody(obj, code_deepness, ctx, ec);
+		auto ctx = dynamic_cast<Priv::Context*>(_ctx);
+		assert(ctx);
+		return priv->writeConstructorBody(intf, obj, code_deepness, ctx, ec);
 	}
 
-	bool JSON_CSCodeGen::writeDestructorBody(Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_CSCodeGen::writeDestructorBody(Language::Interface * intf, Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
 	{
 		switch (ctx->role())
 		{
@@ -1090,7 +1314,7 @@ namespace PIDL
 		return true;
 	}
 
-	bool JSON_CSCodeGen::writeInvoke(short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
+	bool JSON_CSCodeGen::writeInvoke(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
 	{
 		switch (ctx->role())
 		{
@@ -1139,14 +1363,18 @@ namespace PIDL
 		return true;
 	}
 
-	bool JSON_CSCodeGen::writePropertyGetterBody(Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_CSCodeGen::writePropertyGetterBody(Language::Interface * intf, Language::Property * prop, short code_deepness, CSCodeGenContext * _ctx, ErrorCollector & ec)
 	{
-		return priv->writePropertyGetterBody(prop, code_deepness, ctx, ec);
+		auto ctx = dynamic_cast<Priv::Context*>(_ctx);
+		assert(ctx);
+		return priv->writePropertyGetterBody(intf, prop, code_deepness, ctx, ec);
 	}
 
-	bool JSON_CSCodeGen::writePropertySetterBody(Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_CSCodeGen::writePropertySetterBody(Language::Interface * intf, Language::Property * prop, short code_deepness, CSCodeGenContext * _ctx, ErrorCollector & ec)
 	{
-		return priv->writePropertySetterBody(prop, code_deepness, ctx, ec);
+		auto ctx = dynamic_cast<Priv::Context*>(_ctx);
+		assert(ctx);
+		return priv->writePropertySetterBody(intf, prop, code_deepness, ctx, ec);
 	}
 
 

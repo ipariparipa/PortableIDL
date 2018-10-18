@@ -32,21 +32,23 @@ namespace PIDL
 		JSON_CSCodeGen();
 		virtual ~JSON_CSCodeGen();
 
+		virtual CSCodeGenContext * createContext(short tab_length, char tab_char, std::ostream & o, Role role) const final override;
+
 	protected:
 		virtual CSCodeGenHelper * helper() const override;
 		virtual bool writeUsings(short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
 		virtual bool writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) override;
 		virtual bool writeInvoke(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) override;
-		virtual bool writeFunctionBody(Language::FunctionVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeFunctionBody(Language::Interface * intf, Language::FunctionVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
 		virtual bool writeConstructorBody(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
 
-		virtual bool writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec) override;
-		virtual bool writeFunctionBody(Language::MethodVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
-		virtual bool writeConstructorBody(Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
-		virtual bool writeDestructorBody(Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
-		virtual bool writeInvoke(short code_deepness, CSCodeGenContext * ctx, Language::Object * intf, ErrorCollector & ec) override;
-		virtual bool writePropertyGetterBody(Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
-		virtual bool writePropertySetterBody(Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeMembers(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec) override;
+		virtual bool writeFunctionBody(Language::Interface * intf, Language::MethodVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeConstructorBody(Language::Interface * intf, Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeDestructorBody(Language::Interface * intf, Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeInvoke(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec) override;
+		virtual bool writePropertyGetterBody(Language::Interface * intf, Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writePropertySetterBody(Language::Interface * intf, Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) override;
 	};
 
 }

@@ -730,7 +730,7 @@ namespace PIDL
 		return true;
 	}
 
-	bool JSON_STL_CodeGen::writeFunctionBody(Language::FunctionVariant * function, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_STL_CodeGen::writeFunctionBody(Language::Interface * intf, Language::FunctionVariant * function, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
 		switch (ctx->role())
 		{
@@ -861,7 +861,7 @@ namespace PIDL
 		return priv->writeConstructorBody(intf, code_deepness, ctx, ec);
 	}
 
-	bool JSON_STL_CodeGen::writeInvoke(short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec)
+	bool JSON_STL_CodeGen::writeInvoke(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec)
 	{
 		if (ctx->role() == Role::Client && ctx->mode() == Mode::Implementatinon)
 			return true;
@@ -948,13 +948,13 @@ namespace PIDL
 		return true;
 	}
 
-	bool JSON_STL_CodeGen::writePrivateMembers(short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec)
+	bool JSON_STL_CodeGen::writePrivateMembers(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec)
 	{
 		return priv->writePrivateMembers(code_deepness, ctx, object, ec);
 		return true;
 	}
 
-	bool JSON_STL_CodeGen::writePropertyGetterBody(Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_STL_CodeGen::writePropertyGetterBody(Language::Interface * intf, Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
 		switch (ctx->mode())
 		{
@@ -1011,7 +1011,7 @@ namespace PIDL
 		return true;
 	}
 
-	bool JSON_STL_CodeGen::writePropertySetterBody(Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_STL_CodeGen::writePropertySetterBody(Language::Interface * intf, Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
 		switch (ctx->mode())
 		{
@@ -1059,7 +1059,7 @@ namespace PIDL
 		return true;
 	}
 
-	bool JSON_STL_CodeGen::writeConstructorBody(Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_STL_CodeGen::writeConstructorBody(Language::Interface * intf, Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
 		return priv->writeConstructorBody(object, code_deepness, ctx, ec);
 	}
@@ -1187,7 +1187,7 @@ namespace PIDL
 		return true;
 	}
 
-	bool JSON_STL_CodeGen::writeDestructorBody(Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
+	bool JSON_STL_CodeGen::writeDestructorBody(Language::Interface * intf, Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
 		switch (ctx->role())
 		{
@@ -1197,7 +1197,7 @@ namespace PIDL
 		case Role::Server:
 			break;
 		}
-		return CPPCodeGen::writeDestructorBody(object, code_deepness, ctx, ec);
+		return CPPCodeGen::writeDestructorBody(intf, object, code_deepness, ctx, ec);
 	}
 
 }

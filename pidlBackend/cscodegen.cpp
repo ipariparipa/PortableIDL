@@ -34,7 +34,6 @@ namespace PIDL {
 	CSCodeGenContext::~CSCodeGenContext() = default;
 
 
-
 	CSCodeGenLogging::CSCodeGenLogging() : priv(nullptr)
 	{ }
 
@@ -293,7 +292,7 @@ namespace PIDL {
 			return true;
 		}
 
-		bool writeFunction(short code_deepness, CSCodeGenContext * ctx, Language::FunctionVariant * function, ErrorCollector & ec)
+		bool writeFunction(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::FunctionVariant * function, ErrorCollector & ec)
 		{
 			if (!writeDocumentation(code_deepness, ctx, CStyleDocumentation::Before, function, ec))
 				return false;
@@ -352,7 +351,7 @@ namespace PIDL {
 				**ctx << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 
-				if (!that->writeFunctionBody(function, code_deepness, ctx, ec))
+				if (!that->writeFunctionBody(intf, function, code_deepness, ctx, ec))
 					return false;
 
 				ctx->writeTabs(--code_deepness) << "}" << std::endl;
@@ -370,7 +369,7 @@ namespace PIDL {
 			return true;
 		}
 
-		bool writeProperty(short code_deepness, CSCodeGenContext * ctx, Language::Property * property, ErrorCollector & ec)
+		bool writeProperty(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::Property * property, ErrorCollector & ec)
 		{
 			if (!writeDocumentation(code_deepness, ctx, CStyleDocumentation::Before, property, ec))
 				return false;
@@ -385,14 +384,14 @@ namespace PIDL {
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << "get" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				if (!that->writePropertyGetterBody(property, code_deepness, ctx, ec))
+				if (!that->writePropertyGetterBody(intf, property, code_deepness, ctx, ec))
 					return false;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				if (!property->readOnly())
 				{
 					ctx->writeTabs(code_deepness) << "set" << std::endl;
 					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					if (!that->writePropertySetterBody(property, code_deepness, ctx, ec))
+					if (!that->writePropertySetterBody(intf, property, code_deepness, ctx, ec))
 						return false;
 					ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				}
@@ -429,7 +428,7 @@ namespace PIDL {
 
 				ctx->writeTabs(code_deepness) << "public string _id { get; private set; }" << std::endl;
 
-				if (!that->writeMembers(code_deepness, ctx, object, ec))
+				if (!that->writeMembers(intf, code_deepness, ctx, object, ec))
 					return false;
 
 				ctx->writeTabs(code_deepness) << "public " << object->name() << "(" << intf->name() << " intf, string id)" << std::endl;
@@ -437,20 +436,20 @@ namespace PIDL {
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << "_intf = intf;" << std::endl;
 				ctx->writeTabs(code_deepness) << "_id = id;" << std::endl;
-				if (!that->writeConstructorBody(object, code_deepness, ctx, ec))
+				if (!that->writeConstructorBody(intf, object, code_deepness, ctx, ec))
 					return false;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
 				ctx->writeTabs(code_deepness) << "~" << object->name() << "()" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				if (!that->writeDestructorBody(object, code_deepness, ctx, ec))
+				if (!that->writeDestructorBody(intf, object, code_deepness, ctx, ec))
 					return false;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
-				if (!writeDefinitions(code_deepness, ctx, object, ec))
+				if (!writeDefinitions(intf, code_deepness, ctx, object, ec))
 					return false;
 
-				if (!that->writeInvoke(code_deepness, ctx, object, ec))
+				if (!that->writeInvoke(intf, code_deepness, ctx, object, ec))
 					return false;
 
 				ctx->writeTabs(--code_deepness) << "}" << std::endl;
@@ -461,7 +460,7 @@ namespace PIDL {
 				ctx->writeTabs(code_deepness) << intf->name() << " _intf;" << std::endl;
 				ctx->writeTabs(code_deepness) << "public string _id { get; private set; }" << std::endl;
 
-				if (!that->writeMembers(code_deepness, ctx, object, ec))
+				if (!that->writeMembers(intf, code_deepness, ctx, object, ec))
 					return false;
 
 				ctx->writeTabs(code_deepness) << "public " << object->name() << "(" << intf->name() << " intf, string id)" << std::endl;
@@ -469,14 +468,14 @@ namespace PIDL {
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << "_intf = intf;" << std::endl;
 				ctx->writeTabs(code_deepness) << "_id = id;" << std::endl;
-				if (!that->writeConstructorBody(object, code_deepness, ctx, ec))
+				if (!that->writeConstructorBody(intf, object, code_deepness, ctx, ec))
 					return false;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
-				if (!writeDefinitions(code_deepness, ctx, object, ec))
+				if (!writeDefinitions(intf, code_deepness, ctx, object, ec))
 					return false;
 
-				if (!that->writeInvoke(code_deepness, ctx, object, ec))
+				if (!that->writeInvoke(intf, code_deepness, ctx, object, ec))
 					return false;
 
 				ctx->writeTabs(--code_deepness) << "}" << std::endl;
@@ -501,7 +500,7 @@ namespace PIDL {
 			else if (dynamic_cast<Language::Function*>(definition))
 			{
 				for (auto & v : dynamic_cast<Language::Function*>(definition)->variants())
-					if (!writeFunction(code_deepness, ctx, v.second.get(), ec))
+					if (!writeFunction(intf, code_deepness, ctx, v.second.get(), ec))
 						return false;
 			}
 			else if (dynamic_cast<Language::Object*>(definition))
@@ -512,17 +511,17 @@ namespace PIDL {
 			return true;
 		}
 
-		bool writeDefinition(short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, Language::Definition * definition, ErrorCollector & ec)
+		bool writeDefinition(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, Language::Definition * definition, ErrorCollector & ec)
 		{
 			if (dynamic_cast<Language::Method*>(definition))
 			{
 				for (auto & v : dynamic_cast<Language::Method*>(definition)->variants())
-					if (!writeFunction(code_deepness, ctx, v.second.get(), ec))
+					if (!writeFunction(intf, code_deepness, ctx, v.second.get(), ec))
 						return false;
 			}
 			else if (dynamic_cast<Language::Property*>(definition))
 			{
-				if (!writeProperty(code_deepness, ctx, dynamic_cast<Language::Property*>(definition), ec))
+				if (!writeProperty(intf, code_deepness, ctx, dynamic_cast<Language::Property*>(definition), ec))
 					return false;
 			}
 			return true;
@@ -555,7 +554,7 @@ namespace PIDL {
 				}
 				else if (dynamic_cast<Language::FunctionVariant*>(definition.get()))
 				{
-					if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::FunctionVariant*>(definition.get()), ec))
+					if (!writeFunction(intf, code_deepness, ctx, dynamic_cast<Language::FunctionVariant*>(definition.get()), ec))
 						return false;
 				}
 				else if (dynamic_cast<Language::Object*>(definition.get()))
@@ -567,17 +566,17 @@ namespace PIDL {
 			return true;
 		}
 
-		bool writeDefinitions(short code_deepness, CSCodeGenContext * ctx, Language::Object * intf, ErrorCollector & ec)
+		bool writeDefinitions(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
 		{
-			for (auto & definition : intf->definitions())
+			for (auto & definition : obj->definitions())
 				if (dynamic_cast<Language::MethodVariant*>(definition.get()))
 				{
-					if (!writeFunction(code_deepness, ctx, dynamic_cast<Language::MethodVariant*>(definition.get()), ec))
+					if (!writeFunction(intf, code_deepness, ctx, dynamic_cast<Language::MethodVariant*>(definition.get()), ec))
 						return false;
 				}
 				else if (dynamic_cast<Language::Property*>(definition.get()))
 				{
-					if (!writeProperty(code_deepness, ctx, dynamic_cast<Language::Property*>(definition.get()), ec))
+					if (!writeProperty(intf, code_deepness, ctx, dynamic_cast<Language::Property*>(definition.get()), ec))
 						return false;
 				}
 
@@ -725,6 +724,12 @@ namespace PIDL {
 	CSCodeGen::~CSCodeGen()
 	{
 		delete priv;
+	}
+
+	//virtual 
+	CSCodeGenContext * CSCodeGen::createContext(short tab_length, char tab_char, std::ostream & o, Role role) const
+	{
+		return new CSCodeGenContext(tab_length, tab_char, o, role);
 	}
 
 	bool CSCodeGen::generateCode(Language::TopLevel * topLevel, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)

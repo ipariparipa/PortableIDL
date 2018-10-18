@@ -26,6 +26,10 @@ namespace PIDL {
 
 	class ErrorCollector;
 
+	namespace Language {
+		class TopLevel;
+	}
+
 	class PIDL_BACKEND__CLASS CodeGenContext
 	{
 		PIDL_COPY_PROTECTOR(CodeGenContext)
@@ -53,6 +57,8 @@ namespace PIDL {
 		Role role() const;
 
 		std::ostream & writeTabs(short code_deepness);
+
+		virtual bool prebuild(Language::TopLevel *tl, ErrorCollector & ec);
 
 	protected:
 		CodeGenContext(short tab_length, char tab_char, std::ostream & o, Role role);

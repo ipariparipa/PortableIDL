@@ -67,4 +67,10 @@ namespace PIDL
 		return priv->o;
 	}
 
+	//virtual 
+	bool CodeGenContext::prebuild(Language::TopLevel *tl, ErrorCollector & ec)
+	{
+		return true;
+	}
+
 }

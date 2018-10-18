@@ -147,6 +147,7 @@ namespace PIDL {
 		struct Priv;
 		Priv * priv;
 	public:
+		using Role = CSCodeGenContext::Role;
 
 		CSCodeGen();
 		virtual ~CSCodeGen();
@@ -156,24 +157,24 @@ namespace PIDL {
 
 		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CS_CODEGEN; }
 
-	protected:
-		using Role = CSCodeGenContext::Role;
+		virtual CSCodeGenContext * createContext(short tab_length, char tab_char, std::ostream & o, Role role) const;
 
+	protected:
 		virtual CSCodeGenHelper * helper() const = 0;
 
 		virtual bool writeUsings(short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
 		virtual bool writeInvoke(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) = 0;
 		virtual bool writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) = 0;
-		virtual bool writeFunctionBody(Language::FunctionVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeFunctionBody(Language::Interface * intf, Language::FunctionVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
 		virtual bool writeConstructorBody(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
 
-		virtual bool writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec) = 0;
-		virtual bool writeFunctionBody(Language::MethodVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
-		virtual bool writeConstructorBody(Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
-		virtual bool writeDestructorBody(Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
-		virtual bool writeInvoke(short code_deepness, CSCodeGenContext * ctx, Language::Object * intf, ErrorCollector & ec) = 0;
-		virtual bool writePropertyGetterBody(Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
-		virtual bool writePropertySetterBody(Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeMembers(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec) = 0;
+		virtual bool writeFunctionBody(Language::Interface * intf, Language::MethodVariant * function, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeConstructorBody(Language::Interface * intf, Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeDestructorBody(Language::Interface * intf, Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeInvoke(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec) = 0;
+		virtual bool writePropertyGetterBody(Language::Interface * intf, Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writePropertySetterBody(Language::Interface * intf, Language::Property * prop, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec) = 0;
 
 		bool writeType(Language::Type * type, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec);
 	};
