@@ -65,15 +65,15 @@ namespace PIDL {
 				(*priv->o) << "#ifndef " << guard << std::endl;
 				(*priv->o) << "#define " << guard << std::endl;
 
-				CPPCodeGenContext ctx(1, '\t', (*priv->o), (CPPCodeGenContext::Role)priv->role, CPPCodeGenContext::Mode::Declaration);
-				if (!priv->codegen->generateIncludes(0, &ctx, ec))
+				std::unique_ptr<CPPCodeGenContext> ctx(priv->codegen->createContext(1, '\t', (*priv->o), (CPPCodeGenContext::Role)priv->role, CPPCodeGenContext::Mode::Declaration));
+				if (!priv->codegen->generateIncludes(0, ctx.get(), ec))
 					return false;
 
 				(*priv->o) << std::endl;
 
 				for (const auto & top_level : reader->topLevels())
 				{
-					if (!priv->codegen->generateCode(top_level.get(), 0, &ctx, ec))
+					if (!priv->codegen->generateCode(top_level.get(), 0, ctx.get(), ec))
 						return false;
 				}
 
@@ -82,30 +82,39 @@ namespace PIDL {
 			break;
 		case Mode::Source:
 			{
-				CPPCodeGenContext ctx(1, '\t', (*priv->o), (CPPCodeGenContext::Role)priv->role, CPPCodeGenContext::Mode::Implementatinon);
-				if (!priv->codegen->generateIncludes(0, &ctx, ec))
+				std::unique_ptr<CPPCodeGenContext> ctx(priv->codegen->createContext(1, '\t', (*priv->o), (CPPCodeGenContext::Role)priv->role, CPPCodeGenContext::Mode::Implementatinon));
+				if (!priv->codegen->generateIncludes(0, ctx.get(), ec))
 					return false;
+
+				bool has_error = false;
+				for (auto & top_level : reader->topLevels())
+					if (!ctx->prebuild(top_level.get(), ec))
+						has_error = true;
+
+				if (has_error)
+					return false;
+
 
 				(*priv->o) << std::endl;
 
 				for (const auto & top_level : reader->topLevels())
 				{
-					if (!priv->codegen->generateCode(top_level.get(), 0, &ctx, ec))
+					if (!priv->codegen->generateCode(top_level.get(), 0, ctx.get(), ec))
 						return false;
 				}
 			}
 			break;
 		case Mode::Combo:
 			{
-				CPPCodeGenContext ctx(1, '\t', (*priv->o), (CPPCodeGenContext::Role)priv->role, CPPCodeGenContext::Mode::AllInOne);
-				if (!priv->codegen->generateIncludes(0, &ctx, ec))
+				std::unique_ptr<CPPCodeGenContext> ctx(priv->codegen->createContext(1, '\t', (*priv->o), (CPPCodeGenContext::Role)priv->role, CPPCodeGenContext::Mode::AllInOne));
+				if (!priv->codegen->generateIncludes(0, ctx.get(), ec))
 					return false;
 
 				(*priv->o) << std::endl;
 
 				for (const auto & top_level : reader->topLevels())
 				{
-					if (!priv->codegen->generateCode(top_level.get(), 0, &ctx, ec))
+					if (!priv->codegen->generateCode(top_level.get(), 0, ctx.get(), ec))
 						return false;
 				}
 				break;

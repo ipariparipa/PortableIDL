@@ -49,15 +49,23 @@ namespace PIDL {
 
 	bool CSWriter::write(Reader * reader, ErrorCollector & ec)
 	{
-		CSCodeGenContext ctx(1, '\t', (*priv->o), (CSCodeGenContext::Role)priv->role);
-		if (!priv->codegen->generateUsings(0, &ctx, ec))
+		std::unique_ptr<CSCodeGenContext> ctx(priv->codegen->createContext(1, '\t', (*priv->o), (CSCodeGenContext::Role)priv->role));
+		bool has_error = false;
+		for (auto & top_level : reader->topLevels())
+			if (!ctx->prebuild(top_level.get(), ec))
+				has_error = true;
+
+		if (has_error)
+			return false;
+
+		if (!priv->codegen->generateUsings(0, ctx.get(), ec))
 			return false;
 
 		(*priv->o) << std::endl;
 
-		for (const auto & top_level : reader->topLevels())
+		for (auto & top_level : reader->topLevels())
 		{
-			if (!priv->codegen->generateCode(top_level.get(), 0, &ctx, ec))
+			if (!priv->codegen->generateCode(top_level.get(), 0, ctx.get(), ec))
 				return false;
 		}
 

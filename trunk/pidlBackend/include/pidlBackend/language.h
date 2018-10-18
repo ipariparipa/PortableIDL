@@ -393,7 +393,20 @@ namespace PIDL { namespace Language {
 		const Info & info() const;
 	};
 
-	class PIDL_BACKEND__CLASS Interface : public TopLevel, public DocumentationProvider
+	class PIDL_BACKEND__CLASS DefinitionProvider : public Element
+	{
+		PIDL_COPY_PROTECTOR(DefinitionProvider)
+		struct Priv;
+		Priv * priv;
+	public:
+		typedef std::shared_ptr<DefinitionProvider> Ptr;
+
+		DefinitionProvider();
+		virtual ~DefinitionProvider();
+		virtual const std::vector<Definition::Ptr> & definitions() const = 0;
+	};
+
+	class PIDL_BACKEND__CLASS Interface : public TopLevel, public DefinitionProvider, public DocumentationProvider
 	{
 		PIDL_COPY_PROTECTOR(Interface)
 		struct Priv;
@@ -403,7 +416,7 @@ namespace PIDL { namespace Language {
 		Interface(const std::string & name, const std::vector<std::shared_ptr<Definition>> & definitions, const std::vector<std::string> & scope, const Documentation & doc);
 		Interface(const std::string & name, const std::list<std::shared_ptr<Definition>> & definitions, const std::vector<std::string> & scope, const Documentation & doc);
 		virtual ~Interface();
-		const std::vector<std::shared_ptr<Definition>> & definitions() const;
+		const std::vector<Definition::Ptr> & definitions() const override;
 		virtual const char * name() const override;
 		virtual const std::vector<std::string> & scope() const override;
 
@@ -454,7 +467,7 @@ namespace PIDL { namespace Language {
 		virtual const Documentation & documentation() const override;
 	};
 
-	class PIDL_BACKEND__CLASS Object : public Type, public Definition, public DocumentationProvider
+	class PIDL_BACKEND__CLASS Object : public Type, public DefinitionProvider, public Definition, public DocumentationProvider
 	{
 		PIDL_COPY_PROTECTOR(Object)
 		struct Priv;
@@ -465,7 +478,7 @@ namespace PIDL { namespace Language {
 		Object(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc);
 		Object(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc);
 		virtual ~Object();
-		const std::vector<std::shared_ptr<Definition>> & definitions() const;
+		const std::vector<Definition::Ptr> & definitions() const override;
 		virtual const char * name() const override;
 		virtual const std::vector<std::string> & scope() const override;
 

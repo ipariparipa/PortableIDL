@@ -168,6 +168,9 @@ namespace PIDL {
 		struct Priv;
 		Priv * priv;
 	public:
+		using Role = CPPCodeGenContext::Role;
+		using Mode = CPPCodeGenContext::Mode;
+
 		CPPCodeGen();
 		virtual ~CPPCodeGen();
 
@@ -176,10 +179,9 @@ namespace PIDL {
 		bool generateIncludes(short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec);
 		bool generateCode(Language::TopLevel * topLevel, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec);
 
-	protected:
-		using Role = CPPCodeGenContext::Role;
-		using Mode = CPPCodeGenContext::Mode;
+		virtual CPPCodeGenContext * createContext(short tab_length, char tab_char, std::ostream & o, Role role, Mode mode) const;
 
+	protected:
 		virtual CPPCodeGenHelper * helper() const = 0;
 
 		virtual bool writeInclude(short code_deepness, CPPCodeGenContext * ctx, const CPPCodeGenHelper::Include & include, ErrorCollector & ec);
@@ -188,27 +190,27 @@ namespace PIDL {
 		virtual bool writePublicSection(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec);
 		virtual bool writeProtectedSection(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec);
 
-		virtual bool writePrivateSection(short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec);
-		virtual bool writePublicSection(short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec);
-		virtual bool writeProtectedSection(short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec);
+		virtual bool writePrivateSection(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec);
+		virtual bool writePublicSection(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec);
+		virtual bool writeProtectedSection(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec);
 
 		virtual bool writeIncludes(short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
 		virtual bool writeAliases(short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
 
 		virtual bool writeInvoke(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) = 0;
 		virtual bool writePrivateMembers(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) = 0;
-		virtual bool writeFunctionBody(Language::FunctionVariant * function, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeFunctionBody(Language::Interface * intf, Language::FunctionVariant * function, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
 		virtual bool writeConstructorBody(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
 		virtual bool writeDestructorBody(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec);
 
-		virtual bool writeInvoke(short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec) = 0;
-		virtual bool writePrivateMembers(short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec) = 0;
-		virtual bool writePropertyGetterBody(Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
-		virtual bool writePropertySetterBody(Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
-		virtual bool writeConstructorBody(Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
-		virtual bool writeDestructorBody(Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec);
+		virtual bool writeInvoke(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec) = 0;
+		virtual bool writePrivateMembers(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec) = 0;
+		virtual bool writePropertyGetterBody(Language::Interface * intf, Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writePropertySetterBody(Language::Interface * intf, Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeConstructorBody(Language::Interface * intf, Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeDestructorBody(Language::Interface * intf, Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec);
 
-		virtual bool writeObjectBase(Language::Interface * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
+		virtual bool writeObjectBase(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) = 0;
 
 		bool writeType(Language::Type * type, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec);
 	};

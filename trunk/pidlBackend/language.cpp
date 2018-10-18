@@ -525,6 +525,11 @@ namespace PIDL {
 		}
 
 
+		// struct DefinitionProvider::Priv { };
+		DefinitionProvider::DefinitionProvider() : priv(nullptr) { }
+		DefinitionProvider::~DefinitionProvider() = default;
+
+
 		struct Interface::Priv
 		{
 			Priv(const std::string & name_, const std::vector<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_) :
@@ -548,11 +553,15 @@ namespace PIDL {
 
 		Interface::Interface(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
 			TopLevel(),
+			DefinitionProvider(),
+			DocumentationProvider(),
 			priv(new Priv(name, definitions, scope, doc))
 		{ }
 
 		Interface::Interface(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
 			TopLevel(),
+			DefinitionProvider(),
+			DocumentationProvider(),
 			priv(new Priv(name, definitions, scope, doc))
 		{ }
 
@@ -671,12 +680,18 @@ namespace PIDL {
 		};
 
 		Object::Object(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
+			Type(),
+			DefinitionProvider(),
 			Definition(),
+			DocumentationProvider(),
 			priv(new Priv(name, definitions, scope, doc))
 		{ }
 
 		Object::Object(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
+			Type(),
+			DefinitionProvider(),
 			Definition(),
+			DocumentationProvider(),
 			priv(new Priv(name, definitions, scope, doc))
 		{ }
 

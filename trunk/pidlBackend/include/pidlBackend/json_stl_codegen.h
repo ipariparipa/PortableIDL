@@ -45,17 +45,17 @@ namespace PIDL
 		virtual bool writeAliases(short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
 		virtual bool writePrivateMembers(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) override;
 		virtual bool writeInvoke(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec) override;
-		virtual bool writeFunctionBody(Language::FunctionVariant * function, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeFunctionBody(Language::Interface * intf, Language::FunctionVariant * function, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
 		virtual bool writeConstructorBody(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
 
-		virtual bool writeInvoke(short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec) override;
-		virtual bool writePrivateMembers(short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec) override;
-		virtual bool writePropertyGetterBody(Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
-		virtual bool writePropertySetterBody(Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
-		virtual bool writeConstructorBody(Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
-		virtual bool writeDestructorBody(Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeInvoke(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec) override;
+		virtual bool writePrivateMembers(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec) override;
+		virtual bool writePropertyGetterBody(Language::Interface * intf, Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writePropertySetterBody(Language::Interface * intf, Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeConstructorBody(Language::Interface * intf, Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeDestructorBody(Language::Interface * intf, Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
 
-		virtual bool writeObjectBase(Language::Interface * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
+		virtual bool writeObjectBase(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec) override;
 	};
 
 }
