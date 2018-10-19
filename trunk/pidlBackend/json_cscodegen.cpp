@@ -448,7 +448,7 @@ namespace PIDL
 					if (dynamic_cast<Language::MethodVariant*>(function))
 					{
 						ctx->writeTabs(code_deepness) << "var _r = PIDL.JSONTools.addValue(_root, \"object_call\", PIDL.JSONTools.Type.Object);" << std::endl;
-						ctx->writeTabs(code_deepness) << "_intf._addValue(_r, \"object_id\", _id);" << std::endl;
+						ctx->writeTabs(code_deepness) << "_intf._addValue(_r, \"object_data\", _data);" << std::endl;
 						ctx->writeTabs(code_deepness) << "var _v = PIDL.JSONTools.addValue(_r, \"method\", PIDL.JSONTools.Type.Object);" << std::endl;
 					}
 					else
@@ -513,10 +513,15 @@ namespace PIDL
 							}
 							else
 								o << "| ";
-							o << "!" << ctx->getValue_str(intf, a->type().get()) << "(_out_v, \"" << a->name() << "\", out " << a->name() << ", _ec)" << std::endl;
+							o << "!_intf." << ctx->getValue_str(intf, a->type().get()) << "(_out_v, \"" << a->name() << "\", out " << a->name() << ", _ec)" << std::endl;
 						}
-						ctx->writeTabs(--code_deepness) << ")" << std::endl;
-						ctx->writeTabs(code_deepness + 1) << "_ec.ThrowException();" << std::endl;
+						ctx->writeTabs(--code_deepness) << ") _ec.ThrowException();" << std::endl;
+					}
+
+					if (dynamic_cast<Language::MethodVariant*>(function))
+					{
+						ctx->writeTabs(code_deepness) << "string _tmp_object_data;" << std::endl;
+						ctx->writeTabs(code_deepness) << "if (PIDL.JSONTools.getValue(_ret, \"object_data\", out _tmp_object_data)) _data = _tmp_object_data;" << std::endl;
 					}
 
 					if (!dynamic_cast<Language::Void*>(ret_type))
@@ -542,7 +547,7 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "PIDL.JSONTools.addValue(_root, \"version\", " << PIDL_JSON_MARSHALLING_VERSION << ");" << std::endl;
 
 				ctx->writeTabs(code_deepness) << "var _r = PIDL.JSONTools.addValue(_root, \"object_call\", PIDL.JSONTools.Type.Object);" << std::endl;
-				ctx->writeTabs(code_deepness) << "_intf._addValue(_r, \"object_id\", _id);" << std::endl;
+				ctx->writeTabs(code_deepness) << "_intf._addValue(_r, \"object_data\", _data);" << std::endl;
 				ctx->writeTabs(code_deepness) << "var _v = PIDL.JSONTools.addValue(_r, \"property_get\", PIDL.JSONTools.Type.Object);" << std::endl;
 				ctx->writeTabs(code_deepness) << "_intf._addValue(_v, \"name\", \"" << prop->name() << "\");" << std::endl;
 
@@ -555,8 +560,10 @@ namespace PIDL
 				if (!that->writeType(ret_type, code_deepness, ctx, ec))
 					return false;
 				*ctx << " _retval;" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!_intf." << ctx->getValue_str(intf, ret_type) << "(_ret, \"retval\", out _retval, _ec))" << std::endl;
-				ctx->writeTabs(code_deepness + 1) << "_ec.ThrowException();" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (!_intf." << ctx->getValue_str(intf, ret_type) << "(_ret, \"retval\", out _retval, _ec)) _ec.ThrowException();" << std::endl;
+
+				ctx->writeTabs(code_deepness) << "string _tmp_object_data;" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (PIDL.JSONTools.getValue(_ret, \"object_data\", out _tmp_object_data)) _data = _tmp_object_data;" << std::endl;
 
 				ctx->writeTabs(code_deepness) << "return _retval;" << std::endl;
 			}
@@ -580,15 +587,17 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "PIDL.JSONTools.addValue(_root, \"version\", " << PIDL_JSON_MARSHALLING_VERSION << ");" << std::endl;
 
 				ctx->writeTabs(code_deepness) << "var _r = PIDL.JSONTools.addValue(_root, \"object_call\", PIDL.JSONTools.Type.Object);" << std::endl;
-				ctx->writeTabs(code_deepness) << "_intf._addValue(_r, \"object_id\", _id);" << std::endl;
+				ctx->writeTabs(code_deepness) << "_intf._addValue(_r, \"object_data\", _data);" << std::endl;
 				ctx->writeTabs(code_deepness) << "var _v = PIDL.JSONTools.addValue(_r, \"property_set\", PIDL.JSONTools.Type.Object);" << std::endl;
 				ctx->writeTabs(code_deepness) << "_intf._addValue(_v, \"name\", \"" << prop->name() << "\");" << std::endl;
 
 				ctx->writeTabs(code_deepness) << "_intf." << ctx->addValue_str(intf, prop->type().get()) << "(_v, \"value\", value);" << std::endl;
 
 				ctx->writeTabs(code_deepness) << "XElement _ret;" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!_intf._invokeCall(_root, out _ret, _ec))" << std::endl;
-				ctx->writeTabs(code_deepness + 1) << "_ec.ThrowException();" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (!_intf._invokeCall(_root, out _ret, _ec)) _ec.ThrowException();" << std::endl;
+
+				ctx->writeTabs(code_deepness) << "string _tmp_object_data;" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (PIDL.JSONTools.getValue(_ret, \"object_data\", out _tmp_object_data)) _data = _tmp_object_data;" << std::endl;
 			}
 			break;
 			case Role::Server:
@@ -661,11 +670,11 @@ namespace PIDL
 				case Role::Client:
 					ctx->writeTabs(code_deepness) << object->name() << " _getValue_" << object->name() << "(XElement v, out bool isOk, PIDL.IPIDLErrorCollector ec)" << std::endl;
 					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					ctx->writeTabs(code_deepness) << "string object_id;" << std::endl;
-					ctx->writeTabs(code_deepness) << "if(!_getValue(v, out object_id, ec))" << std::endl;
+					ctx->writeTabs(code_deepness) << "string object_data;" << std::endl;
+					ctx->writeTabs(code_deepness) << "if(!_getValue(v, out object_data, ec))" << std::endl;
 					ctx->writeTabs(code_deepness) << "{ isOk = false; return null; }" << std::endl;
 					ctx->writeTabs(code_deepness) << "isOk = true;" << std::endl;
-					ctx->writeTabs(code_deepness) << "return new " << object->name() << "(this, object_id);" << std::endl;
+					ctx->writeTabs(code_deepness) << "return new " << object->name() << "(this, object_data);" << std::endl;
 					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
 					ctx->writeTabs(code_deepness) << object->name() << " _getValue_" << object->name() << "(XElement r, string name, out bool isOk, PIDL.IPIDLErrorCollector ec)" << std::endl;
@@ -679,14 +688,14 @@ namespace PIDL
 				case Role::Server:
 					ctx->writeTabs(code_deepness) << object->name() << " _getValue_" << object->name() << "(XElement v, out bool isOk, PIDL.IPIDLErrorCollector ec)" << std::endl;
 					ctx->writeTabs(code_deepness++) << "{" << std::endl;
-					ctx->writeTabs(code_deepness) << "string object_id;" << std::endl;
-					ctx->writeTabs(code_deepness) << "if(!_getValue(v, out object_id, ec))" << std::endl;
+					ctx->writeTabs(code_deepness) << "string object_data;" << std::endl;
+					ctx->writeTabs(code_deepness) << "if(!_getValue(v, out object_data, ec))" << std::endl;
 					ctx->writeTabs(code_deepness) << "{ isOk = false; return null; }" << std::endl;
-					ctx->writeTabs(code_deepness) << "var o = _get_object(object_id, ec);" << std::endl;
+					ctx->writeTabs(code_deepness) << "var o = _get_object(object_data, ec);" << std::endl;
 					ctx->writeTabs(code_deepness) << "if (o == null)" << std::endl;
 					ctx->writeTabs(code_deepness) << "{ isOk = false; return null; }" << std::endl;
 					ctx->writeTabs(code_deepness) << "if (!(o is " << object->name() << "))" << std::endl;
-					ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"unexpected: invalid object type for id '\" + object_id + \" '\"); isOk = false; return null; }" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"unexpected: invalid object type for id '\" + object_data + \" '\"); isOk = false; return null; }" << std::endl;
 					ctx->writeTabs(code_deepness) << "isOk = true; return o as " << object->name() << ";" << std::endl;
 					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
@@ -867,7 +876,7 @@ namespace PIDL
 				for (size_t i = 0, l = tt->types().size(); i < l; ++i)
 				{
 					if (i) *ctx << ", ";
-					*ctx << "_t" << ++i;
+					*ctx << "_t" << i + 1;
 				}
 				*ctx << ");" << std::endl;
 				ctx->writeTabs(code_deepness) << "return true;" << std::endl;
@@ -1049,7 +1058,7 @@ namespace PIDL
 				else
 					ctx->writeTabs(code_deepness) << "else if (typeof(T) == typeof(" << object->name() << "))" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				ctx->writeTabs(code_deepness) << "_addValue(r, name, ((" << object->name() << ")(object)val)._id);" << std::endl;
+				ctx->writeTabs(code_deepness) << "_addValue(r, name, ((" << object->name() << ")(object)val)._data);" << std::endl;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 			}
 		}
@@ -1158,11 +1167,11 @@ namespace PIDL
 			switch (ctx->role())
 			{
 			case Role::Server:
-				ctx->writeTabs(code_deepness) << "protected abstract _IObject _get_object(string object_id, PIDL.IPIDLErrorCollector ec);" << std::endl;
-				ctx->writeTabs(code_deepness) << "protected abstract void _dispose_object(string object_id);" << std::endl;
+				ctx->writeTabs(code_deepness) << "protected abstract _IObject _get_object(string object_data, PIDL.IPIDLErrorCollector ec);" << std::endl;
+				ctx->writeTabs(code_deepness) << "protected abstract void _dispose_object(string object_data);" << std::endl;
 				break;
 			case Role::Client:
-				ctx->writeTabs(code_deepness) << "void _dispose_object(string object_id)" << std::endl;
+				ctx->writeTabs(code_deepness) << "void _dispose_object(string object_data)" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << "" << std::endl;
 				ctx->writeTabs(code_deepness) << "var _ec = new PIDL.PIDLExceptionErrorCollector();" << std::endl;
@@ -1173,7 +1182,7 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "var _v = PIDL.JSONTools.addValue(_root, \"function\", PIDL.JSONTools.Type.Object);" << std::endl;
 				ctx->writeTabs(code_deepness) << "_addValue(_v, \"name\", \"_dispose_object\");" << std::endl;
 				ctx->writeTabs(code_deepness) << "var _aa = PIDL.JSONTools.addValue(_v, \"arguments\", PIDL.JSONTools.Type.Object);" << std::endl;
-				ctx->writeTabs(code_deepness) << "_addValue(_aa, \"object_id\", object_id);" << std::endl;
+				ctx->writeTabs(code_deepness) << "_addValue(_aa, \"object_data\", object_data);" << std::endl;
 				ctx->writeTabs(code_deepness) << "XElement _ret;" << std::endl;
 				ctx->writeTabs(code_deepness) << "if (!_invokeCall(_root, out _ret, _ec))" << std::endl;
 				ctx->writeTabs(code_deepness + 1) << "_ec.ThrowException();" << std::endl;
@@ -1215,10 +1224,10 @@ namespace PIDL
 			{
 				ctx->writeTabs(code_deepness) << "else if (PIDL.JSONTools.getValue(root, \"object_call\", out v) && PIDL.JSONTools.checkType(v, PIDL.JSONTools.Type.Object))" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				ctx->writeTabs(code_deepness) << "string object_id;" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!_getValue(v, \"object_id\", out object_id, ec))" << std::endl;
+				ctx->writeTabs(code_deepness) << "string object_data;" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (!_getValue(v, \"object_data\", out object_data, ec))" << std::endl;
 				ctx->writeTabs(code_deepness) << "{ ret = null; return _InvokeStatus.MarshallingError; }" << std::endl;
-				ctx->writeTabs(code_deepness) << "var obj = _get_object(object_id, ec);" << std::endl;
+				ctx->writeTabs(code_deepness) << "var obj = _get_object(object_data, ec);" << std::endl;
 				ctx->writeTabs(code_deepness) << "if(obj == null)" << std::endl;
 				ctx->writeTabs(code_deepness) << "{ ret = null; return _InvokeStatus.Error; }" << std::endl;
 				ctx->writeTabs(code_deepness) << "return obj._invoke(v, out ret, ec);" << std::endl;
@@ -1274,13 +1283,13 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "_functions[\"_dispose_object\"][string.Empty] = (root, ec) =>" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << "var ret = new _FunctionRet();" << std::endl;
-				ctx->writeTabs(code_deepness) << "string _arg_object_id = default(string);" << std::endl;
+				ctx->writeTabs(code_deepness) << "string _arg_object_data = default(string);" << std::endl;
 				ctx->writeTabs(code_deepness) << "XElement aa;" << std::endl;
 				ctx->writeTabs(code_deepness) << "if (!_getValue(root, \"arguments\", PIDL.JSONTools.Type.Object, out aa, ec))" << std::endl;
 				ctx->writeTabs(code_deepness) << "{ ret.status = _InvokeStatus.MarshallingError; return ret; }" << std::endl;
-				ctx->writeTabs(code_deepness) << "if (!_getValue(aa, \"object_id\", out _arg_object_id, ec))" << std::endl;
+				ctx->writeTabs(code_deepness) << "if (!_getValue(aa, \"object_data\", out _arg_object_data, ec))" << std::endl;
 				ctx->writeTabs(code_deepness) << "{ ret.status = _InvokeStatus.MarshallingError; return ret; }" << std::endl;
-				ctx->writeTabs(code_deepness) << "var stat = _callFunction(() => { _dispose_object(_arg_object_id); return null; }, ec);" << std::endl;
+				ctx->writeTabs(code_deepness) << "var stat = _callFunction(() => { _dispose_object(_arg_object_data); return null; }, ec);" << std::endl;
 				ctx->writeTabs(code_deepness) << "if (stat != _InvokeStatus.Ok)" << std::endl;
 				ctx->writeTabs(code_deepness) << "{ ret.status = _InvokeStatus.Error; return ret; }" << std::endl;
 				ctx->writeTabs(code_deepness) << "ret.status = _InvokeStatus.Ok;" << std::endl;
@@ -1313,7 +1322,7 @@ namespace PIDL
 		{
 		case Role::Client:
 			ctx->writeTabs(code_deepness) << "if (_intf != null)" << std::endl;
-			ctx->writeTabs(code_deepness + 1) << "_intf._dispose_object(_id);" << std::endl;
+			ctx->writeTabs(code_deepness + 1) << "_intf._dispose_object(_data);" << std::endl;
 			break;
 		case Role::Server:
 			break;
@@ -1337,7 +1346,9 @@ namespace PIDL
 			ctx->writeTabs(code_deepness) << "{ ret = null; return _InvokeStatus.MarshallingError; }" << std::endl << std::endl;
 			ctx->writeTabs(code_deepness) << "PIDL.JSONTools.getValue(v, \"variant\", out variant);" << std::endl;
 			ctx->writeTabs(code_deepness) << "ec.Clear();" << std::endl;
-			ctx->writeTabs(code_deepness) << "return _callFunction(name, variant, v, out ret, ec);" << std::endl;
+			ctx->writeTabs(code_deepness) << "var stat = _callFunction(name, variant, v, out ret, ec);" << std::endl;
+			ctx->writeTabs(code_deepness) << "_intf._addValue(ret, \"object_data\", _data);" << std::endl;
+			ctx->writeTabs(code_deepness) << "return stat;" << std::endl;
 			ctx->writeTabs(--code_deepness) << "}" << std::endl;
 
 			ctx->writeTabs(code_deepness) << "else if (PIDL.JSONTools.getValue(root, \"property_get\", out v) && PIDL.JSONTools.checkType(v, PIDL.JSONTools.Type.Object))" << std::endl;
@@ -1346,7 +1357,9 @@ namespace PIDL
 			ctx->writeTabs(code_deepness) << "if (!_intf._getValue(v, \"name\", out name, ec))" << std::endl;
 			ctx->writeTabs(code_deepness) << "{ ret = null; return _InvokeStatus.MarshallingError; }" << std::endl << std::endl;
 			ctx->writeTabs(code_deepness) << "ec.Clear();" << std::endl;
-			ctx->writeTabs(code_deepness) << "return _callFunction(name, \"get\", v, out ret, ec);" << std::endl;
+			ctx->writeTabs(code_deepness) << "var stat = _callFunction(name, \"get\", v, out ret, ec);" << std::endl;
+			ctx->writeTabs(code_deepness) << "_intf._addValue(ret, \"object_data\", _data);" << std::endl;
+			ctx->writeTabs(code_deepness) << "return stat;" << std::endl;
 			ctx->writeTabs(--code_deepness) << "}" << std::endl;
 
 			ctx->writeTabs(code_deepness) << "else if (PIDL.JSONTools.getValue(root, \"property_set\", out v) && PIDL.JSONTools.checkType(v, PIDL.JSONTools.Type.Object))" << std::endl;
@@ -1355,7 +1368,10 @@ namespace PIDL
 			ctx->writeTabs(code_deepness) << "if (!_intf._getValue(v, \"name\", out name, ec))" << std::endl;
 			ctx->writeTabs(code_deepness) << "{ ret = null; return _InvokeStatus.MarshallingError; }" << std::endl << std::endl;
 			ctx->writeTabs(code_deepness) << "ec.Clear();" << std::endl;
-			ctx->writeTabs(code_deepness) << "return _callFunction(name, \"set\", v, out ret, ec);" << std::endl;
+			ctx->writeTabs(code_deepness) << "var stat = _callFunction(name, \"set\", v, out ret, ec);" << std::endl;
+			ctx->writeTabs(code_deepness) << "if (ret == null) ret = PIDL.JSONTools.createValue(\"root\", PIDL.JSONTools.Type.Object);" << std::endl;
+			ctx->writeTabs(code_deepness) << "_intf._addValue(ret, \"object_data\", _data);" << std::endl;
+			ctx->writeTabs(code_deepness) << "return stat;" << std::endl;
 			ctx->writeTabs(--code_deepness) << "}" << std::endl;
 
 			ctx->writeTabs(code_deepness) << "ret = null;" << std::endl;

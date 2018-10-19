@@ -735,21 +735,45 @@ namespace PIDL
 
 		bool writeConstructor(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * cl, ErrorCollector & ec)
 		{
-			switch (ctx->mode())
+			switch (ctx->role())
 			{
-			case Mode::AllInOne:
-				ctx->writeTabs(code_deepness) << cl->name() << "(" << getScope(cl, false) << " * intf, const std::string & id)" << std::endl;
-				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				if (!that->writeConstructorBody(intf, cl, code_deepness, ctx, ec))
-					return false;
-				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+			case Role::Server:
+				switch (ctx->mode())
+				{
+				case Mode::AllInOne:
+					ctx->writeTabs(code_deepness) << cl->name() << "(" << getScope(cl, false) << " * intf)" << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					if (!that->writeConstructorBody(intf, cl, code_deepness, ctx, ec))
+						return false;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+					break;
+				case Mode::Declaration:
+					ctx->writeTabs(code_deepness) << cl->name() << "(" << getScope(cl, false) << " * intf);" << std::endl;
+					break;
+				case Mode::Implementatinon:
+					ctx->writeTabs(code_deepness) << getScope(cl) << cl->name() << "::" << cl->name() << "(" << getScope(cl, false) << " * intf) : _priv(new _Priv(this, intf))" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ }" << std::endl << std::endl;
+					break;
+				}
 				break;
-			case Mode::Declaration:
-				ctx->writeTabs(code_deepness) << cl->name() << "(" << getScope(cl, false) << " * intf, const std::string & id);" << std::endl;
-				break;
-			case Mode::Implementatinon:
-				ctx->writeTabs(code_deepness) << getScope(cl) << cl->name() << "::" << cl->name() << "(" << getScope(cl, false) << " * intf, const std::string & id) : _priv(new _Priv(this, intf, id))" << std::endl;
-				ctx->writeTabs(code_deepness) << "{ }" << std::endl << std::endl;
+			case Role::Client:
+				switch (ctx->mode())
+				{
+				case Mode::AllInOne:
+					ctx->writeTabs(code_deepness) << cl->name() << "(" << getScope(cl, false) << " * intf, const std::string & id)" << std::endl;
+					ctx->writeTabs(code_deepness++) << "{" << std::endl;
+					if (!that->writeConstructorBody(intf, cl, code_deepness, ctx, ec))
+						return false;
+					ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+					break;
+				case Mode::Declaration:
+					ctx->writeTabs(code_deepness) << cl->name() << "(" << getScope(cl, false) << " * intf, const std::string & id);" << std::endl;
+					break;
+				case Mode::Implementatinon:
+					ctx->writeTabs(code_deepness) << getScope(cl) << cl->name() << "::" << cl->name() << "(" << getScope(cl, false) << " * intf, const std::string & id) : _priv(new _Priv(this, intf, id))" << std::endl;
+					ctx->writeTabs(code_deepness) << "{ }" << std::endl << std::endl;
+					break;
+				}
 				break;
 			}
 
@@ -1090,22 +1114,43 @@ namespace PIDL
 			return true;
 		}
 
-		bool writePriv(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * cl, ErrorCollector & ec)
+		bool writePriv(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
 		{
-			ctx->writeTabs(code_deepness) << "_Priv(" << cl->name() << " * _that_, " << getScope(cl, false) << " * _intf_, const std::string & _id_): _that(_that_), _intf(_intf_), __id(_id_)" << std::endl;
-			ctx->writeTabs(code_deepness++) << "{" << std::endl;
-			if (!that->writeConstructorBody(intf, cl, code_deepness, ctx, ec))
-				return false;
-			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+			switch (ctx->role())
+			{
+			case Role::Client:
+				ctx->writeTabs(code_deepness) << "_Priv(" << obj->name() << " * _that_, " << getScope(obj, false) << " * _intf_, const std::string & _data_): _that(_that_), _intf(_intf_), __data(_data_)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				if (!that->writeConstructorBody(intf, obj, code_deepness, ctx, ec))
+					return false;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
-			ctx->writeTabs(code_deepness) << "~_Priv()" << std::endl;
-			ctx->writeTabs(code_deepness++) << "{" << std::endl;
-			if (!that->writeDestructorBody(intf, cl, code_deepness, ctx, ec))
-				return false;
-			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
-			ctx->writeTabs(code_deepness) << cl->name() << " * _that;" << std::endl;
-			ctx->writeTabs(code_deepness) << getScope(cl, false) << " *  _intf;" << std::endl;
-			ctx->writeTabs(code_deepness) << "std::string __id;" << std::endl;
+				ctx->writeTabs(code_deepness) << "~_Priv()" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				if (!that->writeDestructorBody(intf, obj, code_deepness, ctx, ec))
+					return false;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+				ctx->writeTabs(code_deepness) << obj->name() << " * _that;" << std::endl;
+				ctx->writeTabs(code_deepness) << getScope(obj, false) << " *  _intf;" << std::endl;
+				ctx->writeTabs(code_deepness) << "std::string __data;" << std::endl;
+				break;
+			case Role::Server:
+				ctx->writeTabs(code_deepness) << "_Priv(" << obj->name() << " * _that_, " << getScope(obj, false) << " * _intf_): _that(_that_), _intf(_intf_)" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				if (!that->writeConstructorBody(intf, obj, code_deepness, ctx, ec))
+					return false;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
+				ctx->writeTabs(code_deepness) << "~_Priv()" << std::endl;
+				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+				if (!that->writeDestructorBody(intf, obj, code_deepness, ctx, ec))
+					return false;
+				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+				ctx->writeTabs(code_deepness) << obj->name() << " * _that;" << std::endl;
+				ctx->writeTabs(code_deepness) << getScope(obj, false) << " *  _intf;" << std::endl;
+				break;
+			}
+
 			return true;
 		}
 
@@ -1279,20 +1324,6 @@ namespace PIDL
 	{
 		if (!priv->writePublicSection(intf, code_deepness, ctx, obj, ec))
 			return false;
-		switch (ctx->mode())	
-		{
-			case Mode::AllInOne:
-				ctx->writeTabs(code_deepness) << "virtual std::string _id() const override" << std::endl;
-				ctx->writeTabs(code_deepness) << "{ return __id; }" << std::endl << std::endl;
-				break;
-			case Mode::Declaration:
-				ctx->writeTabs(code_deepness) << "virtual std::string _id() const override;" << std::endl;
-				break;
-			case Mode::Implementatinon:
-				ctx->writeTabs(code_deepness) << "std::string " << priv->getScope(obj) << obj->name() << "::_id() const" << std::endl;
-				ctx->writeTabs(code_deepness) << "{ return _priv->__id; }" << std::endl << std::endl;
-				break;
-		}
 		return true;
 	}
 

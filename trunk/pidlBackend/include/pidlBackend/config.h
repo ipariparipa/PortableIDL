@@ -33,6 +33,6 @@
 #  endif
 #endif
 
-#define PIDL_JSON_MARSHALLING_VERSION 1
+#define PIDL_JSON_MARSHALLING_VERSION 2
 
 #endif // pidlBackend__config_h
