@@ -426,16 +426,16 @@ namespace PIDL {
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << intf->name() << " _intf;" << std::endl;
 
-				ctx->writeTabs(code_deepness) << "public string _id { get; private set; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "public string _data { get; private set; }" << std::endl;
 
 				if (!that->writeMembers(intf, code_deepness, ctx, object, ec))
 					return false;
 
-				ctx->writeTabs(code_deepness) << "public " << object->name() << "(" << intf->name() << " intf, string id)" << std::endl;
+				ctx->writeTabs(code_deepness) << "public " << object->name() << "(" << intf->name() << " intf, string data)" << std::endl;
 
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << "_intf = intf;" << std::endl;
-				ctx->writeTabs(code_deepness) << "_id = id;" << std::endl;
+				ctx->writeTabs(code_deepness) << "_data = data;" << std::endl;
 				if (!that->writeConstructorBody(intf, object, code_deepness, ctx, ec))
 					return false;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
@@ -458,16 +458,15 @@ namespace PIDL {
 				ctx->writeTabs(code_deepness) << "public abstract class " << object->name() << " : _IObject" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << intf->name() << " _intf;" << std::endl;
-				ctx->writeTabs(code_deepness) << "public string _id { get; private set; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "public abstract string _data { get; }" << std::endl;
 
 				if (!that->writeMembers(intf, code_deepness, ctx, object, ec))
 					return false;
 
-				ctx->writeTabs(code_deepness) << "public " << object->name() << "(" << intf->name() << " intf, string id)" << std::endl;
+				ctx->writeTabs(code_deepness) << "public " << object->name() << "(" << intf->name() << " intf)" << std::endl;
 
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << "_intf = intf;" << std::endl;
-				ctx->writeTabs(code_deepness) << "_id = id;" << std::endl;
 				if (!that->writeConstructorBody(intf, object, code_deepness, ctx, ec))
 					return false;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
@@ -534,13 +533,13 @@ namespace PIDL {
 			case Role::Client:
 				ctx->writeTabs(code_deepness) << "public interface _IObject" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				ctx->writeTabs(code_deepness) << "string _id { get; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "string _data { get; }" << std::endl;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 				break;
 			case Role::Server:
 				ctx->writeTabs(code_deepness) << "protected interface _IObject" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				ctx->writeTabs(code_deepness) << "string _id { get; }" << std::endl;
+				ctx->writeTabs(code_deepness) << "string _data { get; }" << std::endl;
 				ctx->writeTabs(code_deepness) << "_InvokeStatus _invoke(XElement root, out XElement ret, PIDL.IPIDLErrorCollector ec);" << std::endl;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 				break;
