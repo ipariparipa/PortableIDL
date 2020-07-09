@@ -249,13 +249,13 @@ namespace PIDL { namespace JSONTools {
 		millisecond = 0;
 		getValue(r, "millisecond", millisecond);
 
-		ret.year = (short)year;
-		ret.month = (short)month;
-		ret.day = (short)day;
-		ret.hour = (short)hour;
-		ret.minute = (short)minute;
-		ret.second = (short)second;
-		ret.millisecond = (short)millisecond;
+        ret.year = static_cast<short>(year);
+        ret.month = static_cast<short>(month);
+        ret.day = static_cast<short>(day);
+        ret.hour = static_cast<short>(hour);
+        ret.minute = static_cast<short>(minute);
+        ret.second = static_cast<short>(second);
+        ret.millisecond = static_cast<short>(millisecond);
 
 		std::string kind_str;
 		if (getValue(r, "kind", kind_str))
@@ -305,6 +305,7 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, long long num)
 	{
+        (void)doc;
 		rapidjson::Value v(rapidjson::kNumberType);
 		v.SetInt64(num);
 		return v;
@@ -312,21 +313,24 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, int num)
 	{
-		rapidjson::Value v(rapidjson::kNumberType);
+        (void)doc;
+        rapidjson::Value v(rapidjson::kNumberType);
 		v.SetInt(num);
 		return v;
 	}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, double num)
 	{
-		rapidjson::Value v(rapidjson::kNumberType);
+        (void)doc;
+        rapidjson::Value v(rapidjson::kNumberType);
 		v.SetDouble(num);
 		return v;
 	}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createNull(rapidjson::Document & doc)
 	{
-		return rapidjson::Value(rapidjson::kNullType);
+        (void)doc;
+        return rapidjson::Value(rapidjson::kNullType);
 	}
 	extern PIDL_CORE__FUNCTION void addNull(rapidjson::Document & doc, rapidjson::Value & r, const char * name)
 	{
@@ -336,21 +340,22 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, bool b)
 	{
-		return rapidjson::Value(b ? rapidjson::kTrueType : rapidjson::kFalseType);
+        (void)doc;
+        return rapidjson::Value(b ? rapidjson::kTrueType : rapidjson::kFalseType);
 	}
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const tm & t, short millisecond)
 	{
 		rapidjson::Value v(rapidjson::kObjectType);
 
-		addValue(doc, v, "year", (long long)(t.tm_year + 1900));
-		addValue(doc, v, "month", (long long)(t.tm_mon + 1));
-		addValue(doc, v, "day", (long long)t.tm_mday);
-		addValue(doc, v, "hour", (long long)t.tm_hour);
-		addValue(doc, v, "minute", (long long)t.tm_min);
-		addValue(doc, v, "second", (long long)t.tm_sec);
+        addValue(doc, v, "year", static_cast<long long>(t.tm_year + 1900));
+        addValue(doc, v, "month", static_cast<long long>(t.tm_mon + 1));
+        addValue(doc, v, "day", static_cast<long long>(t.tm_mday));
+        addValue(doc, v, "hour", static_cast<long long>(t.tm_hour));
+        addValue(doc, v, "minute", static_cast<long long>(t.tm_min));
+        addValue(doc, v, "second", static_cast<long long>(t.tm_sec));
 		if (millisecond > 0)
-			addValue(doc, v, "millisecond", (long long)millisecond);
+            addValue(doc, v, "millisecond", static_cast<long long>(millisecond));
 
 		addValue(doc, v, "kind", "local");
 
@@ -366,14 +371,14 @@ namespace PIDL { namespace JSONTools {
 	{
 		rapidjson::Value v(rapidjson::kObjectType);
 
-		addValue(doc, v, "year", (long long)dt.year);
-		addValue(doc, v, "month", (long long)dt.month);
-		addValue(doc, v, "day", (long long)dt.day);
-		addValue(doc, v, "hour", (long long)dt.hour);
-		addValue(doc, v, "minute", (long long)dt.minute);
-		addValue(doc, v, "second", (long long)dt.second);
+        addValue(doc, v, "year", static_cast<long long>(dt.year));
+        addValue(doc, v, "month", static_cast<long long>(dt.month));
+        addValue(doc, v, "day", static_cast<long long>(dt.day));
+        addValue(doc, v, "hour", static_cast<long long>(dt.hour));
+        addValue(doc, v, "minute", static_cast<long long>(dt.minute));
+        addValue(doc, v, "second", static_cast<long long>(dt.second));
 		if (dt.millisecond > 0)
-			addValue(doc, v, "millisecond", (long long)dt.millisecond);
+            addValue(doc, v, "millisecond", static_cast<long long>(dt.millisecond));
 
 		switch (dt.kind)
 		{
