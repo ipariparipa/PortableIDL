@@ -289,7 +289,7 @@ namespace PIDL
 				if (doc.details.count(Language::DocumentationProvider::Documentation::Description))
 					writeLines(split(doc.details.at(Language::DocumentationProvider::Documentation::Description), '\n'));
 
-				if (dynamic_cast<Language::Function*>(docprov))
+                if (dynamic_cast<Language::FunctionVariant*>(docprov))
 				{
 					if (doc.details.count(Language::DocumentationProvider::Documentation::Return))
 					{
