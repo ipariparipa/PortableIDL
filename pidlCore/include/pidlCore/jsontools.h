@@ -58,8 +58,6 @@ namespace PIDL { namespace JSONTools {
 		_internal::for_each(t, f, _internal::gen_seq<sizeof...(Ts)>());
 	}
 
-	enum class InvokeStatus { Ok, NotImplemented, Error, MarshallingError, NotSupportedMarshaklingVersion, FatalError };
-
 	extern PIDL_CORE__FUNCTION std::string getErrorText(rapidjson::ParseErrorCode code);
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, rapidjson::Value *& ret);

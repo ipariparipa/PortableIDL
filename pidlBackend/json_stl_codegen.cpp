@@ -121,9 +121,9 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "case _invoke_status::FatalError:" << std::endl;
 				ctx->writeTabs(code_deepness + 1) << "ec.add((long)status, \"fatal error while executing server function\"); return false;" << std::endl;
 				ctx->writeTabs(code_deepness) << "case _invoke_status::MarshallingError:" << std::endl;
-				ctx->writeTabs(code_deepness + 1) << "ec.add((long)status, \"error while marshaling of function call\"); return false;" << std::endl;
-				ctx->writeTabs(code_deepness) << "case _invoke_status::NotSupportedMarshaklingVersion:" << std::endl;
-				ctx->writeTabs(code_deepness + 1) << "ec.add((long)status, \"not supported marshaling version\"); return false;" << std::endl;
+                ctx->writeTabs(code_deepness + 1) << "ec.add((long)status, \"error while marshalling of function call\"); return false;" << std::endl;
+                ctx->writeTabs(code_deepness) << "case _invoke_status::NotSupportedMarshallingVersion:" << std::endl;
+                ctx->writeTabs(code_deepness + 1) << "ec.add((long)status, \"not supported marshalling version\"); return false;" << std::endl;
 				ctx->writeTabs(code_deepness) << "}" << std::endl << std::endl;
 				ctx->writeTabs(code_deepness) << "return true;" << std::endl;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
@@ -218,7 +218,7 @@ namespace PIDL
 			ctx->writeTabs(code_deepness++) << "{" << std::endl;
 			ctx->writeTabs(code_deepness) << "bool has_error = false;" << std::endl;
 			ctx->writeTabs(code_deepness) << "PIDL::JSONTools::for_each_in_tuple(ret, _tuple_getValue_functor(this, v, has_error, ec));" << std::endl;
-			ctx->writeTabs(code_deepness) << "if (has_error) ec << \"invalid marshaling when tuple value\";" << std::endl;
+            ctx->writeTabs(code_deepness) << "if (has_error) ec << \"invalid marshalling when tuple value\";" << std::endl;
 			ctx->writeTabs(code_deepness) << "return !has_error;" << std::endl;
 			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
@@ -614,7 +614,8 @@ namespace PIDL
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/exception.h" : "exception.h"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/nullable.h" : "nullable.h"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/jsontools.h" : "jsontools.h"), ec) &&
-			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/errorcollector.h" : "errorcollector.h"), ec);
+            writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/basictypes.h" : "basictypes.h"), ec) &&
+            writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/errorcollector.h" : "errorcollector.h"), ec);
 	}
 
 	bool JSON_STL_CodeGen::writeAliases(short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
@@ -628,7 +629,7 @@ namespace PIDL
 		ctx->writeTabs(code_deepness) << "using blob = std::vector<char>;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using exception = PIDL::Exception;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using _error_collector = PIDL::ErrorCollector;" << std::endl;
-		ctx->writeTabs(code_deepness) << "using _invoke_status = PIDL::JSONTools::InvokeStatus;" << std::endl << std::endl;
+        ctx->writeTabs(code_deepness) << "using _invoke_status = PIDL::InvokeStatus;" << std::endl << std::endl;
 
 		return true;
 	}
@@ -682,7 +683,7 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "if (!PIDL::JSONTools::getValue(root, \"version\", version))" << std::endl;
 				ctx->writeTabs(code_deepness) << "{ ec << \"could not detect mashalling version\"; return _invoke_status::MarshallingError; }" << std::endl << std::endl;
 				ctx->writeTabs(code_deepness) << "if (version != " << PIDL_JSON_MARSHALLING_VERSION << ")" << std::endl;
-				ctx->writeTabs(code_deepness) << "{ ec << \"unsupported mashalling version detected\"; return _invoke_status::NotSupportedMarshaklingVersion; }" << std::endl << std::endl;
+                ctx->writeTabs(code_deepness) << "{ ec << \"unsupported mashalling version detected\"; return _invoke_status::NotSupportedMarshallingVersion; }" << std::endl << std::endl;
 
 				ctx->writeTabs(code_deepness) << "rapidjson::Value * v;" << std::endl;
 				ctx->writeTabs(code_deepness) << "if (PIDL::JSONTools::getValue(root, \"function\", v) && v->IsObject())" << std::endl;

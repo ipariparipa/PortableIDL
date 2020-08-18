@@ -1196,7 +1196,7 @@ namespace PIDL
 
 	bool JSON_CSCodeGen::writeInvoke(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		ctx->writeTabs(code_deepness) << "public enum _InvokeStatus {Ok, NotImplemented, Error, MarshallingError, NotSupportedMarshaklingVersion, FatalError};" << std::endl;
+        ctx->writeTabs(code_deepness) << "public enum _InvokeStatus {Ok, NotImplemented, Error, MarshallingError, NotSupportedMarshallingVersion, FatalError};" << std::endl;
 		switch (ctx->role())
 		{
 		case Role::Server:
@@ -1208,7 +1208,7 @@ namespace PIDL
 			ctx->writeTabs(code_deepness) << "if (!PIDL.JSONTools.getValue(root, \"version\", out version))" << std::endl;
 			ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"could not detect mashalling version\"); ret = null; return _InvokeStatus.MarshallingError; }" << std::endl << std::endl;
 			ctx->writeTabs(code_deepness) << "if (version != " << PIDL_JSON_MARSHALLING_VERSION << ")" << std::endl;
-			ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"unsupported mashalling version detected\"); ret = null; return _InvokeStatus.NotSupportedMarshaklingVersion; }" << std::endl << std::endl;
+            ctx->writeTabs(code_deepness) << "{ ec.Add(-1, \"unsupported mashalling version detected\"); ret = null; return _InvokeStatus.NotSupportedMarshallingVersion; }" << std::endl << std::endl;
 
 			ctx->writeTabs(code_deepness) << "if (PIDL.JSONTools.getValue(root, \"function\", out v) && PIDL.JSONTools.checkType(v, PIDL.JSONTools.Type.Object))" << std::endl;
 			ctx->writeTabs(code_deepness++) << "{" << std::endl;

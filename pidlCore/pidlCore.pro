@@ -20,6 +20,7 @@ HEADERS += \
     include/pidlCore/exception.h \
     include/pidlCore/jsontools.h \
     include/pidlCore/nullable.h \
-    include/pidlCore/platform.h
+    include/pidlCore/platform.h \
+    include/pidlCore/basictypes.h
 
 
