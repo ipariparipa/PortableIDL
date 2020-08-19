@@ -28,7 +28,7 @@ namespace PIDL {
 #ifndef PIDL_WINDOWS
             gmtime_r(&t, &ret);
 #else
-            gmtime_s(&t, &ret);
+            gmtime_s(&ret, &t);
 #endif
         }
 
