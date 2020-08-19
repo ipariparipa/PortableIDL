@@ -13,7 +13,26 @@ namespace PIDL {
 		ret.tm_hour = dt.hour;
 		ret.tm_min = dt.minute;
 		ret.tm_sec = dt.second;
-		return ret.tm_year >= 0 && ret.tm_mon >= 0 && dt.millisecond == 0 && dt.kind != DateTime::UTC;
+
+        if(ret.tm_mon < 0)
+            return false;
+
+        auto t = mktime(&ret);
+        switch(dt.kind)
+        {
+        case DateTime::UTC:
+            localtime_r(&t, &ret);
+            break;
+        case DateTime::None:
+        case DateTime::Local:
+#ifndef PIDL_WINDOWS
+            gmtime_r(&t, &ret);
+#else
+            gmtime_s(&t, &ret);
+#endif
+        }
+
+        return true;
 	}
 
     extern PIDL_CORE__FUNCTION bool fromDateTime(const DateTime & dt, std::chrono::system_clock::time_point & ret)
@@ -21,6 +40,7 @@ namespace PIDL {
         tm tmp;
         if(!fromDateTime(dt, tmp))
             return false;
+
         ret = std::chrono::system_clock::time_point(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(mktime(&tmp))) + std::chrono::milliseconds(dt.millisecond));
 
         return true;
@@ -33,6 +53,20 @@ namespace PIDL {
 		return ret;
 	}
 
+    extern PIDL_CORE__FUNCTION tm toTm(const DateTime & dt)
+    {
+        tm ret;
+        fromDateTime(dt, ret);
+        return ret;
+    }
+
+    extern PIDL_CORE__FUNCTION std::chrono::system_clock::time_point toTimepoint(const DateTime & dt)
+    {
+        std::chrono::system_clock::time_point ret;
+        fromDateTime(dt, ret);
+        return ret;
+    }
+
 	extern PIDL_CORE__FUNCTION bool toDateTime(const tm & t, DateTime & ret)
 	{
         ret.year = static_cast<short>(t.tm_year + 1900);
@@ -42,7 +76,10 @@ namespace PIDL {
         ret.minute = static_cast<short>(t.tm_min);
         ret.second = static_cast<short>(t.tm_sec);
 		ret.millisecond = 0;
-		ret.kind = DateTime::Local;
+        if(t.tm_zone && strcmp(t.tm_zone, "UTC") == 0)
+            ret.kind = DateTime::UTC;
+        else
+            ret.kind = DateTime::Local;
 		return ret.month <= 12;
 	}
 
@@ -58,12 +95,4 @@ namespace PIDL {
 
         return true;
     }
-
-	extern PIDL_CORE__FUNCTION DateTime toDateTime(const tm & t)
-	{
-		DateTime ret;
-		toDateTime(t, ret);
-		return ret;
-	}
-
 }
