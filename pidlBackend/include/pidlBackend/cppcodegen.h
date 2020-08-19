@@ -46,6 +46,12 @@ namespace PIDL {
 	class ErrorCollector;
 	class CStyleDocumentation;
 
+    enum class IncludeType
+    {
+        GLobal, Local
+    };
+    typedef std::pair<IncludeType, std::string> Include;
+
 	class PIDL_BACKEND__CLASS CPPCodeGenContext : public CodeGenContext
 	{
 		PIDL_COPY_PROTECTOR(CPPCodeGenContext)
@@ -77,7 +83,8 @@ namespace PIDL {
 		virtual const char * type() const override { return PIDL_OBJECT_TYPE__CPP_CODEGEN_LOGGING; }
 
 	public:
-		virtual std::string initLogger(const std::string & scope) const = 0;
+        virtual std::vector<Include> includes() const = 0;
+        virtual std::string initLogger(const std::string & scope) const = 0;
 		virtual std::string loggerType() const = 0;
 		virtual std::string loggingStart(const std::string & logger) const = 0;
 		virtual std::string loggingAssert(const std::string & logger, const std::string & expression, const std::string & message) const = 0;
@@ -98,6 +105,7 @@ namespace PIDL {
 		CPPVoidLogging();
 		virtual ~CPPVoidLogging();
 
+        virtual std::vector<Include> includes() const override;
 		virtual std::string initLogger(const std::string & scope) const override;
 		virtual std::string loggerType() const override;
 		virtual std::string loggingStart(const std::string & logger) const override;
@@ -118,13 +126,7 @@ namespace PIDL {
 		struct Priv;
 		Priv * priv;
 
-	public:
-		enum class IncludeType
-		{
-			GLobal, Local
-		};
-		typedef std::pair<IncludeType, std::string> Include;
-
+    public:
 		CPPCodeGenHelper();
 		virtual ~CPPCodeGenHelper();
 
@@ -184,7 +186,7 @@ namespace PIDL {
 	protected:
 		virtual CPPCodeGenHelper * helper() const = 0;
 
-		virtual bool writeInclude(short code_deepness, CPPCodeGenContext * ctx, const CPPCodeGenHelper::Include & include, ErrorCollector & ec);
+        virtual bool writeInclude(short code_deepness, CPPCodeGenContext * ctx, const Include & include, ErrorCollector & ec);
 
 		virtual bool writePrivateSection(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec);
 		virtual bool writePublicSection(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec);

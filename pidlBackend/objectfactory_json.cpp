@@ -282,7 +282,7 @@ namespace PIDL {
 				return true;
 			}
 
-			static bool get_include(rapidjson::Value & r, CPPCodeGenHelper::Include & incl, ErrorCollector & ec)
+            static bool get_include(rapidjson::Value & r, Include & incl, ErrorCollector & ec)
 			{
 				if (!r.IsObject())
 				{
@@ -295,9 +295,9 @@ namespace PIDL {
 					return false;
 
 				if (type_str == "global")
-					incl.first = CPPCodeGenHelper::IncludeType::GLobal;
+                    incl.first = IncludeType::GLobal;
 				else if (type_str == "local")
-					incl.first = CPPCodeGenHelper::IncludeType::Local;
+                    incl.first = IncludeType::Local;
 				else
 				{
 					ec << "invalid type: '" + type_str + "'";
@@ -576,7 +576,7 @@ namespace PIDL {
 					return false;
 				}
 
-				std::vector<CPPCodeGenHelper::Include> includes;
+                std::vector<Include> includes;
 				rapidjson::Value * includes_v;
 				if (JSONTools::getValue(r, "includes", includes_v))
 				{

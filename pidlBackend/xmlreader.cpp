@@ -20,7 +20,7 @@
 #include "include/pidlBackend/language.h"
 
 #include <pidlCore/errorcollector.h>
-
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <list>
@@ -149,6 +149,13 @@ namespace PIDL
 			std::list<std::shared_ptr<Language::Definition>> definitions_list;
 		};
 
+        std::string appendLoggerName(const std::string & base, const std::string name)
+        {
+            if(base.length())
+                return base + "." + name;
+
+            return name;
+        }
 
 		bool readDocumentation(const rapidxml::xml_base<> * v, Language::DocumentationProvider::Documentation & ret, const std::string & error_path, ErrorCollector & ec)
 		{
@@ -516,12 +523,14 @@ namespace PIDL
 			return true;
 		}
 
-		bool readObject(InterfaceElementRegistry & interfaceRegistry, std::vector<std::string> scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Object> & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readObject(const std::string & baseLoggerName, InterfaceElementRegistry & interfaceRegistry, std::vector<std::string> scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Object> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidxml::xml_node<> * b;
 
 			ObjectElementRegistry registry;
 			registry.path = name;
+
+            auto loggerName = appendLoggerName(baseLoggerName, name);
 
 			if (getNode(v, "body", b))
 			{
@@ -571,7 +580,7 @@ namespace PIDL
 			if (!readDocumentation(v, doc, error_path, ec))
 				return false;
 
-			ret = std::make_shared<Language::Object>(name, registry.definitions_list, scope, doc);
+            ret = std::make_shared<Language::Object>(name, registry.definitions_list, scope, doc, loggerName);
 			interfaceRegistry.types[name] = ret;
 			interfaceRegistry.definitions[name] = ret;
 			interfaceRegistry.definitions_list.push_back(ret);
@@ -686,11 +695,13 @@ namespace PIDL
 			return true;
 		}
 
-		bool readInterface(std::vector<std::string> scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Interface> & ret, ErrorCollector & ec)
+        bool readInterface(const std::string & baseLoggerName, std::vector<std::string> scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Interface> & ret, ErrorCollector & ec)
 		{
 			rapidxml::xml_node<> * b;
 
 			InterfaceElementRegistry registry;
+
+            auto loggerName = baseLoggerName;
 
 			if (getNode(v, "body", b))
 			{
@@ -725,7 +736,7 @@ namespace PIDL
 						auto _scope = scope;
 						_scope.push_back(name);
 						std::shared_ptr<Language::Object> tmp;
-						if (!readObject(registry, _scope, e_name, e, tmp, name + "." + e_name, ec))
+                        if (!readObject(loggerName, registry, _scope, e_name, e, tmp, name + "." + e_name, ec))
 							return false;
 					}
 					else if (e_nature == "function")
@@ -748,12 +759,12 @@ namespace PIDL
 			if (!readDocumentation(v, doc, name, ec))
 				return false;
 
-			ret = std::make_shared<Language::Interface>(name, registry.definitions_list, scope, doc);
+            ret = std::make_shared<Language::Interface>(name, registry.definitions_list, scope, doc, loggerName);
 
 			return true;
 		}
 
-		bool readModule(const std::string name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Module> & ret, ErrorCollector & ec)
+        bool readModule(const std::string & baseLoggerName, const std::string name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Module> & ret, ErrorCollector & ec)
 		{
 			Language::Module::Info info;
 
@@ -780,7 +791,7 @@ namespace PIDL
 					}
 
 					std::shared_ptr<Language::TopLevel> tmp;
-					if (!readTopLevel(e_name, n, tmp, ec))
+                    if (!readTopLevel(baseLoggerName, e_name, n, tmp, ec))
 						return false;
 					elements[e_name] = tmp;
 
@@ -804,7 +815,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool readTopLevel(const std::string name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::TopLevel> & ret, ErrorCollector & ec)
+        bool readTopLevel(const std::string & baseLoggerName, const std::string name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::TopLevel> & ret, ErrorCollector & ec)
 		{
 			std::string nature;
 			if (!getNature(v, nature))
@@ -813,18 +824,20 @@ namespace PIDL
 				return false;
 			}
 
+            auto loggerName = appendLoggerName(baseLoggerName, name);
+
 			if (nature == "interface")
 			{
 				std::shared_ptr<Language::Interface> tmp;
 				std::vector<std::string> scope;
-				if (!readInterface(scope, name, v, tmp, ec))
+                if (!readInterface(loggerName, scope, name, v, tmp, ec))
 					return false;
 				ret = tmp;
 			}
 			else if (nature == "module")
 			{
 				std::shared_ptr<Language::Module> tmp;
-				if (!readModule(name, v, tmp, ec))
+                if (!readModule(loggerName, name, v, tmp, ec))
 					return false;
 				ret = tmp;
 			}
@@ -849,7 +862,7 @@ namespace PIDL
 				}
 
 				std::shared_ptr<Language::TopLevel> tmp;
-				if (!readTopLevel(name, n, tmp, ec))
+                if (!readTopLevel(std::string(), name, n, tmp, ec))
 					return false;
 
 				topLevels[name] = tmp;

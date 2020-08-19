@@ -413,15 +413,15 @@ namespace PIDL { namespace Language {
 		Priv * priv;
 	public:
 		typedef std::shared_ptr<Interface> Ptr;
-		Interface(const std::string & name, const std::vector<std::shared_ptr<Definition>> & definitions, const std::vector<std::string> & scope, const Documentation & doc);
-		Interface(const std::string & name, const std::list<std::shared_ptr<Definition>> & definitions, const std::vector<std::string> & scope, const Documentation & doc);
+        Interface(const std::string & name, const std::vector<std::shared_ptr<Definition>> & definitions, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName);
+        Interface(const std::string & name, const std::list<std::shared_ptr<Definition>> & definitions, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName);
 		virtual ~Interface();
 		const std::vector<Definition::Ptr> & definitions() const override;
 		virtual const char * name() const override;
 		virtual const std::vector<std::string> & scope() const override;
-
-		virtual const Documentation & documentation() const override;
-	};
+        virtual const Documentation & documentation() const override;
+        const std::string & loggerName() const;
+    };
 
 	class Method;
 
@@ -475,15 +475,15 @@ namespace PIDL { namespace Language {
 	public:
 		typedef std::shared_ptr<Object> Ptr;
 
-		Object(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc);
-		Object(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc);
+        Object(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName);
+        Object(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName);
 		virtual ~Object();
 		const std::vector<Definition::Ptr> & definitions() const override;
 		virtual const char * name() const override;
 		virtual const std::vector<std::string> & scope() const override;
-
 		virtual const Documentation & documentation() const override;
-	};
+        const std::string & loggerName() const;
+    };
 
 	class PIDL_BACKEND__CLASS Module : public TopLevel, public DocumentationProvider
 	{

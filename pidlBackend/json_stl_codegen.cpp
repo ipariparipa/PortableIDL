@@ -431,7 +431,20 @@ namespace PIDL
 					{
 						auto function = dynamic_cast<Language::FunctionVariant*>(d.get());
 						ctx->writeTabs(code_deepness++) << "_functions[\"" << function->name() << "\"].data[\"" << function->variantId() << "\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
-						write_privs(dynamic_cast<Language::MethodVariant*>(d.get()) != nullptr);
+                        write_privs(dynamic_cast<Language::MethodVariant*>(d.get()) != nullptr);
+
+                        if(helper->logging())
+                        {
+                            auto starter = helper->logging()->loggingStart("_logger");
+                            if(starter.length())
+                                ctx->writeTabs(code_deepness) << starter << ";" << std::endl;
+
+                            auto debug = helper->logging()->loggingDebug("_logger", std::string() + "\"" + (dynamic_cast<Language::MethodVariant*>(d.get()) ? "method: " : "function: '") +
+                                                                         std::string(function->name()) + "' variant: '" + function->variantId() + "'\"");
+                            if(debug.length())
+                                ctx->writeTabs(code_deepness) << debug << ";" << std::endl;
+                        }
+
 						for (auto & a : function->arguments())
 						{
 							auto & o = ctx->writeTabs(code_deepness);
@@ -512,7 +525,19 @@ namespace PIDL
 
 					//getter
 						ctx->writeTabs(code_deepness++) << "_functions[\"" << property->name() << "\"].data[\"get\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
-						write_privs(true);
+                        write_privs(true);
+
+                        if(helper->logging())
+                        {
+                            auto starter = helper->logging()->loggingStart("_logger");
+                            if(starter.length())
+                                ctx->writeTabs(code_deepness) << starter << ";" << std::endl;
+
+                            auto debug = helper->logging()->loggingDebug("_logger", "\"property getter: '" + std::string(property->name()) + "'\"");
+                            if(debug.length())
+                                ctx->writeTabs(code_deepness) << debug << ";" << std::endl;
+                        }
+
 						auto ret_type = property->type().get();
 
 						ctx->writeTabs(code_deepness);
@@ -532,11 +557,23 @@ namespace PIDL
 						ctx->writeTabs(code_deepness) << "return _invoke_status::Ok;" << std::endl;
 						ctx->writeTabs(--code_deepness) << "};" << std::endl << std::endl;
 
-						//setter
+                    //setter
 						if (!property->readOnly())
 						{
 							ctx->writeTabs(code_deepness++) << "_functions[\"" << property->name() << "\"].data[\"set\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
-							write_privs(true);
+                            write_privs(true);
+
+                            if(helper->logging())
+                            {
+                                auto starter = helper->logging()->loggingStart("_logger");
+                                if(starter.length())
+                                    ctx->writeTabs(code_deepness) << starter << ";" << std::endl;
+
+                                auto debug = helper->logging()->loggingDebug("_logger", "\"property setter: '" + std::string(property->name()) + "'\"");
+                                if(debug.length())
+                                    ctx->writeTabs(code_deepness) << debug << ";" << std::endl;
+                            }
+
 							auto type = property->type().get();
 							ctx->writeTabs(code_deepness);
 							if (!that->writeType(type, code_deepness, ctx, ec))
@@ -553,7 +590,19 @@ namespace PIDL
 				if (dynamic_cast<Language::Interface*>(cl) && hasObjects(dynamic_cast<Language::Interface*>(cl)))
 				{
 					ctx->writeTabs(code_deepness++) << "_functions[\"_dispose_object\"].data[std::string()] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
-					write_privs(false);
+                    write_privs(false);
+
+                    if(helper->logging())
+                    {
+                        auto starter = helper->logging()->loggingStart("_logger");
+                        if(starter.length())
+                            ctx->writeTabs(code_deepness) << starter << ";" << std::endl;
+
+                        auto debug = helper->logging()->loggingDebug("_logger", "\"embedded function: '_dispose_object'\"");
+                        if(debug.length())
+                            ctx->writeTabs(code_deepness) << debug << ";" << std::endl;
+                    }
+
 					ctx->writeTabs(code_deepness) << "std::string _arg_object_data;" << std::endl;
 					ctx->writeTabs(code_deepness) << "nullable<string> _arg_comment;" << std::endl;
 					ctx->writeTabs(code_deepness) << "rapidjson::Value * aa;" << std::endl;
@@ -598,18 +647,18 @@ namespace PIDL
 		{
 		case Mode::AllInOne:
 		case Mode::Implementatinon:
-			if (!writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "map"), ec) ||
-				!writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "functional"), ec))
+            if (!writeInclude(code_deepness, ctx, std::make_pair(IncludeType::GLobal, "map"), ec) ||
+                !writeInclude(code_deepness, ctx, std::make_pair(IncludeType::GLobal, "functional"), ec))
 				return false;
 			break;
 		case Mode::Declaration:
 			break;
 		}
 		return
-			writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "vector"), ec) &&
-			writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "tuple"), ec) &&
-			writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "string"), ec) &&
-			writeInclude(code_deepness, ctx, std::make_pair(CPPCodeGenHelper::IncludeType::GLobal, "memory"), ec) &&
+            writeInclude(code_deepness, ctx, std::make_pair(IncludeType::GLobal, "vector"), ec) &&
+            writeInclude(code_deepness, ctx, std::make_pair(IncludeType::GLobal, "tuple"), ec) &&
+            writeInclude(code_deepness, ctx, std::make_pair(IncludeType::GLobal, "string"), ec) &&
+            writeInclude(code_deepness, ctx, std::make_pair(IncludeType::GLobal, "memory"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/datetime.h" : "datetime.h"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/exception.h" : "exception.h"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/nullable.h" : "nullable.h"), ec) &&
@@ -752,6 +801,17 @@ namespace PIDL
 					break;
 				}
 
+                if(helper()->logging())
+                {
+                    auto starter = helper()->logging()->loggingStart("_p->_logger");
+                    if(starter.length())
+                        ctx->writeTabs(code_deepness) << starter << ";" << std::endl;
+
+                    auto debug = helper()->logging()->loggingDebug("_p->_logger", "\"method: '"+std::string(function->name())+"' variant: '"+function->variantId()+"'\"");
+                    if(debug.length())
+                        ctx->writeTabs(code_deepness) << debug << ";" << std::endl;
+                }
+
 				ctx->writeTabs(code_deepness) << "PIDL::ExceptionErrorCollector<_error_collector> _ec;" << std::endl;
 				ctx->writeTabs(code_deepness) << "rapidjson::Document _doc;" << std::endl;
 				ctx->writeTabs(code_deepness) << "_doc.SetObject();" << std::endl;
@@ -788,6 +848,17 @@ namespace PIDL
 				case Mode::Declaration:
 					break;
 				}
+
+                if(helper()->logging())
+                {
+                    auto starter = helper()->logging()->loggingStart("_p->_logger");
+                    if(starter.length())
+                        ctx->writeTabs(code_deepness) << starter << ";" << std::endl;
+
+                    auto debug = helper()->logging()->loggingDebug("_p->_logger", "\"function: '"+std::string(function->name())+"' variant: '"+function->variantId()+"'\"");
+                    if(debug.length())
+                        ctx->writeTabs(code_deepness) << debug << ";" << std::endl;
+                }
 
 				ctx->writeTabs(code_deepness) << "PIDL::ExceptionErrorCollector<_error_collector> _ec;" << std::endl;
 				ctx->writeTabs(code_deepness) << "rapidjson::Document _doc;" << std::endl;
@@ -961,7 +1032,6 @@ namespace PIDL
 	bool JSON_STL_CodeGen::writePrivateMembers(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec)
 	{
 		return priv->writePrivateMembers(code_deepness, ctx, object, ec);
-		return true;
 	}
 
 	bool JSON_STL_CodeGen::writePropertyGetterBody(Language::Interface * intf, Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
@@ -984,7 +1054,18 @@ namespace PIDL
 		{
 		case Role::Client:
 		{
-			ctx->writeTabs(code_deepness) << "PIDL::ExceptionErrorCollector<_error_collector> _ec;" << std::endl;
+            if(helper()->logging())
+            {
+                auto starter = helper()->logging()->loggingStart("_p->_logger");
+                if(starter.length())
+                    ctx->writeTabs(code_deepness) << starter << ";" << std::endl;
+
+                auto debug = helper()->logging()->loggingDebug("_p->_logger", "\"property getter: '"+std::string(property->name())+"'\"");
+                if(debug.length())
+                    ctx->writeTabs(code_deepness) << debug << ";" << std::endl;
+            }
+
+            ctx->writeTabs(code_deepness) << "PIDL::ExceptionErrorCollector<_error_collector> _ec;" << std::endl;
 			ctx->writeTabs(code_deepness) << "rapidjson::Document _doc;" << std::endl;
 			ctx->writeTabs(code_deepness) << "_doc.SetObject();" << std::endl;
 
@@ -1043,6 +1124,16 @@ namespace PIDL
 		{
 		case Role::Client:
 		{
+            if(helper()->logging())
+            {
+                auto starter = helper()->logging()->loggingStart("_p->_logger");
+                if(starter.length())
+                    ctx->writeTabs(code_deepness) << starter << ";" << std::endl;
+
+                auto debug = helper()->logging()->loggingDebug("_p->_logger", "\"property setter: '"+std::string(property->name())+"'\"");
+                if(debug.length())
+                    ctx->writeTabs(code_deepness) << debug << ";" << std::endl;
+            }
 
 			ctx->writeTabs(code_deepness) << "PIDL::ExceptionErrorCollector<_error_collector> _ec;" << std::endl;
 			ctx->writeTabs(code_deepness) << "rapidjson::Document _doc;" << std::endl;
@@ -1174,6 +1265,17 @@ namespace PIDL
 						ctx->writeTabs(code_deepness) << "auto _p = _priv;" << std::endl << std::endl;
 						break;
 					}
+
+                    if(helper()->logging())
+                    {
+                        auto starter = helper()->logging()->loggingStart("_p->_logger");
+                        if(starter.length())
+                            ctx->writeTabs(code_deepness) << starter << ";" << std::endl;
+
+                        auto debug = helper()->logging()->loggingDebug("_p->_logger", "\"embedded function: '_dispose_object'\"");
+                        if(starter.length())
+                            ctx->writeTabs(code_deepness) << debug << ";" << std::endl;
+                    }
 
 					ctx->writeTabs(code_deepness) << "PIDL::ExceptionErrorCollector<_error_collector> _ec;" << std::endl;
 					ctx->writeTabs(code_deepness) << "rapidjson::Document _doc;" << std::endl;

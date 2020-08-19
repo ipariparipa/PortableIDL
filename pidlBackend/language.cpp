@@ -532,14 +532,14 @@ namespace PIDL {
 
 		struct Interface::Priv
 		{
-			Priv(const std::string & name_, const std::vector<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_) :
-				name(name_), scope(scope_), definitions(definitions_), doc(doc_)
+            Priv(const std::string & name_, const std::vector<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_, const std::string & loggerName_) :
+                name(name_), scope(scope_), definitions(definitions_), doc(doc_), loggerName(loggerName_)
 			{
 				scope.push_back(name);
 			}
 
-			Priv(const std::string & name_, const std::list<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_) :
-				name(name_), scope(scope_), doc(doc_)
+            Priv(const std::string & name_, const std::list<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_, const std::string & loggerName_) :
+                name(name_), scope(scope_), doc(doc_), loggerName(loggerName_)
 			{ 
 				definitions.resize(definitions_.size());
 				std::copy(definitions_.begin(), definitions_.end(), definitions.begin());
@@ -549,20 +549,21 @@ namespace PIDL {
 			std::vector<std::string> scope;
 			std::vector<std::shared_ptr<Definition>> definitions;
 			Documentation doc;
+            std::string loggerName;
 		};
 
-		Interface::Interface(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
+        Interface::Interface(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName) :
 			TopLevel(),
 			DefinitionProvider(),
 			DocumentationProvider(),
-			priv(new Priv(name, definitions, scope, doc))
+            priv(new Priv(name, definitions, scope, doc, loggerName))
 		{ }
 
-		Interface::Interface(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
+        Interface::Interface(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName) :
 			TopLevel(),
 			DefinitionProvider(),
 			DocumentationProvider(),
-			priv(new Priv(name, definitions, scope, doc))
+            priv(new Priv(name, definitions, scope, doc, loggerName))
 		{ }
 
 		Interface::~Interface()
@@ -590,6 +591,10 @@ namespace PIDL {
 			return priv->doc;
 		}
 
+        const std::string & Interface::loggerName() const
+        {
+            return priv->loggerName;
+        }
 
 		//struct MethodVariant::Priv { };
 
@@ -662,12 +667,12 @@ namespace PIDL {
 
 		struct Object::Priv
 		{
-			Priv(const std::string & name_, const std::vector<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_) :
-				name(name_), scope(scope_), definitions(definitions_), doc(doc_)
+            Priv(const std::string & name_, const std::vector<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_, const std::string & loggerName_) :
+                name(name_), scope(scope_), definitions(definitions_), doc(doc_), loggerName(loggerName_)
 			{ }
 
-			Priv(const std::string & name_, const std::list<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_) :
-				name(name_), scope(scope_), doc(doc_)
+            Priv(const std::string & name_, const std::list<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_, const std::string & loggerName_) :
+                name(name_), scope(scope_), doc(doc_), loggerName(loggerName_)
 			{
 				definitions.resize(definitions_.size());
 				std::copy(definitions_.begin(), definitions_.end(), definitions.begin());
@@ -677,22 +682,23 @@ namespace PIDL {
 			std::vector<std::string> scope;
 			std::vector<std::shared_ptr<Definition>> definitions;
 			Documentation doc;
+            std::string loggerName;
 		};
 
-		Object::Object(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
+        Object::Object(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName) :
 			Type(),
 			DefinitionProvider(),
 			Definition(),
 			DocumentationProvider(),
-			priv(new Priv(name, definitions, scope, doc))
+            priv(new Priv(name, definitions, scope, doc, loggerName))
 		{ }
 
-		Object::Object(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc) :
+        Object::Object(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName) :
 			Type(),
 			DefinitionProvider(),
 			Definition(),
 			DocumentationProvider(),
-			priv(new Priv(name, definitions, scope, doc))
+            priv(new Priv(name, definitions, scope, doc, loggerName))
 		{ }
 
 		Object::~Object()
@@ -720,6 +726,10 @@ namespace PIDL {
 			return priv->doc;
 		}
 
+        const std::string & Object::loggerName() const
+        {
+            return priv->loggerName;
+        }
 
 		struct Module::Priv
 		{

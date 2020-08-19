@@ -62,7 +62,8 @@ namespace PIDL
 
 	CPPVoidLogging::~CPPVoidLogging() = default;
 
-	std::string CPPVoidLogging::initLogger(const std::string & scope) const { return std::string(); }
+    std::vector<Include> CPPVoidLogging::includes() const { return std::vector<Include>(); }
+    std::string CPPVoidLogging::initLogger(const std::string & scope) const { return std::string(); }
 	std::string CPPVoidLogging::loggerType() const { return std::string(); }
 	std::string CPPVoidLogging::loggingStart(const std::string & logger) const { return std::string(); }
 	std::string CPPVoidLogging::loggingAssert(const std::string & logger, const std::string & expression, const std::string & message) const { return std::string(); }
@@ -101,12 +102,12 @@ namespace PIDL
 		delete priv;
 	}
 
-	std::vector<CPPCodeGenHelper::Include> CPPBasicCodeGenHelper::includes() const
+    std::vector<Include> CPPBasicCodeGenHelper::includes() const
 	{
 		return priv->customIncludes;
 	}
 
-	CPPCodeGenHelper::Include CPPBasicCodeGenHelper::coreIncludePath() const
+    Include CPPBasicCodeGenHelper::coreIncludePath() const
 	{
 		return std::make_pair(IncludeType::GLobal, "pidlCore");
 	}
@@ -150,8 +151,8 @@ namespace PIDL
 			return helper()->getName(t);
 		}
 
-		template<class T>
-		std::string getScope(const T * t, bool isComplete = true)
+        template<class T>
+        std::string getScope(const T * t, const std::string & delim, bool isComplete = true)
 		{
 			std::string ret;
 			bool is_first = true;
@@ -160,13 +161,19 @@ namespace PIDL
 				if (is_first)
 					is_first = false;
 				else
-					ret += "::";
+                    ret += delim;
 				ret += sc;
 			}
 			if (isComplete && !is_first)
-				ret += "::";
+                ret += delim;
 			return ret;
 		}
+
+        template<class T>
+        std::string getScope(const T * t, bool isComplete = true)
+        {
+            return getScope(t, "::", isComplete);
+        }
 
 		bool addStructureBudy(short code_deepness, CPPCodeGenContext * ctx, Language::Structure * structure, ErrorCollector & ec)
 		{
@@ -1095,10 +1102,14 @@ namespace PIDL
 			return true;
 		}
 
-		bool writePriv(Language::Interface *, short code_deepness, CPPCodeGenContext * ctx, Language::Interface * cl, ErrorCollector & ec)
+        bool writePriv(Language::Interface *intf, short code_deepness, CPPCodeGenContext * ctx, Language::Interface * cl, ErrorCollector & ec)
 		{
 			ctx->writeTabs(code_deepness) << "_Priv(" << cl->name() << " * _that_): _that(_that_)" << std::endl;
-			ctx->writeTabs(code_deepness++) << "{" << std::endl;
+
+            if(helper()->logging() && helper()->logging()->loggerType().length())
+                ctx->writeTabs(code_deepness + 2) << ", _logger("<< helper()->logging()->initLogger("\"" + intf->loggerName() + "\"") <<")" << std::endl;
+
+            ctx->writeTabs(code_deepness++) << "{" << std::endl;
 			if (!that->writeConstructorBody(cl, code_deepness, ctx, ec))
 				return false;
 			ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
@@ -1111,6 +1122,9 @@ namespace PIDL
 
 			ctx->writeTabs(code_deepness) << cl->name() << " * _that;" << std::endl << std::endl;
 
+            if(helper()->logging() && helper()->logging()->loggerType().length())
+                ctx->writeTabs(code_deepness) << helper()->logging()->loggerType() << " _logger;" << std::endl << std::endl;
+
 			return true;
 		}
 
@@ -1120,7 +1134,11 @@ namespace PIDL
 			{
 			case Role::Client:
 				ctx->writeTabs(code_deepness) << "_Priv(" << obj->name() << " * _that_, " << getScope(obj, false) << " * _intf_, const std::string & _data_): _that(_that_), _intf(_intf_), __data(_data_)" << std::endl;
-				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+
+                if(helper()->logging() && helper()->logging()->loggerType().length())
+                    ctx->writeTabs(code_deepness + 2) << ", _logger("<< helper()->logging()->initLogger("\"" + obj->loggerName() + "\"") <<")" << std::endl;
+
+                ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				if (!that->writeConstructorBody(intf, obj, code_deepness, ctx, ec))
 					return false;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
@@ -1133,10 +1151,17 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << obj->name() << " * _that;" << std::endl;
 				ctx->writeTabs(code_deepness) << getScope(obj, false) << " *  _intf;" << std::endl;
 				ctx->writeTabs(code_deepness) << "std::string __data;" << std::endl;
-				break;
+
+                if(helper()->logging() && helper()->logging()->loggerType().length())
+                    ctx->writeTabs(code_deepness) << helper()->logging()->loggerType() << " _logger;" << std::endl << std::endl;
+                break;
 			case Role::Server:
 				ctx->writeTabs(code_deepness) << "_Priv(" << obj->name() << " * _that_, " << getScope(obj, false) << " * _intf_): _that(_that_), _intf(_intf_)" << std::endl;
-				ctx->writeTabs(code_deepness++) << "{" << std::endl;
+
+                if(helper()->logging() && helper()->logging()->loggerType().length())
+                    ctx->writeTabs(code_deepness + 2) << ", _logger("<< helper()->logging()->initLogger("\"" + obj->loggerName() + "\"") <<")" << std::endl;
+
+                ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				if (!that->writeConstructorBody(intf, obj, code_deepness, ctx, ec))
 					return false;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
@@ -1148,7 +1173,10 @@ namespace PIDL
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 				ctx->writeTabs(code_deepness) << obj->name() << " * _that;" << std::endl;
 				ctx->writeTabs(code_deepness) << getScope(obj, false) << " *  _intf;" << std::endl;
-				break;
+
+                if(helper()->logging() && helper()->logging()->loggerType().length())
+                    ctx->writeTabs(code_deepness) << helper()->logging()->loggerType() << " _logger;" << std::endl << std::endl;
+                break;
 			}
 
 			return true;
@@ -1280,18 +1308,27 @@ namespace PIDL
 				return false;
 		}
 
+        if(auto logging = helper()->logging())
+        {
+            for (auto & include : logging->includes())
+            {
+                if (!writeInclude(code_deepness, ctx, include, ec))
+                    return false;
+            }
+        }
+
 		return writeIncludes(code_deepness, ctx, ec);
 	}
 
-	bool CPPCodeGen::writeInclude(short code_deepness, CPPCodeGenContext * ctx, const CPPCodeGenHelper::Include & include, ErrorCollector & ec)
+    bool CPPCodeGen::writeInclude(short code_deepness, CPPCodeGenContext * ctx, const Include & include, ErrorCollector & ec)
 	{
 		auto & o = ctx->writeTabs(code_deepness) << "#include ";
 		switch (include.first)
 		{
-		case CPPCodeGenHelper::IncludeType::GLobal:
+        case IncludeType::GLobal:
 			o << "<" << include.second << ">";
 			break;
-		case CPPCodeGenHelper::IncludeType::Local:
+        case IncludeType::Local:
 			o << "\"" << include.second << "\"";
 			break;
 		}
