@@ -619,6 +619,15 @@ namespace PIDL
 
             auto loggerName = appendLoggerName(baseLoggerName, name);
 
+            Language::DocumentationProvider::Documentation doc;
+            if (!readDocumentation(v, doc, error_path, ec))
+                return false;
+
+            ret = std::make_shared<Language::Object>(name, scope, doc, loggerName);
+            registry.types[name] = ret;
+            registry.definitions[name] = ret;
+            registry.definitions_list.push_back(ret);
+
 			rapidjson::Value * b;
 			if (JSONTools::getValue(v, "body", b))
 			{
@@ -651,7 +660,7 @@ namespace PIDL
 							std::shared_ptr<Language::Property> tmp;
 							auto _scope = scope;
 							_scope.push_back(name);
-							if (!readProperty(registry, obj_registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
+                            if (!readProperty(registry, obj_registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
 								return false;
 						}
 						else if (e_nature == "method")
@@ -671,16 +680,9 @@ namespace PIDL
 				}
 			}
 
-			Language::DocumentationProvider::Documentation doc;
-			if (!readDocumentation(v, doc, error_path, ec))
-				return false;
+            ret->setDefinitions(obj_registry.definitions_list);
 
-            ret = std::make_shared<Language::Object>(name, obj_registry.definitions_list, scope, doc, loggerName);
-			registry.types[name] = ret;
-			registry.definitions[name] = ret;
-			registry.definitions_list.push_back(ret);
-
-			return true;
+            return true;
 		}
 
         bool readInterface(const std::string & baseLoggerName, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, std::shared_ptr<Language::Interface> & ret, ErrorCollector & ec)

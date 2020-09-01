@@ -532,6 +532,15 @@ namespace PIDL
 
             auto loggerName = appendLoggerName(baseLoggerName, name);
 
+            Language::DocumentationProvider::Documentation doc;
+            if (!readDocumentation(v, doc, error_path, ec))
+                return false;
+
+            ret = std::make_shared<Language::Object>(name, scope, doc, loggerName);
+            interfaceRegistry.types[name] = ret;
+            interfaceRegistry.definitions[name] = ret;
+            interfaceRegistry.definitions_list.push_back(ret);
+
 			if (getNode(v, "body", b))
 			{
 				size_t i(0);
@@ -576,14 +585,7 @@ namespace PIDL
 				}
 			}
 
-			Language::DocumentationProvider::Documentation doc;
-			if (!readDocumentation(v, doc, error_path, ec))
-				return false;
-
-            ret = std::make_shared<Language::Object>(name, registry.definitions_list, scope, doc, loggerName);
-			interfaceRegistry.types[name] = ret;
-			interfaceRegistry.definitions[name] = ret;
-			interfaceRegistry.definitions_list.push_back(ret);
+            ret->setDefinitions(registry.definitions_list);
 
 			return true;
 		}

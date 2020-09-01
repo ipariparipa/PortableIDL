@@ -667,16 +667,9 @@ namespace PIDL {
 
 		struct Object::Priv
 		{
-            Priv(const std::string & name_, const std::vector<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_, const std::string & loggerName_) :
-                name(name_), scope(scope_), definitions(definitions_), doc(doc_), loggerName(loggerName_)
-			{ }
-
-            Priv(const std::string & name_, const std::list<Definition::Ptr> & definitions_, const std::vector<std::string> & scope_, const Documentation & doc_, const std::string & loggerName_) :
+            Priv(const std::string & name_, const std::vector<std::string> & scope_, const Documentation & doc_, const std::string & loggerName_) :
                 name(name_), scope(scope_), doc(doc_), loggerName(loggerName_)
-			{
-				definitions.resize(definitions_.size());
-				std::copy(definitions_.begin(), definitions_.end(), definitions.begin());
-			}
+			{ }
 
 			std::string name;
 			std::vector<std::string> scope;
@@ -685,26 +678,29 @@ namespace PIDL {
             std::string loggerName;
 		};
 
-        Object::Object(const std::string & name, const std::vector<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName) :
+        Object::Object(const std::string & name, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName) :
 			Type(),
 			DefinitionProvider(),
 			Definition(),
 			DocumentationProvider(),
-            priv(new Priv(name, definitions, scope, doc, loggerName))
-		{ }
-
-        Object::Object(const std::string & name, const std::list<Definition::Ptr> & definitions, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName) :
-			Type(),
-			DefinitionProvider(),
-			Definition(),
-			DocumentationProvider(),
-            priv(new Priv(name, definitions, scope, doc, loggerName))
+            priv(new Priv(name, scope, doc, loggerName))
 		{ }
 
 		Object::~Object()
 		{
 			delete priv;
 		}
+
+        void Object::setDefinitions(const std::vector<Definition::Ptr> & definitions)
+        {
+            priv->definitions = definitions;
+        }
+
+        void Object::setDefinitions(const std::list<Definition::Ptr> & definitions)
+        {
+            priv->definitions.resize(definitions.size());
+            std::copy(definitions.begin(), definitions.end(), priv->definitions.begin());
+        }
 
 		const std::vector<std::shared_ptr<Definition>> & Object::definitions() const
 		{
