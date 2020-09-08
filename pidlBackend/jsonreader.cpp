@@ -944,6 +944,7 @@ namespace PIDL
 
 	bool JSONReader::compile(Writer * writer, const std::string & json_stream, std::string & ret, ErrorCollector & ec)
 	{
+        (void)ret;
 		JSONReader p(json_stream);
 		if (!p.read(ec))
 			return false;

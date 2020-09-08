@@ -43,6 +43,7 @@ namespace PIDL { namespace JSONTools {
 		void for_each(T&& t, F f, seq<Is...>)
 		{
 			auto l = { (f(std::get<Is>(t)), 0)... };
+            (void)l;
 		}
 	}
 
