@@ -304,6 +304,8 @@ namespace PIDL
 
 		bool write(const std::vector<std::shared_ptr<Language::TopLevel>> & topLevels, ErrorCollector & ec)
 		{
+            (void)ec;
+
 			for (auto & tl : topLevels)
 			{
 				rapidjson::Document doc;
