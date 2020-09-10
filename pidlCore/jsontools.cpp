@@ -169,17 +169,45 @@ namespace PIDL { namespace JSONTools {
 	{
 		if (v.IsNull() || !v.IsNumber())
 			return false;
-		ret = v.GetInt();
-		return true;
+        ret = v.IsInt() ? v.GetInt() : static_cast<int>(v.GetDouble());
+        return true;
 	}
+
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, unsigned int & ret)
+    {
+        if (v.IsNull() || !v.IsNumber())
+            return false;
+
+        if(v.IsUint())
+            ret = v.GetUint();
+        else if(v.IsInt() || v.GetDouble() < 0)
+            return false;
+
+        ret = static_cast<unsigned int>(v.GetDouble());
+        return true;
+    }
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, long long & ret)
 	{
 		if (v.IsNull() || !v.IsNumber())
 			return false;
-		ret = v.GetInt64();
-		return true;
+        ret = v.IsInt64() ? v.GetInt64() : static_cast<long long>(v.GetDouble());
+        return true;
 	}
+
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, unsigned long long & ret)
+    {
+        if (v.IsNull() || !v.IsNumber())
+            return false;
+
+        if(v.IsUint64())
+            ret = v.GetUint64();
+        else if(v.IsInt64() || v.GetDouble() < 0)
+            return false;
+
+        ret = static_cast<unsigned int>(v.GetDouble());
+        return true;
+    }
 
 	extern PIDL_CORE__FUNCTION  bool getValue(const rapidjson::Value & v, double & ret)
 	{
@@ -311,6 +339,14 @@ namespace PIDL { namespace JSONTools {
 		return v;
 	}
 
+    extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, unsigned long long num)
+    {
+        (void)doc;
+        rapidjson::Value v(rapidjson::kNumberType);
+        v.SetUint64(num);
+        return v;
+    }
+
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, int num)
 	{
         (void)doc;
@@ -318,6 +354,14 @@ namespace PIDL { namespace JSONTools {
 		v.SetInt(num);
 		return v;
 	}
+
+    extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, unsigned int num)
+    {
+        (void)doc;
+        rapidjson::Value v(rapidjson::kNumberType);
+        v.SetUint(num);
+        return v;
+    }
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, double num)
 	{

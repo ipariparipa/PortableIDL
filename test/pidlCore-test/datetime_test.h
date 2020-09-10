@@ -12,9 +12,9 @@ class DateTime_Test : public CPPUNIT_NS::TestFixture
     CPPUNIT_TEST_SUITE_END();
 
 public:
-	virtual void setUp() override;
+    virtual void setUp() override;
 
-	virtual void tearDown() override;
+    virtual void tearDown() override;
 
 protected:
     void tm_test();

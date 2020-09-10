@@ -59,8 +59,8 @@ int main(int argc, char ** argv)
 				outputterType = OutputterType::Compiler;
 			else
 			{
-//				std::cerr << "invalid command line option: '" << argv[i] << "'" << std::endl;
-//				exit(1);
+                std::cerr << "invalid command line option: '" << argv[i] << "'" << std::endl;
+                exit(1);
 			}
 			break;
 		case ParseStatus::OutFileName:

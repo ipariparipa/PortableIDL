@@ -10,10 +10,12 @@ CONFIG -= qt
 #QMAKE_CXXFLAGS += -std=c++17
 
 SOURCES += main.cpp \
-           datetime_test.cpp
+           datetime_test.cpp \
+    json_test.cpp
 
 HEADERS += \
-           datetime_test.h
+           datetime_test.h \
+    json_test.h
 
 LIBS += -L../../pidlCore -lpidlCore
 INCLUDEPATH += ../../pidlCore/include

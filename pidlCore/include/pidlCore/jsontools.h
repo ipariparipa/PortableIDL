@@ -67,7 +67,11 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, int & ret);
 
-	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, long long & ret);
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, unsigned long long & ret);
+
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, long long & ret);
+
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, unsigned int & ret);
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, double & ret);
 
@@ -79,15 +83,6 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, std::vector<char> & ret);
 
-
-	template<typename T>
-	bool getValue(const rapidjson::Value & r, const char * name, T & ret)
-	{
-		rapidjson::Value * v;
-		if (!getValue(r, name, v))
-			return false;
-		return getValue(*v, ret);
-	}
 
 	template <typename T>
 	bool getValue(const rapidjson::Value & v, std::vector<T> & ret)
@@ -104,6 +99,15 @@ namespace PIDL { namespace JSONTools {
 
 		return !has_error;
 	}
+
+    template<typename T>
+    bool getValue(const rapidjson::Value & r, const char * name, T & ret)
+    {
+        rapidjson::Value * v;
+        if (!getValue(r, name, v))
+            return false;
+        return getValue(*v, ret);
+    }
 
 	namespace _internal {
 
@@ -149,7 +153,11 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, int num);
 
+    extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, unsigned int num);
+
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, long long num);
+
+    extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, unsigned long long num);
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, double num);
 
