@@ -5,8 +5,6 @@ CONFIG += console c++11
 CONFIG -= app_bundle
 CONFIG -= qt
 
-LIBS += -llog4cxx
-
 TARGET_FILE = $$_PRO_FILE_PWD_/include/pidlCore/platform.h
 unix {
     TEMPLATE_FILE = $$_PRO_FILE_PWD_/include/pidlCore/_platform_linux.h_

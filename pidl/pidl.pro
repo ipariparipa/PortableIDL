@@ -10,7 +10,6 @@ INCLUDEPATH += ../pidlCore/include
 
 LIBS += -L../pidlBackend -lpidlBackend
 LIBS += -L../pidlCore -lpidlCore
-LIBS += -llog4cxx
 
 SOURCES += \
     main.cpp

@@ -5,7 +5,6 @@ CONFIG += console c++11
 CONFIG -= app_bundle
 CONFIG -= qt
 
-LIBS += -llog4cxx
 LIBS += -L../pidlCore -lpidlCore
 
 INCLUDEPATH += ../pidlCore/include
