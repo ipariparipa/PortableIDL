@@ -26,7 +26,7 @@ namespace PIDL {
 
 		std::string buff;
 	};
-	
+
 	Exception::Exception(const std::list<Error> & errors) : std::exception(), priv(new Priv)
 	{
 		priv->errors = errors;
@@ -47,6 +47,15 @@ namespace PIDL {
 	{
 		delete priv;
 	}
+
+    Exception::Exception(const Exception & o) : std::exception(), priv(new Priv(*o.priv))
+    { }
+
+    Exception & Exception::operator = (const Exception & o)
+    {
+        *priv = *o.priv;
+        return *this;
+    }
 
 	const char * Exception::what() const throw()
 	{

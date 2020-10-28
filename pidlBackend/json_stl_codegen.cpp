@@ -85,14 +85,14 @@ namespace PIDL
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
 				ctx->writeTabs(code_deepness) << "func();" << std::endl;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl;
-				ctx->writeTabs(code_deepness) << "catch (exception * e)" << std::endl;
+                ctx->writeTabs(code_deepness) << "catch (exception & e)" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				ctx->writeTabs(code_deepness) << "e->get(ec); " << std::endl;
+                ctx->writeTabs(code_deepness) << "e.get(ec); " << std::endl;
 				ctx->writeTabs(code_deepness) << "return _invoke_status::Error;" << std::endl;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl;
-				ctx->writeTabs(code_deepness) << "catch (std::exception * e)" << std::endl;
+                ctx->writeTabs(code_deepness) << "catch (std::exception & e)" << std::endl;
 				ctx->writeTabs(code_deepness++) << "{" << std::endl;
-				ctx->writeTabs(code_deepness) << "ec.add((long)_invoke_status::FatalError, std::string() + \"unhandled exception: '\" + e->what() + \"'\");" << std::endl;
+                ctx->writeTabs(code_deepness) << "ec.add((long)_invoke_status::FatalError, std::string() + \"unhandled exception: '\" + e.what() + \"'\");" << std::endl;
 				ctx->writeTabs(code_deepness) << "return _invoke_status::FatalError;" << std::endl;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl;
 				ctx->writeTabs(code_deepness) << "catch (...)" << std::endl;
