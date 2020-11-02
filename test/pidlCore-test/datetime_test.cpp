@@ -40,3 +40,69 @@ void DateTime_Test::chrono_test()
     CPPUNIT_ASSERT_EQUAL(std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count(),
                          std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count());
 }
+
+void DateTime_Test::local_test()
+{
+    //DST:
+    {
+        auto tp = std::chrono::system_clock::time_point(std::chrono::seconds(1596364463)); //2020-08-02 10:34:23 UTC
+        PIDL::DateTime dt;
+        CPPUNIT_ASSERT(PIDL::toDateTime(tp, dt));
+        CPPUNIT_ASSERT_EQUAL(static_cast<short>(12), dt.hour);
+
+        {
+            tm tmp;
+            PIDL::fromDateTime(dt, tmp);
+            CPPUNIT_ASSERT_EQUAL(std::chrono::duration_cast<std::chrono::hours>(std::chrono::hours(10 /*GMT*/) + std::chrono::seconds(tmp.tm_gmtoff)).count(), std::chrono::hours(tmp.tm_hour).count());
+        }
+
+        CPPUNIT_ASSERT_EQUAL(tp.time_since_epoch().count(), PIDL::toTimepoint(dt).time_since_epoch().count());
+    }
+
+    //no DST:
+    {
+        auto tp = std::chrono::system_clock::time_point(std::chrono::seconds(1605180863)); //2020-11-02 10:34:23 UTC
+        PIDL::DateTime dt;
+        CPPUNIT_ASSERT(PIDL::toDateTime(tp, dt));
+
+        {
+            tm tmp;
+            PIDL::fromDateTime(dt, tmp);
+            CPPUNIT_ASSERT_EQUAL(std::chrono::duration_cast<std::chrono::hours>(std::chrono::hours(11 /*GMT*/) + std::chrono::seconds(tmp.tm_gmtoff)).count(), std::chrono::hours(tmp.tm_hour).count());
+        }
+
+        CPPUNIT_ASSERT_EQUAL(static_cast<short>(12), dt.hour);
+        CPPUNIT_ASSERT_EQUAL(tp.time_since_epoch().count(), PIDL::toTimepoint(dt).time_since_epoch().count());
+    }
+}
+
+void DateTime_Test::utc_test()
+{
+    //DST:
+    {
+        PIDL::DateTime dt;
+        dt.year = 2020;
+        dt.month = 8;
+        dt.day = 2;
+        dt.hour = 10;
+        dt.minute= 34;
+        dt.second = 23;
+        dt.kind = PIDL::DateTime::UTC;
+
+        CPPUNIT_ASSERT_EQUAL(std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(1596364463)).count(), PIDL::toTimepoint(dt).time_since_epoch().count());
+    }
+
+    //no DST:
+    {
+        PIDL::DateTime dt;
+        dt.year = 2020;
+        dt.month = 12;
+        dt.day = 2;
+        dt.hour = 10;
+        dt.minute= 34;
+        dt.second = 23;
+        dt.kind = PIDL::DateTime::UTC;
+
+        CPPUNIT_ASSERT_EQUAL(std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::seconds(1606905263)).count(), PIDL::toTimepoint(dt).time_since_epoch().count());
+    }
+}

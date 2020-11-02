@@ -9,6 +9,8 @@ class DateTime_Test : public CPPUNIT_NS::TestFixture
     CPPUNIT_TEST_SUITE(DateTime_Test);
     CPPUNIT_TEST(tm_test);
     CPPUNIT_TEST(chrono_test);
+    CPPUNIT_TEST(local_test);
+    CPPUNIT_TEST(utc_test);
     CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -19,6 +21,8 @@ public:
 protected:
     void tm_test();
     void chrono_test();
+    void local_test();
+    void utc_test();
 };
 
 #endif //__datetime_test_h__
