@@ -83,6 +83,18 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, std::vector<char> & ret);
 
+    template <typename T>
+    bool getValue(const rapidjson::Value & v, Nullable<T> & ret)
+    {
+        if(v.IsNull())
+        {
+            ret.setNull();
+            return true;
+        }
+
+        ret.setNotNull();
+        return getValue(v, *ret);
+    }
 
 	template <typename T>
 	bool getValue(const rapidjson::Value & v, std::vector<T> & ret)

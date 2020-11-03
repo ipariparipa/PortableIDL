@@ -275,20 +275,24 @@ namespace PIDL
 					case Role::Client:
 						ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & v, " << obj->name() << "::Ptr & ret, _error_collector & ec)" << std::endl;
 						ctx->writeTabs(code_deepness++) << "{" << std::endl;
-						ctx->writeTabs(code_deepness) << "std::string object_data;" << std::endl;
+                        ctx->writeTabs(code_deepness) << "nullable<std::string> object_data;" << std::endl;
 						ctx->writeTabs(code_deepness) << "if (!_getValue(v, object_data, ec))" << std::endl;
 						ctx->writeTabs(code_deepness + 1) << "return false;" << std::endl;
-						ctx->writeTabs(code_deepness) << "ret = std::make_shared<" << obj->name() << ">(_that, object_data);" << std::endl;
+                        ctx->writeTabs(code_deepness) << "if (!object_data)" << std::endl;
+                        ctx->writeTabs(code_deepness) << "{ ret.reset(); return true; }" << std::endl;
+                        ctx->writeTabs(code_deepness) << "ret = std::make_shared<" << obj->name() << ">(_that, *object_data);" << std::endl;
 						ctx->writeTabs(code_deepness) << "return true;" << std::endl;
 						ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 						break;
 					case Role::Server:
 						ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & v, " << obj->name() << "::Ptr & ret, _error_collector & ec)" << std::endl;
 						ctx->writeTabs(code_deepness++) << "{" << std::endl;
-						ctx->writeTabs(code_deepness) << "std::string id;" << std::endl;
-						ctx->writeTabs(code_deepness) << "if (!PIDL::JSONTools::getValue(v, id))" << std::endl;
+                        ctx->writeTabs(code_deepness) << "nullable<std::string> object_data;" << std::endl;
+                        ctx->writeTabs(code_deepness) << "if (!PIDL::JSONTools::getValue(v, object_data))" << std::endl;
 						ctx->writeTabs(code_deepness) << "{ ec << \"value is invalid\"; return false; }" << std::endl;
-						ctx->writeTabs(code_deepness) << "return (bool)(ret = _that->_get_object<" << obj->name() << ">(id, ec));" << std::endl;
+                        ctx->writeTabs(code_deepness) << "if (!object_data)" << std::endl;
+                        ctx->writeTabs(code_deepness) << "{ ret.reset(); return true; }" << std::endl;
+                        ctx->writeTabs(code_deepness) << "return (bool)(ret = _that->_get_object<" << obj->name() << ">(*object_data, ec));" << std::endl;
 						ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
 						ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & r, const char * name, " << obj->name() << "::Ptr & ret, _error_collector & ec)" << std::endl;
@@ -330,7 +334,7 @@ namespace PIDL
 				{
 					auto obj = dynamic_cast<Language::Object*>(d.get());
 					ctx->writeTabs(code_deepness) << "rapidjson::Value _createValue(rapidjson::Document & doc, const " << obj->name() << "::Ptr & in)" << std::endl;
-					ctx->writeTabs(code_deepness) << "{ return PIDL::JSONTools::createValue(doc, in->_data()); }" << std::endl << std::endl;
+                    ctx->writeTabs(code_deepness) << "{ return in ? PIDL::JSONTools::createValue(doc, in->_data()) : rapidjson::Value(rapidjson::kNullType); }" << std::endl << std::endl;
 				}
 			}
 
