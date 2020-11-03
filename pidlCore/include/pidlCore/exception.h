@@ -28,17 +28,18 @@ namespace PIDL {
 
 	class PIDL_CORE__CLASS Exception : public std::exception
 	{
-		PIDL_COPY_PROTECTOR(Exception)
 		struct Priv;
 		Priv * priv;
 	public:
 		typedef std::pair<long, std::string> Error;
 
-
 		Exception(const std::list<Error> & errors);
 		Exception(const Error & error);
 		Exception(long code, const std::string & msg);
 		virtual ~Exception() throw();
+
+        Exception(const Exception & o);
+        Exception & operator = (const Exception & o);
 
 		virtual const char * what() const throw();
 
@@ -71,8 +72,14 @@ namespace PIDL {
 
 		void throwException()
 		{
-			throw new Exception(_errors);
+            throw Exception(_errors);
 		}
+
+        void throwException(long errorCode, const std::string & errorText)
+        {
+            append(errorCode, errorText);
+            throw Exception(_errors);
+        }
 
 		virtual void clear()
 		{
