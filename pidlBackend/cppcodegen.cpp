@@ -276,11 +276,11 @@ namespace PIDL
 				o << "blob";
 
 			return true;
-		}
+        }
 
 		bool addObject(CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
 		{
-			*ctx << getScope(obj) << obj->name() << "::Ptr";
+            *ctx << "ptr<" << getScope(obj) << obj->name() << ">";
 			return true;
 		}
 
@@ -677,7 +677,7 @@ namespace PIDL
 				if (!that->writePrivateSection(intf, code_deepness, ctx, obj, ec))
 					return false;
 				ctx->writeTabs(code_deepness - 1) << "public:" << std::endl;
-				ctx->writeTabs(code_deepness) << "typedef std::shared_ptr<" << obj->name() << "> Ptr;" << std::endl;
+               ctx->writeTabs(code_deepness) << "typedef ptr<" << obj->name() << "> Ptr;" << std::endl;
 				break;
 			case Mode::Implementatinon:
 				if (!that->writePrivateSection(intf, code_deepness, ctx, obj, ec))
@@ -866,25 +866,31 @@ namespace PIDL
 			case Mode::Declaration:
 				if (!that->writeObjectBase(intf, code_deepness, ctx, ec))
 					return false;
-				break;
+
+                //write predeclarations of objects
+                for (auto & definition : intf->definitions())
+                    if (auto o = dynamic_cast<Language::Object*>(definition.get()))
+                        ctx->writeTabs(code_deepness) << "class " << o->name() << ";" << std::endl;
+
+                break;
 			case Mode::Implementatinon:
 				break;
 			}
 
-			for (auto & definition : intf->definitions())
-				if (dynamic_cast<Language::TypeDefinition*>(definition.get()))
+            for (auto & definition : intf->definitions())
+                if (auto o = dynamic_cast<Language::TypeDefinition*>(definition.get()))
 				{
-					if (!writeTypeDefinition(code_deepness, ctx, dynamic_cast<Language::TypeDefinition*>(definition.get()), ec))
+                    if (!writeTypeDefinition(code_deepness, ctx, o, ec))
 						return false;
 				}
-				else if (dynamic_cast<Language::FunctionVariant*>(definition.get()))
+                else if (auto o = dynamic_cast<Language::FunctionVariant*>(definition.get()))
 				{
-					if (!writeFunction(intf, code_deepness, ctx, dynamic_cast<Language::FunctionVariant*>(definition.get()), ec))
+                    if (!writeFunction(intf, code_deepness, ctx, o, ec))
 						return false;
 				}
-				else if (dynamic_cast<Language::Object*>(definition.get()))
+                else if (auto o = dynamic_cast<Language::Object*>(definition.get()))
 				{
-					if (!writeObject(intf, code_deepness, ctx, dynamic_cast<Language::Object*>(definition.get()), ec))
+                    if (!writeObject(intf, code_deepness, ctx, o, ec))
 						return false;
 				}
 
@@ -894,14 +900,14 @@ namespace PIDL
 		bool writeDefinitions(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
 		{
 			for (auto & definition : obj->definitions())
-				if (dynamic_cast<Language::Property*>(definition.get()))
+                if (auto o = dynamic_cast<Language::Property*>(definition.get()))
 				{
-					if (!writeProperty(intf, code_deepness, ctx, dynamic_cast<Language::Property*>(definition.get()), ec))
+                    if (!writeProperty(intf, code_deepness, ctx, o, ec))
 						return false;
 				}
-				else if (dynamic_cast<Language::MethodVariant*>(definition.get()))
+                else if (auto o = dynamic_cast<Language::MethodVariant*>(definition.get()))
 				{
-					if (!writeFunction(intf, code_deepness, ctx, dynamic_cast<Language::MethodVariant*>(definition.get()), ec))
+                    if (!writeFunction(intf, code_deepness, ctx, o, ec))
 						return false;
 				}
 

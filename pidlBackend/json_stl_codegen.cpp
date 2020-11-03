@@ -63,7 +63,7 @@ namespace PIDL
 			switch (ctx->role())
 			{
 			case Role::Server:
-				//ctx->writeTabs(code_deepness) << "std::map<std::string, _Object::Ptr> _objects;" << std::endl;
+                //ctx->writeTabs(code_deepness) << "std::map<std::string, ptr<_Object> _objects;" << std::endl;
 				ctx->writeTabs(code_deepness) << "typedef std::function<_invoke_status(const rapidjson::Value & root, rapidjson::Document & ret, _error_collector & ec)> _Function;" << std::endl;
 				ctx->writeTabs(code_deepness) << "struct _Variants { std::map<std::string, _Function> data; };" << std::endl;
 				ctx->writeTabs(code_deepness) << "std::map<std::string, _Variants> _functions;" << std::endl;
@@ -273,7 +273,7 @@ namespace PIDL
 					switch (ctx->role())
 					{
 					case Role::Client:
-						ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & v, " << obj->name() << "::Ptr & ret, _error_collector & ec)" << std::endl;
+                        ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & v, ptr<" << obj->name() << "> & ret, _error_collector & ec)" << std::endl;
 						ctx->writeTabs(code_deepness++) << "{" << std::endl;
                         ctx->writeTabs(code_deepness) << "nullable<std::string> object_data;" << std::endl;
 						ctx->writeTabs(code_deepness) << "if (!_getValue(v, object_data, ec))" << std::endl;
@@ -285,7 +285,7 @@ namespace PIDL
 						ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 						break;
 					case Role::Server:
-						ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & v, " << obj->name() << "::Ptr & ret, _error_collector & ec)" << std::endl;
+                        ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & v, ptr<" << obj->name() << "> & ret, _error_collector & ec)" << std::endl;
 						ctx->writeTabs(code_deepness++) << "{" << std::endl;
                         ctx->writeTabs(code_deepness) << "nullable<std::string> object_data;" << std::endl;
                         ctx->writeTabs(code_deepness) << "if (!PIDL::JSONTools::getValue(v, object_data))" << std::endl;
@@ -295,7 +295,7 @@ namespace PIDL
                         ctx->writeTabs(code_deepness) << "return (bool)(ret = _that->_get_object<" << obj->name() << ">(*object_data, ec));" << std::endl;
 						ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
-						ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & r, const char * name, " << obj->name() << "::Ptr & ret, _error_collector & ec)" << std::endl;
+                        ctx->writeTabs(code_deepness) << "bool _getValue(const rapidjson::Value & r, const char * name, ptr<" << obj->name() << "> & ret, _error_collector & ec)" << std::endl;
 						ctx->writeTabs(code_deepness++) << "{" << std::endl;
 						ctx->writeTabs(code_deepness) << "rapidjson::Value * v; " << std::endl;
 						ctx->writeTabs(code_deepness) << "if (!PIDL::JSONTools::getValue(r, name, v))" << std::endl;
@@ -333,7 +333,7 @@ namespace PIDL
 				else if (dynamic_cast<Language::Object*>(d.get()))
 				{
 					auto obj = dynamic_cast<Language::Object*>(d.get());
-					ctx->writeTabs(code_deepness) << "rapidjson::Value _createValue(rapidjson::Document & doc, const " << obj->name() << "::Ptr & in)" << std::endl;
+                    ctx->writeTabs(code_deepness) << "rapidjson::Value _createValue(rapidjson::Document & doc, const ptr<" << obj->name() << "> & in)" << std::endl;
                     ctx->writeTabs(code_deepness) << "{ return in ? PIDL::JSONTools::createValue(doc, in->_data()) : rapidjson::Value(rapidjson::kNullType); }" << std::endl << std::endl;
 				}
 			}
@@ -677,7 +677,8 @@ namespace PIDL
 		ctx->writeTabs(code_deepness) << "template<typename T> using nullable_const_ref = PIDL::NullableConstRef<T>;" << std::endl;
 		ctx->writeTabs(code_deepness) << "template<typename T> using array = std::vector<T>;" << std::endl;
 		ctx->writeTabs(code_deepness) << "template<typename ...T> using tuple = std::tuple<T...>;" << std::endl;
-		ctx->writeTabs(code_deepness) << "using string = std::string;" << std::endl;
+        ctx->writeTabs(code_deepness) << "template<typename T> using ptr = std::shared_ptr<T>;" << std::endl;
+        ctx->writeTabs(code_deepness) << "using string = std::string;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using datetime = PIDL::DateTime;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using blob = std::vector<char>;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using exception = PIDL::Exception;" << std::endl;
@@ -1180,8 +1181,8 @@ namespace PIDL
 			ctx->writeTabs(code_deepness) << "class _Object" << std::endl;
 			ctx->writeTabs(code_deepness++) << "{" << std::endl;
 			ctx->writeTabs(code_deepness - 1) << "public:" << std::endl;
-			ctx->writeTabs(code_deepness) << "typedef std::shared_ptr<_Object> Ptr;" << std::endl;
-			ctx->writeTabs(code_deepness) << "virtual ~_Object() = default;" << std::endl;
+            ctx->writeTabs(code_deepness) << "typedef ptr<_Object> Ptr;" << std::endl;
+            ctx->writeTabs(code_deepness) << "virtual ~_Object() = default;" << std::endl;
 			switch (ctx->role())
 			{
 			case Role::Client:
@@ -1211,8 +1212,8 @@ namespace PIDL
 			case Role::Server:
 				if (priv->hasObjects(intf))
 				{
-					ctx->writeTabs(code_deepness) << "virtual _Object::Ptr _get_object(const std::string & object_data, _error_collector & ec) = 0;" << std::endl;
-					ctx->writeTabs(code_deepness) << "template<class Object_T> typename Object_T::Ptr _get_object(const std::string & object_data, _error_collector & ec)" << std::endl;
+                    ctx->writeTabs(code_deepness) << "virtual ptr<_Object> _get_object(const std::string & object_data, _error_collector & ec) = 0;" << std::endl;
+                    ctx->writeTabs(code_deepness) << "template<class Object_T> ptr<Object_T> _get_object(const std::string & object_data, _error_collector & ec)" << std::endl; //**
 					ctx->writeTabs(code_deepness++) << "{" << std::endl;
 					ctx->writeTabs(code_deepness) << "auto o = _get_object(object_data, ec);" << std::endl;
 					ctx->writeTabs(code_deepness) << "if (!o) return nullptr;" << std::endl;
