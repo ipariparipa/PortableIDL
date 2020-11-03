@@ -667,10 +667,15 @@ namespace PIDL {
 
 		struct Object::Priv
 		{
-            Priv(const std::string & name_, const std::vector<std::string> & scope_, const Documentation & doc_, const std::string & loggerName_) :
-                name(name_), scope(scope_), doc(doc_), loggerName(loggerName_)
+            Priv(const std::string & name, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName) :
+                initialized(true), name(name), scope(scope), doc(doc), loggerName(loggerName)
 			{ }
 
+            Priv(const std::string & name) :
+                initialized(false), name(name)
+            { }
+
+            bool initialized;
 			std::string name;
 			std::vector<std::string> scope;
 			std::vector<std::shared_ptr<Definition>> definitions;
@@ -686,10 +691,30 @@ namespace PIDL {
             priv(new Priv(name, scope, doc, loggerName))
 		{ }
 
+        Object::Object(const std::string & name) :
+            Type(),
+            DefinitionProvider(),
+            Definition(),
+            DocumentationProvider(),
+            priv(new Priv(name))
+        { }
+
 		Object::~Object()
 		{
 			delete priv;
 		}
+
+        void Object::init(const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName)
+        {
+            priv->scope = scope;
+            priv->doc = doc;
+            priv->loggerName = loggerName;
+        }
+
+        bool Object::initialized() const
+        {
+            return priv->initialized;
+        }
 
         void Object::setDefinitions(const std::vector<Definition::Ptr> & definitions)
         {

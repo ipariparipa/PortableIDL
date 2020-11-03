@@ -623,8 +623,23 @@ namespace PIDL
             if (!readDocumentation(v, doc, error_path, ec))
                 return false;
 
-            ret = std::make_shared<Language::Object>(name, scope, doc, loggerName);
-            registry.types[name] = ret;
+            if(registry.types.count(name))
+            {
+                if(!(ret = std::dynamic_pointer_cast<Language::Object>(registry.types[name])))
+                {
+                    ec << (error_path + ": '" + name + "' has been already registered as a different type");
+                    return false;
+                }
+                if(ret->initialized())
+                {
+                    ec << (error_path + ": object '" + name + "' has been already registered");
+                    return false;
+                }
+                ret->init(scope, doc, loggerName);
+            }
+            else
+                registry.types[name] = ret = std::make_shared<Language::Object>(name, scope, doc, loggerName);
+
             registry.definitions[name] = ret;
             registry.definitions_list.push_back(ret);
 
@@ -700,6 +715,46 @@ namespace PIDL
 					ec << ("body of interface '" + name + "' is not array");
 					return false;
 				}
+
+                //prebuild registry
+                for (rapidjson::SizeType i(0), l(b->Size()); i < l; ++i)
+                {
+                    auto & e = (*b)[i];
+                    if (!e.IsNull())
+                    {
+                        std::string e_name;
+                        if (!getName(e, e_name))
+                        {
+                            ec << ("name of element #" + std::to_string(i) + " of interface '" + name + "' is not specified");
+                            return false;
+                        }
+
+                        std::string e_nature;
+                        if (!getNature(e, e_nature))
+                        {
+                            ec << ("nature of element '" + name + "." + e_name + "' is not specified");
+                            return false;
+                        }
+
+                        if (e_nature == "object")
+                        {
+                            if(registry.types.count(e_name))
+                            {
+                                if(!(std::dynamic_pointer_cast<Language::Object>(registry.types[e_name])))
+                                {
+                                    ec << (e_name+": type definition is alread found but not as an object'");
+                                    return false;
+                                }
+                            }
+                            else
+                            {
+                                auto obj = std::make_shared<Language::Object>(e_name);
+                                registry.types[e_name] = obj;
+                            }
+                        }
+                    }
+                }
+
 				for (rapidjson::SizeType i(0), l(b->Size()); i < l; ++i)
 				{
 					auto & e = (*b)[i];

@@ -476,7 +476,10 @@ namespace PIDL { namespace Language {
 		typedef std::shared_ptr<Object> Ptr;
 
         Object(const std::string & name, const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName);
+        Object(const std::string & name);
         virtual ~Object() override;
+        void init(const std::vector<std::string> & scope, const Documentation & doc, const std::string & loggerName);
+        bool initialized() const;
         void setDefinitions(const std::vector<Definition::Ptr> & definitions);
         void setDefinitions(const std::list<Definition::Ptr> & definitions);
         const std::vector<Definition::Ptr> & definitions() const override;

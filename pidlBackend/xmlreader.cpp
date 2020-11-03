@@ -336,7 +336,7 @@ namespace PIDL
 					return false;
 				ret = std::make_shared<Language::Tuple>(tmp);
 			}
-			else 
+            else
 			{
 				if (registry.embedded_types.count(name))
 					ret = registry.embedded_types[name];
@@ -536,8 +536,23 @@ namespace PIDL
             if (!readDocumentation(v, doc, error_path, ec))
                 return false;
 
-            ret = std::make_shared<Language::Object>(name, scope, doc, loggerName);
-            interfaceRegistry.types[name] = ret;
+            if(interfaceRegistry.types.count(name))
+            {
+                if(!(ret = std::dynamic_pointer_cast<Language::Object>(interfaceRegistry.types[name])))
+                {
+                    ec << (error_path + ": '" + name + "' has been already registered as a different type");
+                    return false;
+                }
+                if(ret->initialized())
+                {
+                    ec << (error_path + ": object '" + name + "' has been already registered");
+                    return false;
+                }
+                ret->init(scope, doc, loggerName);
+            }
+            else
+                interfaceRegistry.types[name] = ret = std::make_shared<Language::Object>(name, scope, doc, loggerName);
+
             interfaceRegistry.definitions[name] = ret;
             interfaceRegistry.definitions_list.push_back(ret);
 
@@ -707,7 +722,44 @@ namespace PIDL
 
 			if (getNode(v, "body", b))
 			{
-				size_t i(0);
+                //prebuild registry
+                size_t i(0);
+                for (auto e = b->first_node(); e; e = e->next_sibling())
+                {
+                    ++i;
+                    std::string e_name;
+                    if (!getName(e, e_name))
+                    {
+                        ec << ("name of element #" + std::to_string(i) + " of interface '" + name + "' is not specified");
+                        return false;
+                    }
+
+                    std::string e_nature;
+                    if (!getNature(e, e_nature))
+                    {
+                        ec << ("nature of element '" + name + "." + e_name + "' is not specified");
+                        return false;
+                    }
+
+                    if (e_nature == "object")
+                    {
+                        if(registry.types.count(e_name))
+                        {
+                            if(!(std::dynamic_pointer_cast<Language::Object>(registry.types[e_name])))
+                            {
+                                ec << (e_name+": type definition is alread found but not as an object'");
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            auto obj = std::make_shared<Language::Object>(e_name);
+                            registry.types[e_name] = obj;
+                        }
+                    }
+                }
+
+                i = 0;
 				for (auto e = b->first_node(); e; e = e->next_sibling())
 				{
 					++i;
@@ -925,6 +977,7 @@ namespace PIDL
 
 	bool XMLReader::compile(Writer * writer, const std::string & xml_stream, std::string & ret, ErrorCollector & ec)
 	{
+        (void)ret;
 		XMLReader p(xml_stream);
 		if (!p.read(ec))
 			return false;
