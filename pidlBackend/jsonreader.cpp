@@ -97,9 +97,41 @@ namespace PIDL
 			return !ret->IsNull();
 		}
 
-		struct ElementRegistry
+
+        struct InterfaceElementRegistry;
+
+        struct BaseElementRegistry
+        {
+            std::string path;
+
+            std::map<std::string, std::shared_ptr<Language::Type>> types;
+
+            std::map<std::string, std::shared_ptr<Language::Definition>> definitions;
+            std::list<std::shared_ptr<Language::Definition>> definitions_list;
+
+            InterfaceElementRegistry * interfaceRegistry =  nullptr;
+
+            const std::shared_ptr<Language::Type> & getType(const std::string & name) const
+            {
+                assert(interfaceRegistry);
+                if (interfaceRegistry->embedded_types.count(name))
+                    return interfaceRegistry->embedded_types.at(name);
+                else if (types.count(name))
+                    return types.at(name);
+                else if (interfaceRegistry->types.count(name))
+                    return interfaceRegistry->types.at(name);
+
+                static const std::shared_ptr<Language::Type> null;
+                return null;
+            }
+
+        protected:
+            BaseElementRegistry() = default;
+        };
+
+        struct InterfaceElementRegistry : public BaseElementRegistry
 		{
-			ElementRegistry()
+            InterfaceElementRegistry()
 			{
 				embedded_types["integer"].reset(new Language::Integer());
 				embedded_types["float"].reset(new Language::Float());
@@ -108,23 +140,19 @@ namespace PIDL
 				embedded_types["void"].reset(new Language::Void());
 				embedded_types["boolean"].reset(new Language::Boolean());
 				embedded_types["blob"].reset(new Language::Blob());
+                interfaceRegistry = this;
 			}
 
-			std::string path;
 			std::map<std::string, std::shared_ptr<Language::Type>> embedded_types;
-			std::map<std::string, std::shared_ptr<Language::Type>> types;
 			std::map<std::string, std::shared_ptr<Language::Function>> functions;
-
-			std::map<std::string, std::shared_ptr<Language::Definition>> definitions;
-			std::list<std::shared_ptr<Language::Definition>> definitions_list;
 		};
 
-		struct ObjectElementRegistry
+        struct ObjectElementRegistry : public BaseElementRegistry
 		{
-			std::string path;
-
-			std::map<std::string, std::shared_ptr<Language::Definition>> definitions;
-			std::list<std::shared_ptr<Language::Definition>> definitions_list;
+            ObjectElementRegistry(InterfaceElementRegistry * reg)
+            {
+                interfaceRegistry = reg;
+            }
 		};
 
         std::string appendLoggerName(const std::string & base, const std::string name)
@@ -166,7 +194,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool readType(ElementRegistry & registry, const rapidjson::Value & v, std::vector<Language::Type::Ptr> & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readType(BaseElementRegistry & registry, const rapidjson::Value & v, std::vector<Language::Type::Ptr> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (v.IsNull() || !v.IsArray())
 			{
@@ -184,7 +212,7 @@ namespace PIDL
 			return !has_error;
 		}
 
-		bool readType(ElementRegistry & registry, const rapidjson::Value & v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readType(BaseElementRegistry & registry, const rapidjson::Value & v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (v.IsNull())
 			{
@@ -195,19 +223,13 @@ namespace PIDL
 			{
 				std::string name = v.GetString();
 
-				if (registry.embedded_types.count(name))
-				{
-					ret = registry.embedded_types[name];
-					return true;
-				}
-
-				if (!registry.types.count(name))
-				{
-					ec << (error_path + ": type '" + name + "' is not found in '" + registry.path + "'");
+                if (!(ret = registry.getType(name)))
+                {
+                    ec << (error_path + ": type '" + name + "' is not found in '" + registry.path + "'");
 					return false;
 				}
-				ret = registry.types[name];
-				return true;
+
+                return true;
 			}
 			else if (v.IsObject())
 			{
@@ -223,7 +245,7 @@ namespace PIDL
 			return false;
 		}
 
-		bool readType(ElementRegistry & registry, const std::string & name, const rapidjson::Value & v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readType(BaseElementRegistry & registry, const std::string & name, const rapidjson::Value & v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (v.IsNull() || !v.IsObject())
 			{
@@ -317,13 +339,16 @@ namespace PIDL
 			}
 			else
 			{
-				ec << ("name '"+name+"' of type '" + error_path + "' is invalid");
-				return false;
-			}
+                if (!(ret = registry.getType(name)))
+                {
+                    ec << (error_path + ": type '" + name + "' is not found in '" + registry.path + "'");
+                    return false;
+                }
+            }
 			return true;
 		}
 
-		bool readTypeDefinition(ElementRegistry & registry, const std::vector<std::string> & scope, std::string & name, const rapidjson::Value & v, std::shared_ptr<Language::TypeDefinition> & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readTypeDefinition(BaseElementRegistry & registry, const std::vector<std::string> & scope, std::string & name, const rapidjson::Value & v, std::shared_ptr<Language::TypeDefinition> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (v.IsNull() || !v.IsObject())
 			{
@@ -339,6 +364,12 @@ namespace PIDL
 			std::shared_ptr<Language::Type> tmp;
 			if (!readType(registry, *t, tmp, error_path, ec))
 				return false;
+
+            if (registry.interfaceRegistry->embedded_types.count(name))
+            {
+                ec << (error_path + ": name '" + name + "' is already registered as enbedded type");
+                return false;
+            }
 
 			if (registry.definitions.count(name))
 			{
@@ -356,7 +387,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool readFunction(ElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, Language::Function::Variant::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readFunction(InterfaceElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, Language::Function::Variant::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidjson::Value * as;
 
@@ -469,7 +500,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool readMethod(ElementRegistry & registry, ObjectElementRegistry & obj_registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, Language::Method::Variant::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readMethod(ObjectElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, Language::Method::Variant::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidjson::Value * as;
 
@@ -562,9 +593,9 @@ namespace PIDL
 				return false;
 
 			Language::Method::Ptr meth;
-			if (!obj_registry.definitions.count(name))
-				obj_registry.definitions[name] = meth = std::make_shared<Language::Method>(scope, name);
-			else if (!(meth = std::dynamic_pointer_cast<Language::Method>(obj_registry.definitions[name])))
+            if (!registry.definitions.count(name))
+                registry.definitions[name] = meth = std::make_shared<Language::Method>(scope, name);
+            else if (!(meth = std::dynamic_pointer_cast<Language::Method>(registry.definitions[name])))
 			{
 				ec << (error_path + ": unexpected: name '" + name + "' has different definition type");
 				return false;
@@ -578,11 +609,11 @@ namespace PIDL
 				return false;
 			}
 
-			obj_registry.definitions_list.push_back(meth->variants()[var->variantId()] = ret = var);
+            registry.definitions_list.push_back(meth->variants()[var->variantId()] = ret = var);
 			return true;
 		}
 
-		bool readProperty(ElementRegistry & registry, ObjectElementRegistry & obj_registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, std::shared_ptr<Language::Property> & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readProperty(ObjectElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, std::shared_ptr<Language::Property> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidjson::Value * r;
 			if (!getTypeValue(v, r))
@@ -597,7 +628,7 @@ namespace PIDL
 			bool read_only = false;
 			JSONTools::getValue(v, "readonly", read_only);
 
-			if (obj_registry.definitions.count(name))
+            if (registry.definitions.count(name))
 			{
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
@@ -607,15 +638,15 @@ namespace PIDL
 			if (!readDocumentation(v, doc, error_path, ec))
 				return false;
 
-			obj_registry.definitions[name] = ret = std::make_shared<Language::Property>(type, scope, name, read_only, doc);
-			obj_registry.definitions_list.push_back(ret);
+            registry.definitions[name] = ret = std::make_shared<Language::Property>(type, scope, name, read_only, doc);
+            registry.definitions_list.push_back(ret);
 			return true;
 		}
 
-        bool readObject(const std::string & baseLoggerName, ElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, Language::Object::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readObject(const std::string & baseLoggerName, BaseElementRegistry & parentRegistry, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, Language::Object::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
-			ObjectElementRegistry obj_registry;
-			obj_registry.path = registry.path + "." + name;
+            ObjectElementRegistry registry(parentRegistry.interfaceRegistry);
+            registry.path = registry.path + "." + name;
 
             auto loggerName = appendLoggerName(baseLoggerName, name);
 
@@ -623,9 +654,15 @@ namespace PIDL
             if (!readDocumentation(v, doc, error_path, ec))
                 return false;
 
-            if(registry.types.count(name))
+            if(parentRegistry.interfaceRegistry->embedded_types.count(name))
             {
-                if(!(ret = std::dynamic_pointer_cast<Language::Object>(registry.types[name])))
+                ec << (error_path + ": '" + name + "' has been already registered as embedded type");
+                return false;
+            }
+
+            if(parentRegistry.types.count(name))
+            {
+                if(!(ret = std::dynamic_pointer_cast<Language::Object>(parentRegistry.types[name])))
                 {
                     ec << (error_path + ": '" + name + "' has been already registered as a different type");
                     return false;
@@ -638,10 +675,10 @@ namespace PIDL
                 ret->init(scope, doc, loggerName);
             }
             else
-                registry.types[name] = ret = std::make_shared<Language::Object>(name, scope, doc, loggerName);
+                parentRegistry.types[name] = ret = std::make_shared<Language::Object>(name, scope, doc, loggerName);
 
-            registry.definitions[name] = ret;
-            registry.definitions_list.push_back(ret);
+            parentRegistry.definitions[name] = ret;
+            parentRegistry.definitions_list.push_back(ret);
 
 			rapidjson::Value * b;
 			if (JSONTools::getValue(v, "body", b))
@@ -670,12 +707,28 @@ namespace PIDL
 							return false;
 						}
 
-						if (e_nature == "property")
-						{
+                        if (e_nature == "typedef")
+                        {
+                            auto _scope = scope;
+                            _scope.push_back(name);
+                            std::shared_ptr<Language::TypeDefinition> tmp;
+                            if (!readTypeDefinition(registry, _scope, e_name, e, tmp, name + "." + e_name, ec))
+                                return false;
+                        }
+                        else if (e_nature == "object")
+                        {
+                            auto _scope = scope;
+                            _scope.push_back(name);
+                            std::shared_ptr<Language::Object> tmp;
+                            if (!readObject(loggerName, registry, _scope, e_name, e, tmp, name + "." + e_name, ec))
+                                return false;
+                        }
+                        else if (e_nature == "property")
+                        {
 							std::shared_ptr<Language::Property> tmp;
 							auto _scope = scope;
 							_scope.push_back(name);
-                            if (!readProperty(registry, obj_registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
+                            if (!readProperty(registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
 								return false;
 						}
 						else if (e_nature == "method")
@@ -683,7 +736,7 @@ namespace PIDL
 							Language::Method::Variant::Ptr tmp;
 							auto _scope = scope;
 							_scope.push_back(name);
-							if (!readMethod(registry, obj_registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
+                            if (!readMethod(registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
 								return false;
 						}
 						else
@@ -695,14 +748,14 @@ namespace PIDL
 				}
 			}
 
-            ret->setDefinitions(obj_registry.definitions_list);
+            ret->setDefinitions(registry.definitions_list);
 
             return true;
 		}
 
         bool readInterface(const std::string & baseLoggerName, const std::vector<std::string> & scope, const std::string & name, const rapidjson::Value & v, std::shared_ptr<Language::Interface> & ret, ErrorCollector & ec)
 		{
-			ElementRegistry registry;
+            InterfaceElementRegistry registry;
 			registry.path = name;
 
             auto loggerName = baseLoggerName;
@@ -818,7 +871,7 @@ namespace PIDL
 
         bool readModule(const std::string & baseLoggerName, const std::string name, const rapidjson::Value & v, std::shared_ptr<Language::Module> & ret, ErrorCollector & ec)
 		{
-			ElementRegistry registry;
+            InterfaceElementRegistry registry;
 			registry.path = name;
 
 			Language::TopLevel::Info info;

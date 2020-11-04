@@ -211,7 +211,19 @@ namespace PIDL
 
 			for (auto & d : o->definitions())
 			{
-				if (dynamic_cast<Language::MethodVariant*>(d.get()))
+                if (dynamic_cast<Language::TypeDefinition*>(d.get()))
+                {
+                    rapidjson::Value e(rapidjson::kObjectType);
+                    addTypeDefinition(doc, e, std::dynamic_pointer_cast<Language::TypeDefinition>(d));
+                    b.PushBack(e, doc.GetAllocator());
+                }
+                else if (dynamic_cast<Language::Object*>(d.get()))
+                {
+                    rapidjson::Value e(rapidjson::kObjectType);
+                    addObject(doc, e, std::dynamic_pointer_cast<Language::Object>(d));
+                    b.PushBack(e, doc.GetAllocator());
+                }
+                else if (dynamic_cast<Language::MethodVariant*>(d.get()))
 				{
 					rapidjson::Value e(rapidjson::kObjectType);
 					addMethod(doc, e, std::dynamic_pointer_cast<Language::MethodVariant>(d));
