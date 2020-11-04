@@ -26,6 +26,53 @@ along with pidlBackend.  If not, see <http://www.gnu.org/licenses/>
 
 namespace PIDL
 {
+    namespace  {
+        std::list<std::string> split(const std::string & src, char delimeter)
+        {
+            std::stringstream ss(src);
+            std::string item;
+            std::list<std::string> splittedStrings;
+            while (std::getline(ss, item, delimeter))
+                splittedStrings.push_back(item);
+            return splittedStrings;
+        };
+
+        std::string join(const std::list<std::string> & src, char delimeter)
+        {
+            std::stringstream ss;
+            bool is_first = true;
+            for (auto & s : src)
+            {
+                if (is_first)
+                    is_first = false;
+                else if (delimeter)
+                    ss << delimeter;
+                ss << s;
+            }
+            return ss.str();
+        };
+
+        std::string replace(const std::string & str, char before, char after)
+        {
+            return join(split(str, before), after);
+        }
+
+        std::string trim(const std::string & str, char sp)
+        {
+            auto first = str.find_first_not_of(sp);
+            auto last = str.find_last_not_of(sp);
+            if(first == std::string::npos)
+                first = 0;
+            if(last == std::string::npos)
+                last = str.length() - 1;
+            return str.substr(first, (last-first+1));
+        }
+
+        std::string clear(const std::string & str)
+        {
+            return trim(trim(replace(str, '\r', '\0'), '\t'), ' ');
+        }
+    }
 
 	//struct CStyleDocumentation::Priv { };
 	CStyleDocumentation::CStyleDocumentation() : priv(nullptr) { }
@@ -38,6 +85,11 @@ namespace PIDL
 
 	bool CStyleVoidDocumentation::write(short code_deepness, CodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec)
 	{
+        (void)code_deepness;
+        (void)ctx;
+        (void)place;
+        (void)docprov;
+        (void)ec;
 		return true;
 	}
 
@@ -48,48 +100,18 @@ namespace PIDL
 
 	bool CStyleBasicDocumentation::write(short code_deepness, CodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec)
 	{
+        (void)ec;
 		auto & doc = docprov->documentation();
 
 		if (!doc.brief.length() && !doc.details.size())
 			return true;
-
-		auto split = [](const std::string & src, char delimeter) -> std::list<std::string>
-		{
-			std::stringstream ss(src);
-			std::string item;
-			std::list<std::string> splittedStrings;
-			while (std::getline(ss, item, delimeter))
-				splittedStrings.push_back(item);
-			return splittedStrings;
-		};
-
-		auto join = [](const std::list<std::string> & src, char delimeter) -> std::string
-		{
-			std::stringstream ss;
-			bool is_first = true;
-			for (auto & s : src)
-			{
-				if (is_first)
-					is_first = false;
-				else if (delimeter)
-					ss << delimeter;
-				ss << s;
-			}
-			return ss.str();
-		};
-
-
-		auto clean = [&](const std::string & str) -> std::string
-		{
-			return join(split(str, '\r'), '\0');
-		};
 
 		auto writeLines = [&](const std::string & title, const std::list<std::string> & lines)
 		{
 			if (title.length())
 				ctx->writeTabs(code_deepness) << " * " << title << std::endl;
 			for (auto & l : lines)
-				ctx->writeTabs(code_deepness) << " * " << clean(l) << std::endl;
+                ctx->writeTabs(code_deepness) << " * " << clear(l) << std::endl;
 		};
 
 		switch (place)
@@ -104,11 +126,13 @@ namespace PIDL
 					writeLines(std::string(), split(doc.brief, '\n'));
 
 				if (doc.details.count(Language::DocumentationProvider::Documentation::Description))
-					writeLines("Description:", split(doc.details.at(Language::DocumentationProvider::Documentation::Description), '\n'));
+                    writeLines("\n", split(doc.details.at(Language::DocumentationProvider::Documentation::Description), '\n'));
 
 				if (dynamic_cast<Language::Function*>(docprov) &&
 					doc.details.count(Language::DocumentationProvider::Documentation::Return))
-					writeLines("Return:", split(doc.details.at(Language::DocumentationProvider::Documentation::Return), '\n'));
+                    writeLines("\nReturn:", split(doc.details.at(Language::DocumentationProvider::Documentation::Return), '\n'));
+
+                // Language::DocumentationProvider::Documentation::Group is not handled here
 
 				ctx->writeTabs(code_deepness) << " */" << std::endl;
 			}
@@ -116,7 +140,7 @@ namespace PIDL
 		case Place::After:
 			if (dynamic_cast<Language::FunctionVariant::Argument*>(docprov))
 			{
-				*ctx << " // " << clean(join(split(doc.brief, '\n'), ' ')) << std::endl;
+                *ctx << " // " << clear(replace(doc.brief, '\n', ' ')) << std::endl;
 				ctx->writeTabs(code_deepness + 1);
 			}
 			break;
@@ -131,40 +155,16 @@ namespace PIDL
 
 	bool CStyleDotNetDocumentation::write(short code_deepness, CodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec)
 	{
+        (void)ec;
 		auto & doc = docprov->documentation();
 
 		if (!doc.brief.length() && !doc.details.size())
 			return true;
 
-		auto split = [](const std::string & src, char delimeter) -> std::list<std::string>
-		{
-			std::stringstream ss(src);
-			std::string item;
-			std::list<std::string> splittedStrings;
-			while (std::getline(ss, item, delimeter))
-				splittedStrings.push_back(item);
-			return splittedStrings;
-		};
-
-		auto join = [](const std::list<std::string> & src, char delimeter) -> std::string
-		{
-			std::stringstream ss;
-			bool is_first = true;
-			for (auto & s : src)
-			{
-				if (is_first)
-					is_first = false;
-				else if (delimeter)
-					ss << delimeter;
-				ss << s;
-			}
-			return ss.str();
-		};
-
 		auto writeLines = [&](const std::list<std::string> & lines)
 		{
 			for (auto & l : lines)
-				ctx->writeTabs(code_deepness) << "/// " << join(split(l, '\r'), '\0') << std::endl;
+                ctx->writeTabs(code_deepness) << "/// " << clear(l) << std::endl;
 		};
 
 		switch (place)
@@ -199,7 +199,7 @@ namespace PIDL
 
 					for (auto & arg : dynamic_cast<Language::FunctionVariant*>(docprov)->arguments())
 					{
-						if ((long)arg->documentation().brief.find("\n") == -1)
+                        if (static_cast<long>(arg->documentation().brief.find("\n")) == -1)
 						{
 							ctx->writeTabs(code_deepness) << "/// <param name=\"" << arg->name() << "\">";
 							*ctx << arg->documentation().brief;
@@ -213,6 +213,8 @@ namespace PIDL
 						}
 					}
 				}
+
+                // Language::DocumentationProvider::Documentation::Group is not handled here
 
 			}
 			break;
@@ -229,44 +231,15 @@ namespace PIDL
 
 	bool CStyleDoxygenDocumentation::write(short code_deepness, CodeGenContext * ctx, Place place, Language::DocumentationProvider * docprov, ErrorCollector & ec)
 	{
+        (void)ec;
 		auto & doc = docprov->documentation();
 
 		if (!doc.brief.length() && !doc.details.size())
 			return true;
 
-		auto split = [](const std::string & src, char delimeter) -> std::list<std::string>
-		{
-			std::stringstream ss(src);
-			std::string item;
-			std::list<std::string> splittedStrings;
-			while (std::getline(ss, item, delimeter))
-				splittedStrings.push_back(item);
-			return splittedStrings;
-		};
-
-		auto join = [](const std::list<std::string> & src, char delimeter) -> std::string
-		{
-			std::stringstream ss;
-			bool is_first = true;
-			for (auto & s : src)
-			{
-				if (is_first)
-					is_first = false;
-				else if (delimeter)
-					ss << delimeter;
-				ss << s;
-			}
-			return ss.str();
-		};
-
-		auto clean = [&](const std::string & str) -> std::string
-		{
-			return join(split(str, '\r'), '\0');
-		};
-
 		auto writeLine = [&](const std::string & line)
 		{
-			ctx->writeTabs(code_deepness) << " * " << clean(line) << std::endl;
+            ctx->writeTabs(code_deepness) << " * " << clear(line) << std::endl;
 		};
 
 		auto writeLines = [&](const std::list<std::string> & lines)
@@ -281,10 +254,15 @@ namespace PIDL
 			if (!dynamic_cast<Language::FunctionVariant::Argument*>(docprov))
 			{
 				**ctx << std::endl;
-				ctx->writeTabs(code_deepness) << "/*!" << std::endl;
+                ctx->writeTabs(code_deepness) << "/*!";
+
+                if (doc.details.count(Language::DocumentationProvider::Documentation::Group))
+                    **ctx << " @ingroup " << doc.details.at(Language::DocumentationProvider::Documentation::Group);
+
+                **ctx << std::endl;
 
 				if (doc.brief.length())
-					ctx->writeTabs(code_deepness) << " * @brief " << clean(join(split(doc.brief, '\n'), ' ')) << std::endl;
+                    ctx->writeTabs(code_deepness) << " * @brief " << clear(replace(doc.brief, '\n', ' ')) << std::endl;
 
 				if (doc.details.count(Language::DocumentationProvider::Documentation::Description))
 					writeLines(split(doc.details.at(Language::DocumentationProvider::Documentation::Description), '\n'));
@@ -293,7 +271,7 @@ namespace PIDL
 				{
 					if (doc.details.count(Language::DocumentationProvider::Documentation::Return))
 					{
-						ctx->writeTabs(code_deepness) << " * @return " << clean(join(split(doc.details.at(Language::DocumentationProvider::Documentation::Return), '\n'), ' ')) << std::endl;
+                        ctx->writeTabs(code_deepness) << " * @return " << clear(replace(doc.details.at(Language::DocumentationProvider::Documentation::Return), '\n', ' ')) << std::endl;
 					}
 
 					for (auto & arg : dynamic_cast<Language::FunctionVariant*>(docprov)->arguments())
@@ -309,7 +287,7 @@ namespace PIDL
 						case Language::FunctionVariant::Argument::Direction::InOut:
 							*ctx << "in,out"; break;
 						}
-						*ctx << "] " << arg->name() << " " << clean(join(split(doc.brief, '\n'), ' ')) << std::endl;
+                        *ctx << "] " << arg->name() << " " << clear(replace(doc.brief, '\n', ' ')) << std::endl;
 					}
 				}
 				ctx->writeTabs(code_deepness) << " */" << std::endl;

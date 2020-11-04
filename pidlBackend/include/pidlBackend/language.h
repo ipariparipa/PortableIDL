@@ -47,7 +47,8 @@ namespace PIDL { namespace Language {
 			enum Detail
 			{
 				Description,
-				Return
+                Return,
+                Group
 			};
 
 			std::string brief;

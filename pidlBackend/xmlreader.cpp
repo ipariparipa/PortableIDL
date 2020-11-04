@@ -201,6 +201,9 @@ namespace PIDL
 					if (ret_n)
 						ret.details[Language::DocumentationProvider::Documentation::Return] = ret_n->value();
 
+                    if (auto grp_a = doc_n->first_attribute("group"))
+                        ret.details[Language::DocumentationProvider::Documentation::Group] = grp_a->value();
+
 					if (!brief_n && !desc_n && !ret_n)
 						ret.brief = doc_n->value();
 					else if (!brief_n)
@@ -211,10 +214,15 @@ namespace PIDL
 				}
 				else
 				{
-					auto doc_a = _v->first_attribute("documentation");
-					if (doc_a)
-						ret.brief = doc_a->value();
-				}
+                    if (auto brief_a = _v->first_attribute("brief"))
+                    {
+                        ret.brief = brief_a->value();
+                        if (auto grp_a = _v->first_attribute("doc_group"))
+                            ret.details[Language::DocumentationProvider::Documentation::Group] = grp_a->value();
+                    }
+                    else if (auto brief_a = _v->first_attribute("documentation"))
+                        ret.brief = brief_a->value();
+                }
 			}
 
 			return true;

@@ -63,7 +63,10 @@ namespace PIDL
 					case Language::DocumentationProvider::Documentation::Return:
 						JSONTools::addValue(doc, docu_v, "return", det.second);
 						break;
-					}
+                    case Language::DocumentationProvider::Documentation::Group:
+                        JSONTools::addValue(doc, docu_v, "group", det.second);
+                        break;
+                    }
 				}
 
 				JSONTools::addValue(doc, r, "documentation", docu_v);

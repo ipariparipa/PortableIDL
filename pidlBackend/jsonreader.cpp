@@ -168,7 +168,7 @@ namespace PIDL
 			if (v.IsObject())
 			{
 				rapidjson::Value * doc_v;
-				if (JSONTools::getValue(v, "documentation", doc_v))
+                if (JSONTools::getValue(v, "documentation", doc_v))
 				{
 					if (doc_v->IsString())
 						ret.brief = doc_v->GetString();
@@ -187,9 +187,20 @@ namespace PIDL
 
 						if (JSONTools::getValue(*doc_v, "return", tmp))
 							ret.details[Language::DocumentationProvider::Documentation::Return] = tmp;
-					}
+
+                        if (JSONTools::getValue(*doc_v, "group", tmp))
+                            ret.details[Language::DocumentationProvider::Documentation::Group] = tmp;
+                    }
 				}
-			}
+                else
+                {
+                    JSONTools::getValue(v, "brief", ret.brief);
+
+                    std::string tmp;
+                    if(JSONTools::getValue(v, "doc_group", tmp))
+                        ret.details[Language::DocumentationProvider::Documentation::Group] = tmp;
+                }
+            }
 
 			return true;
 		}
