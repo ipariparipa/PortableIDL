@@ -1078,8 +1078,15 @@ namespace PIDL
 			{
 			case Mode::AllInOne:
 			case Mode::Declaration:
-				if (!that->writeAliases(code_deepness, ctx, ec))
-					return false;
+                for(auto & e : module->elements())
+                {
+                    if(std::dynamic_pointer_cast<Language::Interface>(e))
+                    {
+                        if (!that->writeAliases(code_deepness, ctx, ec))
+                            return false;
+                        break;
+                    }
+                }
 				break;
 			case Mode::Implementatinon:
 				break;
