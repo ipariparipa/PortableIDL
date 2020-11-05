@@ -902,8 +902,14 @@ namespace PIDL {
 					if (dynamic_cast<const Language::Interface*>(t))
 						return settings.interfaceSuffix.length() ? (t->name() + settings.interfaceSuffix) : t->name();
 
-					if (dynamic_cast<const Language::Module*>(t))
-						return settings.moduleSuffix.length() ? (t->name() + settings.moduleSuffix) : t->name();
+                    if (auto mod = dynamic_cast<const Language::Module*>(t))
+                    {
+                        for(auto & e : mod->elements())
+                        {
+                            if(std::dynamic_pointer_cast<Language::Interface>(e)) //apply suffix only when the module has interface(s)
+                                return settings.moduleSuffix.length() ? (t->name() + settings.moduleSuffix) : t->name();
+                        }
+                    }
 
 					return t->name();
 				}
