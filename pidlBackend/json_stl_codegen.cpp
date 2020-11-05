@@ -26,11 +26,20 @@ namespace PIDL
 
 	struct JSON_STL_CodeGen::Priv
 	{
-		Priv(JSON_STL_CodeGen * that_, const std::shared_ptr<CPPCodeGenHelper> & helper_) : that(that_), helper(helper_)
+        Priv(JSON_STL_CodeGen * that, const std::shared_ptr<CPPCodeGenHelper> & helper, const std::set<Flag> & flags) :
+            that(that),
+            helper(helper),
+            flags(flags)
 		{ }
 
 		JSON_STL_CodeGen * that;
 		std::shared_ptr<CPPCodeGenHelper> helper;
+        std::set<Flag> flags;
+
+        bool useOptional() const
+        {
+            return flags.count(Flag::UseOptional);
+        }
 
 		std::string privLogger()
 		{
@@ -162,8 +171,16 @@ namespace PIDL
                 ctx->writeTabs(code_deepness) << "template<typename T> bool _getValue(const rapidjson::Value & v, nullable<T> & ret, _error_collector & ec)" << std::endl;
                 ctx->writeTabs(code_deepness++) << "{" << std::endl;
                 ctx->writeTabs(code_deepness) << "if (v.IsNull())" << std::endl;
-                ctx->writeTabs(code_deepness) << "{ ret.setNull(); return true; }" << std::endl;
-                ctx->writeTabs(code_deepness) << "return _getValue(v, ret.setNotNull(), ec);" << std::endl;
+                if(useOptional())
+                {
+                    ctx->writeTabs(code_deepness) << "{ ret.reset(); return true; }" << std::endl;
+                    ctx->writeTabs(code_deepness) << "return _getValue(v, ret.emplace(), ec);" << std::endl;
+                }
+                else
+                {
+                    ctx->writeTabs(code_deepness) << "{ ret.setNull(); return true; }" << std::endl;
+                    ctx->writeTabs(code_deepness) << "return _getValue(v, ret.setNotNull(), ec);" << std::endl;
+                }
                 ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
                 ctx->writeTabs(code_deepness) << "template<typename T> bool _getValue(const rapidjson::Value & r, const char * name, nullable<T> & ret, _error_collector & ec)" << std::endl;
@@ -359,7 +376,7 @@ namespace PIDL
 
                 ctx->writeTabs(code_deepness) << "template<typename T> rapidjson::Value _createValue(rapidjson::Document & doc, const nullable<T> & value)" << std::endl;
                 ctx->writeTabs(code_deepness++) << "{" << std::endl;
-                ctx->writeTabs(code_deepness) << "if (value.isNull()) return rapidjson::Value(rapidjson::kNullType);" << std::endl;
+                ctx->writeTabs(code_deepness) << "if (!value) return rapidjson::Value(rapidjson::kNullType);" << std::endl;
                 ctx->writeTabs(code_deepness) << "return _createValue(doc, *value);" << std::endl;
                 ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
@@ -378,13 +395,13 @@ namespace PIDL
 
                 ctx->writeTabs(code_deepness) << "template<typename T> void _addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const nullable_const_ref<T> & v)" << std::endl;
                 ctx->writeTabs(code_deepness++) << "{" << std::endl;
-                ctx->writeTabs(code_deepness) << "if (v.isNull()) PIDL::JSONTools::addNull(doc, r, name);" << std::endl;
+                ctx->writeTabs(code_deepness) << "if (!v) PIDL::JSONTools::addNull(doc, r, name);" << std::endl;
                 ctx->writeTabs(code_deepness) << "else _addValue(doc, r, name, *v);" << std::endl;
                 ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
                 ctx->writeTabs(code_deepness) << "template<typename T> void _addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const nullable<T> & v)" << std::endl;
                 ctx->writeTabs(code_deepness++) << "{" << std::endl;
-                ctx->writeTabs(code_deepness) << "if (v.isNull()) PIDL::JSONTools::addNull(doc, r, name);" << std::endl;
+                ctx->writeTabs(code_deepness) << "if (!v) PIDL::JSONTools::addNull(doc, r, name);" << std::endl;
                 ctx->writeTabs(code_deepness) << "else _addValue(doc, r, name, *v);" << std::endl;
                 ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
@@ -633,14 +650,14 @@ namespace PIDL
 		}
 	};
 
-	JSON_STL_CodeGen::JSON_STL_CodeGen(const std::shared_ptr<CPPCodeGenHelper> & helper) :
+    JSON_STL_CodeGen::JSON_STL_CodeGen(const std::shared_ptr<CPPCodeGenHelper> & helper, const std::set<Flag> & flags) :
 		CPPCodeGen(),
-		priv(new Priv(this, helper))
+        priv(new Priv(this, helper, flags))
 	{ }
 
 	JSON_STL_CodeGen::JSON_STL_CodeGen() :
 		CPPCodeGen(),
-		priv(new Priv(this, std::make_shared<CPPBasicCodeGenHelper>()))
+        priv(new Priv(this, std::make_shared<CPPBasicCodeGenHelper>(), std::set<Flag>()))
 	{ }
 
 	JSON_STL_CodeGen::~JSON_STL_CodeGen()
@@ -674,16 +691,27 @@ namespace PIDL
             writeInclude(code_deepness, ctx, std::make_pair(IncludeType::GLobal, "memory"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/datetime.h" : "datetime.h"), ec) &&
 			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/exception.h" : "exception.h"), ec) &&
-			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/nullable.h" : "nullable.h"), ec) &&
-			writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/jsontools.h" : "jsontools.h"), ec) &&
+            writeInclude(code_deepness, ctx, priv->useOptional() ?
+                             std::make_pair(IncludeType::GLobal, "optional") :
+                             std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/nullable.h" : "nullable.h"), ec) &&
+            writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/jsontools.h" : "jsontools.h"), ec) &&
             writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/basictypes.h" : "basictypes.h"), ec) &&
             writeInclude(code_deepness, ctx, std::make_pair(core_path.first, core_path.second.length() ? core_path.second + "/errorcollector.h" : "errorcollector.h"), ec);
 	}
 
 	bool JSON_STL_CodeGen::writeAliases(short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		ctx->writeTabs(code_deepness) << "template<typename T> using nullable = PIDL::Nullable<T>;" << std::endl;
-		ctx->writeTabs(code_deepness) << "template<typename T> using nullable_const_ref = PIDL::NullableConstRef<T>;" << std::endl;
+        (void)ec;
+        if(priv->useOptional())
+        {
+            ctx->writeTabs(code_deepness) << "template<typename T> using nullable = std::optional<T>;" << std::endl;
+            ctx->writeTabs(code_deepness) << "template<typename T> using nullable_const_ref = std::optional<const T &>;" << std::endl;
+        }
+        else
+        {
+            ctx->writeTabs(code_deepness) << "template<typename T> using nullable = PIDL::Nullable<T>;" << std::endl;
+            ctx->writeTabs(code_deepness) << "template<typename T> using nullable_const_ref = PIDL::NullableConstRef<T>;" << std::endl;
+        }
 		ctx->writeTabs(code_deepness) << "template<typename T> using array = std::vector<T>;" << std::endl;
 		ctx->writeTabs(code_deepness) << "template<typename ...T> using tuple = std::tuple<T...>;" << std::endl;
         ctx->writeTabs(code_deepness) << "template<typename T> using ptr = std::shared_ptr<T>;" << std::endl;

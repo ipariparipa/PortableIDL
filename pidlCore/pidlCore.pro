@@ -1,9 +1,11 @@
 include(../global.pri)
 
 TEMPLATE = lib
-CONFIG += console c++11
+CONFIG += console c++17
 CONFIG -= app_bundle
 CONFIG -= qt
+
+QMAKE_CXXFLAGS += -std=c++17
 
 TARGET_FILE = $$_PRO_FILE_PWD_/include/pidlCore/platform.h
 unix {

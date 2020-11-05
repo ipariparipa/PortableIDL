@@ -779,7 +779,23 @@ namespace PIDL {
 				else
 					helper = std::make_shared<CPPBasicCodeGenHelper>();
 
-				ret = std::make_shared<JSON_STL_CodeGen>(helper);
+                std::set<JSON_STL_CodeGen::Flag> flags;
+                std::vector<std::string> strl;
+                if(JSONTools::getValue(value, "flags", strl))
+                {
+                    for(auto & str : strl)
+                    {
+                        if(str == "use_optional")
+                            flags.insert(JSON_STL_CodeGen::Flag::UseOptional);
+                        else
+                        {
+                            ec.add(-1, std::string() + "unsupported/invalid flag: '"+str+"'");
+                            return false;
+                        }
+                    }
+                }
+
+                ret = std::make_shared<JSON_STL_CodeGen>(helper, flags);
 
 				return true;
 			}
