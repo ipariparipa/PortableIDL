@@ -27,7 +27,8 @@ along with pidlBackend.  If not, see <http://www.gnu.org/licenses/>
 namespace PIDL
 {
     namespace  {
-        std::list<std::string> split(const std::string & src, char delimeter)
+        std::list<std::string> split(const std::string & src, char delimiter)
+
         {
             std::stringstream ss(src);
             std::string item;
