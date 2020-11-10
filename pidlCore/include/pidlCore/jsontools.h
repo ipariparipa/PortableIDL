@@ -25,7 +25,9 @@
 #include <rapidjson/document.h>
 
 #include <vector>
-#include <optional>
+#ifdef PIDL__HAS_OPTIONAL
+#  include <optional>
+#endif
 
 namespace PIDL { namespace JSONTools {
 
