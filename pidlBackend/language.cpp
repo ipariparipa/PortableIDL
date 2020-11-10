@@ -709,6 +709,7 @@ namespace PIDL {
             priv->scope = scope;
             priv->doc = doc;
             priv->loggerName = loggerName;
+            priv->initialized = true;
         }
 
         bool Object::initialized() const
