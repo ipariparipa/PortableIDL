@@ -46,7 +46,8 @@ namespace PIDL
                 if (is_first)
                     is_first = false;
                 else if (delimeter)
-                    ss << delimeter;
+                    ss << delimiter;
+
                 ss << s;
             }
             return ss.str();
