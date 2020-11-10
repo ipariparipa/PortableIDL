@@ -37,7 +37,8 @@ namespace PIDL
             return splittedStrings;
         };
 
-        std::string join(const std::list<std::string> & src, char delimeter)
+        std::string join(const std::list<std::string> & src, char delimiter)
+
         {
             std::stringstream ss;
             bool is_first = true;
