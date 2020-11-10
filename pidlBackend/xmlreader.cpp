@@ -119,7 +119,35 @@ namespace PIDL
 			return (ret = getNode(v, "type")) || (ret = getAttribute(v, "type"));
 		}
 
-		struct InterfaceElementRegistry
+        struct InterfaceElementRegistry;
+        struct BaseElementRegistry
+        {
+            std::string path;
+
+            std::map<std::string, std::shared_ptr<Language::Type>> types;
+
+            std::map<std::string, std::shared_ptr<Language::Definition>> definitions;
+            std::list<std::shared_ptr<Language::Definition>> definitions_list;
+
+            InterfaceElementRegistry * interfaceRegistry = nullptr;
+
+            const std::shared_ptr<Language::Type> & getType(const std::string & name) const
+            {
+                assert(interfaceRegistry);
+                if (interfaceRegistry->embedded_types.count(name))
+                    return interfaceRegistry->embedded_types.at(name);
+                else if (types.count(name))
+                    return types.at(name);
+                else if (interfaceRegistry->types.count(name))
+                    return interfaceRegistry->types.at(name);
+
+                static const std::shared_ptr<Language::Type> null;
+                return null;
+            }
+
+        };
+
+        struct InterfaceElementRegistry : public BaseElementRegistry
 		{
 			InterfaceElementRegistry()
 			{
@@ -130,24 +158,20 @@ namespace PIDL
 				embedded_types["void"].reset(new Language::Void());
 				embedded_types["boolean"].reset(new Language::Boolean());
 				embedded_types["blob"].reset(new Language::Blob());
+                interfaceRegistry = this;
 			}
 
-			std::string path;
 			std::map<std::string, std::shared_ptr<Language::Type>> embedded_types;
-			std::map<std::string, std::shared_ptr<Language::Type>> types;
 			std::map<std::string, std::shared_ptr<Language::Function>> functions;
-
-			std::map<std::string, std::shared_ptr<Language::Definition>> definitions;
-			std::list<std::shared_ptr<Language::Definition>> definitions_list;
 		};
 
-		struct ObjectElementRegistry
+        struct ObjectElementRegistry : public BaseElementRegistry
 		{
-			std::string path;
-
-			std::map<std::string, std::shared_ptr<Language::Definition>> definitions;
-			std::list<std::shared_ptr<Language::Definition>> definitions_list;
-		};
+            ObjectElementRegistry(InterfaceElementRegistry * reg)
+            {
+                interfaceRegistry = reg;
+            }
+        };
 
         std::string appendLoggerName(const std::string & base, const std::string name)
         {
@@ -177,6 +201,9 @@ namespace PIDL
 					if (ret_n)
 						ret.details[Language::DocumentationProvider::Documentation::Return] = ret_n->value();
 
+                    if (auto grp_a = doc_n->first_attribute("group"))
+                        ret.details[Language::DocumentationProvider::Documentation::Group] = grp_a->value();
+
 					if (!brief_n && !desc_n && !ret_n)
 						ret.brief = doc_n->value();
 					else if (!brief_n)
@@ -187,16 +214,21 @@ namespace PIDL
 				}
 				else
 				{
-					auto doc_a = _v->first_attribute("documentation");
-					if (doc_a)
-						ret.brief = doc_a->value();
-				}
+                    if (auto brief_a = _v->first_attribute("brief"))
+                    {
+                        ret.brief = brief_a->value();
+                        if (auto grp_a = _v->first_attribute("doc_group"))
+                            ret.details[Language::DocumentationProvider::Documentation::Group] = grp_a->value();
+                    }
+                    else if (auto brief_a = _v->first_attribute("documentation"))
+                        ret.brief = brief_a->value();
+                }
 			}
 
 			return true;
 		}
 
-		bool readType(InterfaceElementRegistry & registry, const rapidxml::xml_base<> * v, std::vector<Language::Type::Ptr> & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readType(BaseElementRegistry & registry, const rapidxml::xml_base<> * v, std::vector<Language::Type::Ptr> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (!dynamic_cast<const rapidxml::xml_node<>*>(v))
 			{
@@ -219,24 +251,18 @@ namespace PIDL
 			return !has_error;
 		}
 
-		bool readType(InterfaceElementRegistry & registry, const rapidxml::xml_base<> * v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readType(BaseElementRegistry & registry, const rapidxml::xml_base<> * v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (dynamic_cast<const rapidxml::xml_attribute<>*>(v))
 			{
 				std::string name = v->value();
 
-				if (registry.embedded_types.count(name))
-				{
-					ret = registry.embedded_types[name];
-					return true;
-				}
-
-				if (!registry.types.count(name))
-				{
+                if (!(ret = registry.getType(name)))
+                {
 					ec << (error_path + ": type '" + name + "' is not found in '" + registry.path + "'");
 					return false;
 				}
-				ret = registry.types[name];
+
 				return true;
 			}
 			else if (dynamic_cast<const rapidxml::xml_node<>*>(v))
@@ -255,7 +281,7 @@ namespace PIDL
 			return false;
 		}
 
-		bool readType(InterfaceElementRegistry & registry, const std::string & name, const rapidxml::xml_node<> * v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readType(BaseElementRegistry & registry, const std::string & name, const rapidxml::xml_node<> * v, Language::Type::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			if (name == "nullable")
 			{
@@ -336,22 +362,18 @@ namespace PIDL
 					return false;
 				ret = std::make_shared<Language::Tuple>(tmp);
 			}
-			else 
+            else
 			{
-				if (registry.embedded_types.count(name))
-					ret = registry.embedded_types[name];
-				else if (!registry.types.count(name))
-				{
+                if (!(ret = registry.getType(name)))
+                {
 					ec << (error_path + ": type '" + name + "' is not found in '" + registry.path + "'");
 					return false;
 				}
-				else
-					ret = registry.types[name];
 			}
 			return true;
 		}
 
-		bool readTypeDefinition(InterfaceElementRegistry & registry, const std::vector<std::string> & scope, std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::TypeDefinition> & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readTypeDefinition(BaseElementRegistry & registry, const std::vector<std::string> & scope, std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::TypeDefinition> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidxml::xml_base<> * t;
 			if (!getTypeElem(v, t))
@@ -362,6 +384,12 @@ namespace PIDL
 			std::shared_ptr<Language::Type> tmp;
 			if (!readType(registry, t, tmp, error_path, ec))
 				return false;
+
+            if (registry.interfaceRegistry->embedded_types.count(name))
+            {
+                ec << (error_path + ": name '" + name + "' is already registered as enbedded type");
+                return false;
+            }
 
 			if (registry.definitions.count(name))
 			{
@@ -379,7 +407,7 @@ namespace PIDL
 			return true;
 		}
 
-		bool readMethod(InterfaceElementRegistry & registry, ObjectElementRegistry & objectRegistry, const std::vector<std::string> & scope, const std::string & name, const rapidxml::xml_node<> * v, Language::Method::Variant::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readMethod(ObjectElementRegistry & registry, const std::vector<std::string> & scope, const std::string & name, const rapidxml::xml_node<> * v, Language::Method::Variant::Ptr & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidxml::xml_base<> * r;
 			if (!getTypeElem(v, r))
@@ -387,8 +415,8 @@ namespace PIDL
 				ec << (error_path + ": type is not specified");
 				return false;
 			}
-			std::shared_ptr<Language::Type> ret_type;
-			if (!readType(registry, r, ret_type, error_path, ec))
+            std::shared_ptr<Language::Type> ret_type;
+            if (!readType(registry, r, ret_type, error_path, ec))
 				return false;
 
 			rapidxml::xml_node<> * as;
@@ -416,7 +444,7 @@ namespace PIDL
 						return false;
 					}
 					std::shared_ptr<Language::Type> tmp;
-					if (!readType(registry, t, tmp, error_path + "." + "a_name", ec))
+                    if (!readType(registry, t, tmp, error_path + "." + "a_name", ec))
 						return false;
 					Language::Function::Variant::Argument::Direction direction;
 					{
@@ -466,9 +494,9 @@ namespace PIDL
 				return false;
 
 			Language::Method::Ptr meth;
-			if (!objectRegistry.definitions.count(name))
-				objectRegistry.definitions[name] = meth = std::make_shared<Language::Method>(scope, name);
-			else if (!(meth = std::dynamic_pointer_cast<Language::Method>(objectRegistry.definitions[name])))
+            if (!registry.definitions.count(name))
+                registry.definitions[name] = meth = std::make_shared<Language::Method>(scope, name);
+            else if (!(meth = std::dynamic_pointer_cast<Language::Method>(registry.definitions[name])))
 			{
 				ec << (error_path + ": unexpected: name '" + name + "' has different definition type");
 				return false;
@@ -482,11 +510,11 @@ namespace PIDL
 				return false;
 			}
 
-			objectRegistry.definitions_list.push_back(meth->variants()[var->variantId()] = ret = var);
+            registry.definitions_list.push_back(meth->variants()[var->variantId()] = ret = var);
 			return true;
 		}
 
-		bool readProperty(InterfaceElementRegistry & registry, ObjectElementRegistry & objectRegistry,
+        bool readProperty(ObjectElementRegistry & registry,
 				const std::vector<std::string> & scope, const std::string & name,
 				const rapidxml::xml_node<> * v, std::shared_ptr<Language::Property> & ret,
 				const std::string & error_path, ErrorCollector & ec)
@@ -501,7 +529,7 @@ namespace PIDL
 			if (!readType(registry, r, type, error_path, ec))
 				return false;
 
-			if (objectRegistry.definitions.count(name))
+            if (registry.definitions.count(name))
 			{
 				ec << (error_path + ": name '" + name + "' is already registered");
 				return false;
@@ -518,16 +546,16 @@ namespace PIDL
 			if (!readDocumentation(v, doc, error_path, ec))
 				return false;
 
-			objectRegistry.definitions[name] = ret = std::make_shared<Language::Property>(type, scope, name, readonly, doc);
-			objectRegistry.definitions_list.push_back(ret);
+            registry.definitions[name] = ret = std::make_shared<Language::Property>(type, scope, name, readonly, doc);
+            registry.definitions_list.push_back(ret);
 			return true;
 		}
 
-        bool readObject(const std::string & baseLoggerName, InterfaceElementRegistry & interfaceRegistry, std::vector<std::string> scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Object> & ret, const std::string & error_path, ErrorCollector & ec)
+        bool readObject(const std::string & baseLoggerName, BaseElementRegistry & parentRegistry, std::vector<std::string> scope, const std::string & name, const rapidxml::xml_node<> * v, std::shared_ptr<Language::Object> & ret, const std::string & error_path, ErrorCollector & ec)
 		{
 			rapidxml::xml_node<> * b;
 
-			ObjectElementRegistry registry;
+            ObjectElementRegistry registry(parentRegistry.interfaceRegistry);
 			registry.path = name;
 
             auto loggerName = appendLoggerName(baseLoggerName, name);
@@ -536,10 +564,31 @@ namespace PIDL
             if (!readDocumentation(v, doc, error_path, ec))
                 return false;
 
-            ret = std::make_shared<Language::Object>(name, scope, doc, loggerName);
-            interfaceRegistry.types[name] = ret;
-            interfaceRegistry.definitions[name] = ret;
-            interfaceRegistry.definitions_list.push_back(ret);
+            if(parentRegistry.interfaceRegistry->embedded_types.count(name))
+            {
+                ec << (error_path + ": '" + name + "' has been already registered as embedded type");
+                return false;
+            }
+
+            if(parentRegistry.types.count(name))
+            {
+                if(!(ret = std::dynamic_pointer_cast<Language::Object>(parentRegistry.types[name])))
+                {
+                    ec << (error_path + ": '" + name + "' has been already registered as a different type");
+                    return false;
+                }
+                if(ret->initialized())
+                {
+                    ec << (error_path + ": object '" + name + "' has been already registered");
+                    return false;
+                }
+                ret->init(scope, doc, loggerName);
+            }
+            else
+                parentRegistry.types[name] = ret = std::make_shared<Language::Object>(name, scope, doc, loggerName);
+
+            parentRegistry.definitions[name] = ret;
+            parentRegistry.definitions_list.push_back(ret);
 
 			if (getNode(v, "body", b))
 			{
@@ -561,12 +610,28 @@ namespace PIDL
 						return false;
 					}
 
-					if (e_nature == "property")
+                    if (e_nature == "typedef")
+                    {
+                        auto _scope = scope;
+                        _scope.push_back(name);
+                        std::shared_ptr<Language::TypeDefinition> tmp;
+                        if (!readTypeDefinition(registry, _scope, e_name, e, tmp, name + "." + e_name, ec))
+                            return false;
+                    }
+                    else if (e_nature == "object")
+                    {
+                        auto _scope = scope;
+                        _scope.push_back(name);
+                        std::shared_ptr<Language::Object> tmp;
+                        if (!readObject(loggerName, registry, _scope, e_name, e, tmp, name + "." + e_name, ec))
+                            return false;
+                    }
+                    else if (e_nature == "property")
 					{
 						std::shared_ptr<Language::Property> tmp;
 						auto _scope = scope;
 						_scope.push_back(name);
-						if (!readProperty(interfaceRegistry, registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
+                        if (!readProperty(registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
 							return false;
 					}
 					else if (e_nature == "method")
@@ -574,7 +639,7 @@ namespace PIDL
 						Language::Method::Variant::Ptr tmp;
 						auto _scope = scope;
 						_scope.push_back(name);
-						if (!readMethod(interfaceRegistry, registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
+                        if (!readMethod(registry, _scope, e_name, e, tmp, error_path + "." + e_name, ec))
 							return false;
 					}
 					else
@@ -707,7 +772,44 @@ namespace PIDL
 
 			if (getNode(v, "body", b))
 			{
-				size_t i(0);
+                //prebuild registry
+                size_t i(0);
+                for (auto e = b->first_node(); e; e = e->next_sibling())
+                {
+                    ++i;
+                    std::string e_name;
+                    if (!getName(e, e_name))
+                    {
+                        ec << ("name of element #" + std::to_string(i) + " of interface '" + name + "' is not specified");
+                        return false;
+                    }
+
+                    std::string e_nature;
+                    if (!getNature(e, e_nature))
+                    {
+                        ec << ("nature of element '" + name + "." + e_name + "' is not specified");
+                        return false;
+                    }
+
+                    if (e_nature == "object")
+                    {
+                        if(registry.types.count(e_name))
+                        {
+                            if(!(std::dynamic_pointer_cast<Language::Object>(registry.types[e_name])))
+                            {
+                                ec << (e_name+": type definition is alread found but not as an object'");
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            auto obj = std::make_shared<Language::Object>(e_name);
+                            registry.types[e_name] = obj;
+                        }
+                    }
+                }
+
+                i = 0;
 				for (auto e = b->first_node(); e; e = e->next_sibling())
 				{
 					++i;
@@ -925,6 +1027,7 @@ namespace PIDL
 
 	bool XMLReader::compile(Writer * writer, const std::string & xml_stream, std::string & ret, ErrorCollector & ec)
 	{
+        (void)ret;
 		XMLReader p(xml_stream);
 		if (!p.read(ec))
 			return false;

@@ -19,6 +19,7 @@
 #define pidlBackend__json_stl_codegen_H
 
 #include "cppcodegen.h"
+#include <set>
 
 namespace PIDL
 {
@@ -28,9 +29,13 @@ namespace PIDL
 		struct Priv;
 		Priv * priv;
 	public:
-		JSON_STL_CodeGen(const std::shared_ptr<CPPCodeGenHelper> & helper);
+        enum class Flag {
+            UseOptional
+        };
+
+        JSON_STL_CodeGen(const std::shared_ptr<CPPCodeGenHelper> & helper, const std::set<Flag> & flags);
 		JSON_STL_CodeGen();
-		virtual ~JSON_STL_CodeGen();
+        virtual ~JSON_STL_CodeGen() override;
 
 	protected:
 		using Role = CPPCodeGenContext::Role;

@@ -25,6 +25,9 @@
 #include <rapidjson/document.h>
 
 #include <vector>
+#ifdef PIDL__HAS_OPTIONAL
+#  include <optional>
+#endif
 
 namespace PIDL { namespace JSONTools {
 
@@ -83,6 +86,31 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, std::vector<char> & ret);
 
+    template <typename T>
+    bool getValue(const rapidjson::Value & v, Nullable<T> & ret)
+    {
+        if(v.IsNull())
+        {
+            ret.setNull();
+            return true;
+        }
+
+        ret.setNotNull();
+        return getValue(v, *ret);
+    }
+#ifdef PIDL__HAS_OPTIONAL
+    template <typename T>
+    bool getValue(const rapidjson::Value & v, std::optional<T> & ret)
+    {
+        if(v.IsNull())
+        {
+            ret.reset();
+            return true;
+        }
+
+        return getValue(v, ret.emplace());
+    }
+#endif
 
 	template <typename T>
 	bool getValue(const rapidjson::Value & v, std::vector<T> & ret)
@@ -177,7 +205,7 @@ namespace PIDL { namespace JSONTools {
 	extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::vector<char> & b);
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const std::vector<char> & b);
 
-	template<typename T>
+    template<typename T>
 	void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const NullableConstRef<T> & v);
 
 	template<typename T>
@@ -200,6 +228,26 @@ namespace PIDL { namespace JSONTools {
 		else
 			addValue(doc, r, name, *v);
 	}
+
+#ifdef PIDL__HAS_OPTIONAL
+    template<typename T>
+    void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::optional<T> & v)
+    {
+        if (v)
+            addNull(doc, r, name);
+        else
+            addValue(doc, r, name, *v);
+    }
+
+    template<typename T>
+    void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::optional<const T &> & v)
+    {
+        if (v.isNull())
+            addNull(doc, r, name);
+        else
+            addValue(doc, r, name, *v);
+    }
+#endif
 
 	template<typename T>
 	rapidjson::Value createValue(rapidjson::Document & doc, const std::vector<T> & values)

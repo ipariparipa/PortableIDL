@@ -45,5 +45,9 @@
 
 #define PIDL_COPY_PROTECTOR(class_name) class_name(const class_name &); class_name & operator = (const class_name &);
 
+#if __cplusplus >= 201703L
+#  define PIDL__HAS_OPTIONAL
+#endif
+
 
 #endif // pidlCore__config_h

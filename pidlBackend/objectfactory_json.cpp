@@ -779,7 +779,23 @@ namespace PIDL {
 				else
 					helper = std::make_shared<CPPBasicCodeGenHelper>();
 
-				ret = std::make_shared<JSON_STL_CodeGen>(helper);
+                std::set<JSON_STL_CodeGen::Flag> flags;
+                std::vector<std::string> strl;
+                if(JSONTools::getValue(value, "flags", strl))
+                {
+                    for(auto & str : strl)
+                    {
+                        if(str == "use_optional")
+                            flags.insert(JSON_STL_CodeGen::Flag::UseOptional);
+                        else
+                        {
+                            ec.add(-1, std::string() + "unsupported/invalid flag: '"+str+"'");
+                            return false;
+                        }
+                    }
+                }
+
+                ret = std::make_shared<JSON_STL_CodeGen>(helper, flags);
 
 				return true;
 			}
@@ -886,8 +902,14 @@ namespace PIDL {
 					if (dynamic_cast<const Language::Interface*>(t))
 						return settings.interfaceSuffix.length() ? (t->name() + settings.interfaceSuffix) : t->name();
 
-					if (dynamic_cast<const Language::Module*>(t))
-						return settings.moduleSuffix.length() ? (t->name() + settings.moduleSuffix) : t->name();
+                    if (auto mod = dynamic_cast<const Language::Module*>(t))
+                    {
+                        for(auto & e : mod->elements())
+                        {
+                            if(std::dynamic_pointer_cast<Language::Interface>(e)) //apply suffix only when the module has interface(s)
+                                return settings.moduleSuffix.length() ? (t->name() + settings.moduleSuffix) : t->name();
+                        }
+                    }
 
 					return t->name();
 				}
