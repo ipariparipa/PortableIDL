@@ -33,7 +33,8 @@ namespace PIDL
             std::stringstream ss(src);
             std::string item;
             std::list<std::string> splittedStrings;
-            while (std::getline(ss, item, delimeter))
+            while (std::getline(ss, item, delimiter))
+
                 splittedStrings.push_back(item);
             return splittedStrings;
         };
