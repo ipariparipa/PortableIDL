@@ -70,15 +70,25 @@ namespace PIDL {
 			return _errors;
 		}
 
-		void throwException()
+        Exception throwException()
 		{
-            throw Exception(_errors);
+            throw exception();
 		}
 
         void throwException(long errorCode, const std::string & errorText)
         {
+            throw exception(errorCode, errorText);
+        }
+
+        Exception exception(long errorCode, const std::string & errorText)
+        {
             append(errorCode, errorText);
-            throw Exception(_errors);
+            return Exception(_errors);
+        }
+
+        Exception exception()
+        {
+            return Exception(_errors);
         }
 
 		virtual void clear()
