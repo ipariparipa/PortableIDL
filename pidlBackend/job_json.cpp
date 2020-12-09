@@ -40,10 +40,11 @@ namespace PIDL {
 
 	struct Job_JSON::Priv
 	{
-		Priv(std::shared_ptr<Operation> op_) : op(op_)
-		{
-			facreg = ObjectFactoryRegistry_JSON::build(std::shared_ptr<ObjectRegistry>(&objreg, [](void*) {}));
-		}
+        Priv(std::shared_ptr<Operation> op, const std::shared_ptr<ConfigReader> & cr) :
+            op(op)
+        {
+            facreg = ObjectFactoryRegistry_JSON::build(std::shared_ptr<ObjectRegistry>(&objreg, [](void*) {}), cr);
+        }
 
 		std::shared_ptr<Operation> op;
 
@@ -52,11 +53,14 @@ namespace PIDL {
 
 	};
 
-	Job_JSON::Job_JSON() : priv(new Priv(std::shared_ptr<Operation>()))
+    Job_JSON::Job_JSON() : priv(new Priv(std::shared_ptr<Operation>(), nullptr))
 	{ }
 
-	Job_JSON::Job_JSON(const std::shared_ptr<Operation> & op) : priv(new Priv(op))
+    Job_JSON::Job_JSON(const std::shared_ptr<Operation> & op, const std::shared_ptr<ConfigReader> & cr) : priv(new Priv(op, cr))
 	{ }
+
+    Job_JSON::Job_JSON(const std::shared_ptr<ConfigReader> & cr) : priv(new Priv(std::shared_ptr<Operation>(), cr))
+    { }
 
 	Job_JSON::~Job_JSON()
 	{
@@ -89,7 +93,7 @@ namespace PIDL {
 	}
 
 	//static
-	bool Job_JSON::build(const std::string & json_data, std::shared_ptr<Job_JSON> & ret, ErrorCollector & ec)
+    bool Job_JSON::build(const std::string & json_data, const std::shared_ptr<ConfigReader> & cr, std::shared_ptr<Job_JSON> & ret, ErrorCollector & ec)
 	{
 		std::vector<char> buffer(json_data.length() + 1);
 		memcpy(buffer.data(), json_data.c_str(), json_data.length());
@@ -102,13 +106,13 @@ namespace PIDL {
 			return false;
 		}
 
-		return build(doc, ret, ec);
+        return build(doc, cr, ret, ec);
 	}
 
 	//static
-	bool Job_JSON::build(const rapidjson::Value & root, std::shared_ptr<Job_JSON> & ret, ErrorCollector & ec)
+    bool Job_JSON::build(const rapidjson::Value & root, const std::shared_ptr<ConfigReader> & cr, std::shared_ptr<Job_JSON> & ret, ErrorCollector & ec)
 	{
-		ret = std::shared_ptr<Job_JSON>(new Job_JSON());
+        ret = std::shared_ptr<Job_JSON>(new Job_JSON(cr));
 		return ret->build(root, ec);
 	}
 

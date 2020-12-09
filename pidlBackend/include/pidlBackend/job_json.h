@@ -30,6 +30,7 @@ namespace PIDL {
 
 	class ErrorCollector;
 	class ObjectFactoryRegistry_JSON;
+    class ConfigReader;
 
 	class PIDL_BACKEND__CLASS Job_JSON : public Operation
 	{
@@ -38,18 +39,19 @@ namespace PIDL {
 
 	public:
 		Job_JSON();
+        Job_JSON(const std::shared_ptr<Operation> & op, const std::shared_ptr<ConfigReader> & cr);
+        Job_JSON(const std::shared_ptr<ConfigReader> & cr);
 
-		Job_JSON(const std::shared_ptr<Operation> & op);
-		virtual ~Job_JSON();
+        virtual ~Job_JSON() override;
 
 		virtual bool run(ErrorCollector & ec) override;
 
-		bool build(const rapidjson::Value & root, ErrorCollector & ec);
+        bool build(const rapidjson::Value & root, ErrorCollector & ec);
 
 		ObjectFactoryRegistry_JSON * factoryRegistry() const;
 
-		static bool build(const std::string & json_data, std::shared_ptr<Job_JSON> & ret, ErrorCollector & ec);
-		static bool build(const rapidjson::Value & root, std::shared_ptr<Job_JSON> & ret, ErrorCollector & ec);
+        static bool build(const std::string & json_data, const std::shared_ptr<ConfigReader> & cr, std::shared_ptr<Job_JSON> & ret, ErrorCollector & ec);
+        static bool build(const rapidjson::Value & root, const std::shared_ptr<ConfigReader> & cr, std::shared_ptr<Job_JSON> & ret, ErrorCollector & ec);
 	};
 
 }

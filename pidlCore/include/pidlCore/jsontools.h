@@ -66,6 +66,12 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, rapidjson::Value *& ret);
 
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, const rapidjson::Value *& ret);
+
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, rapidjson::Value *& ret);
+
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, const rapidjson::Value *& ret);
+
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, std::string & ret);
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, int & ret);

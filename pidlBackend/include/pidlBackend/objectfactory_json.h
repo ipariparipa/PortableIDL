@@ -29,6 +29,7 @@
 namespace PIDL {
 
 	class ErrorCollector;
+    class ConfigReader;
 
 	class PIDL_BACKEND__CLASS ObjectFactory_JSON : public ObjectFactory
 	{
@@ -68,7 +69,7 @@ namespace PIDL {
 			return std::dynamic_pointer_cast<FAC_T>(_getValid(type, root));
 		}
 
-		static std::shared_ptr<ObjectFactoryRegistry_JSON> build(const std::shared_ptr<ObjectRegistry> & objreg);
+        static std::shared_ptr<ObjectFactoryRegistry_JSON> build(const std::shared_ptr<ObjectRegistry> & objreg, const std::shared_ptr<ConfigReader> & cr);
 
 	private:
 		const std::list<std::shared_ptr<ObjectFactory_JSON>> & _get(const char * type) const;

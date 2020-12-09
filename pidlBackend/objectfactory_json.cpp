@@ -30,8 +30,8 @@
 #include "include/pidlBackend/json_cscodegen.h"
 #include "include/pidlBackend/operationfactory_json.h"
 #include "include/pidlBackend/cstyledocumentationfactory_json.h"
-
 #include "include/pidlBackend/language.h"
+#include "include/pidlBackend/configreader.h"
 
 #include <pidlCore/errorcollector.h>
 #include <pidlCore/jsontools.h>
@@ -78,55 +78,193 @@ namespace PIDL {
 
 	namespace Factories_JSON
 	{
-		struct Context
-		{
-			Context(const std::shared_ptr<ObjectFactoryRegistry_JSON> & facreg_, const std::shared_ptr<ObjectRegistry> & objreg_) :
-				facreg(facreg_),
-				objreg(objreg_)
-			{ }
+    class Context
+    {
+        std::shared_ptr<ObjectFactoryRegistry_JSON> m_facreg;
+        std::shared_ptr<ObjectRegistry> m_objreg;
+        std::shared_ptr<ConfigReader> m_config;
+    public:
+        Context(const std::shared_ptr<ObjectFactoryRegistry_JSON> & facreg, const std::shared_ptr<ObjectRegistry> & objreg, const std::shared_ptr<ConfigReader> & cr) :
+            m_facreg(facreg),
+            m_objreg(objreg),
+            m_config(cr)
+        { }
 
-			std::shared_ptr<ObjectFactoryRegistry_JSON> facreg;
-			std::shared_ptr<ObjectRegistry> objreg;
+        template<typename T>
+        bool getCfgValue(const std::string name, Nullable<T> & ret, ErrorCollector & ec) const
+        {
+            (void)name, (void)ret, (void)ec;
+            return false;
+        }
 
-			template<typename T>
-			static bool getValueOptional(const rapidjson::Value & r, const char * name, /*in-out*/ T & ret, ErrorCollector & ec)
-			{
-				rapidjson::Value * v;
-				if (!JSONTools::getValue(r, name, v) || v->IsNull())
-					return true;
+        bool getCfgValue(const std::string name, Nullable<std::string> & ret, ErrorCollector & ec) const
+        {
+            std::string tmp;
+            if(m_config->get(name, tmp, ec) == ConfigReader::Status::Error)
+            {
+                ret.setNull();
+                return false;
+            }
+            ret = tmp;
+            return true;
+        }
 
-				if (!JSONTools::getValue(*v, ret))
-				{
-					ec << std::string() + "value '" + name + "' is invalid";
-					return false;
-				}
+        bool getCfgValue(const std::string name, Nullable<long long> & ret, ErrorCollector & ec) const
+        {
+            long long tmp;
+            if(m_config->get(name, tmp, ec) == ConfigReader::Status::Error)
+            {
+                ret.setNull();
+                return false;
+            }
+            ret = tmp;
+            return true;
+        }
 
-				return true;
-			}
+        bool getCfgValue(const std::string & name, Nullable<int> & ret, ErrorCollector & ec) const
+        {
+            long long tmp;
+            if(m_config->get(name, tmp, ec) == ConfigReader::Status::Error)
+            {
+                ret.setNull();
+                return false;
+            }
+            ret = static_cast<int>(tmp);
+            return true;
+        }
 
-			template<typename T>
-			static bool getValue(const rapidjson::Value & v, T & ret, ErrorCollector & ec)
-			{
-				if (!JSONTools::getValue(v, ret))
-				{
-					ec << std::string() + "value is invalid";
-					return false;
-				}
-				return true;
-			}
+        bool getCfgValue(const std::string & name, Nullable<bool> & ret, ErrorCollector & ec) const
+        {
+            bool tmp;
+            if(m_config->get(name, tmp, ec) == ConfigReader::Status::Error)
+            {
+                ret.setNull();
+                return false;
+            }
+            ret = tmp;
+            return true;
+        }
 
-			template<typename T>
-			static bool getValue(const rapidjson::Value & r, const char * name, T & ret, ErrorCollector & ec)
-			{
-				if (!JSONTools::getValue(r, name, ret))
-				{
-					ec << std::string() + "value '" + name + "' is not found or invalid";
-					return false;
-				}
-				return true;
-			}
+        template<typename T>
+        bool getValueOptional(const rapidjson::Value & r, const char * name, /*in-out*/ T & ret, ErrorCollector & ec) const
+        {
+            const rapidjson::Value * v;
+            if (!JSONTools::getValue(r, name, v) || v->IsNull())
+                return true;
 
-			static bool getName(const rapidjson::Value & r, std::string & ret, ErrorCollector & ec)
+            if(m_config && v->IsObject())
+            {
+                std::string cfg;
+                if(JSONTools::getValue(*v, "config", cfg))
+                {
+                    Nullable<T> tmp;
+                    if(!getCfgValue(cfg, tmp, ec))
+                        return false;
+                    if(!tmp)
+                        return getValueOptional(*v, "dafult", ret, ec);
+                    ret = *tmp;
+                    return true;
+                }
+            }
+
+            if (!JSONTools::getValue(*v, ret))
+            {
+                ec << std::string() + "value '" + name + "' is invalid";
+                return false;
+            }
+
+            return true;
+        }
+
+        template<typename T>
+        bool getExistingValue(const rapidjson::Value & r, const char * name, /*in-out*/ T & ret, ErrorCollector & ec) const
+        {
+            const rapidjson::Value * v;
+            if (!JSONTools::getValue(r, name, v) || v->IsNull())
+                return false;
+
+            if(m_config && v->IsObject())
+            {
+                std::string cfg;
+                if(JSONTools::getValue(*v, "config", cfg))
+                {
+                    Nullable<T> tmp;
+                    if(!getCfgValue(cfg, tmp, ec))
+                        return false;
+                    if(!tmp)
+                        return getExistingValue(*v, "dafult", ret, ec);
+                    ret = *tmp;
+                    return true;
+                }
+            }
+
+            if (!JSONTools::getValue(*v, ret))
+            {
+                ec << std::string() + "value '" + name + "' is invalid";
+                return false;
+            }
+
+            return true;
+        }
+
+        template<typename T>
+        bool getExistingValue(const rapidjson::Value & r, const char * name, std::vector<T> & ret, ErrorCollector & ec) const
+        {
+            const rapidjson::Value * v;
+            if (!JSONTools::getValue(r, name, v) || v->IsNull() || !v->IsArray())
+                return false;
+
+            ret.resize(v->Size());
+            size_t i = 0;
+            for(auto & v : v->GetArray())
+            {
+                if(!getValue(v, ret[i++], ec))
+                    return false;
+            }
+
+            return true;
+        }
+
+        template<typename T>
+        bool getValue(const rapidjson::Value & v, T & ret, ErrorCollector & ec) const
+        {
+            if(m_config && v.IsObject())
+            {
+                std::string cfg;
+                if(JSONTools::getValue(v, "config", cfg))
+                {
+                    Nullable<T> tmp;
+                    if(!getCfgValue(cfg, tmp, ec))
+                        return false;
+                    if(!tmp)
+                        return getValue(v, "dafult", ret, ec);
+                    ret = *tmp;
+                    return true;
+                }
+            }
+
+            if (!JSONTools::getValue(v, ret))
+            {
+                ec << std::string() + "value is invalid";
+                return false;
+            }
+            return true;
+        }
+
+        template<typename T>
+        bool getValue(const rapidjson::Value & r, const char * name, T & ret, ErrorCollector & ec) const
+        {
+            const rapidjson::Value * v;
+            if (!JSONTools::getValue(r, name, v))
+            {
+                ec << std::string() + "value '" + name + "' is not found";
+                return false;
+            }
+
+            return getValue(*v, ret, ec);
+        }
+
+            bool getName(const rapidjson::Value & r, std::string & ret, ErrorCollector & ec)
 			{
 				return getValue(r, "name", ret, ec);
 			}
@@ -136,7 +274,7 @@ namespace PIDL {
 			{
 				if(value.IsString())
 				{
-					if(!(ret = this->objreg->get<Object_T>(type_name, value.GetString())))
+                    if(!(ret = this->m_objreg->get<Object_T>(type_name, value.GetString())))
 					{
 						ec << std::string() + "the referred object '"+value.GetString()+"' is not registered";
 						return false;
@@ -144,7 +282,7 @@ namespace PIDL {
 				}
 				else if (value.IsObject())
 				{
-					auto fac = this->facreg->getValid<Factory_T>(type_name, value);
+                    auto fac = this->m_facreg->getValid<Factory_T>(type_name, value);
 					if(!fac)
 					{
 						ec << "could not find valid factory";
@@ -155,7 +293,7 @@ namespace PIDL {
 						return false;
 
 					std::string name;
-					if (JSONTools::getValue(value, "name", name) && !objreg->add(name.c_str(), ret, ec))
+                    if (JSONTools::getValue(value, "name", name) && !m_objreg->add(name.c_str(), ret, ec))
 						return false;
 				}
 				else
@@ -222,7 +360,7 @@ namespace PIDL {
 				return true;
 			}
 
-			static bool get_out(const rapidjson::Value & r, std::shared_ptr<std::ostream> & o, std::string & filename, ErrorCollector & ec)
+            bool get_out(const rapidjson::Value & r, std::shared_ptr<std::ostream> & o, std::string & filename, ErrorCollector & ec)
 			{
 				std::string out_str = r.HasMember("filename") ? "file" : "stdout";
 				if (!getValueOptional(r, "out", out_str, ec))
@@ -256,7 +394,7 @@ namespace PIDL {
 				return true;
 			}
 
-			static bool get_data(const rapidjson::Value & r, std::string & str, ErrorCollector & ec)
+            bool get_data(const rapidjson::Value & r, std::string & str, ErrorCollector & ec)
 			{
 				rapidjson::Value * v;
 				if (JSONTools::getValue(r, "data", v))
@@ -282,7 +420,7 @@ namespace PIDL {
 				return true;
 			}
 
-            static bool get_include(rapidjson::Value & r, Include & incl, ErrorCollector & ec)
+            bool get_include(rapidjson::Value & r, Include & incl, ErrorCollector & ec)
 			{
 				if (!r.IsObject())
 				{
@@ -309,38 +447,6 @@ namespace PIDL {
 
 				return true;
 			}
-
-			//template<class Settings_T>
-			//static bool get_tab_settings(const rapidjson::Value & r, Settings_T & settings, ErrorCollector & ec)
-			//{
-			//	rapidjson::Value * v;
-			//	if (JSONTools::getValue(r, "tab", v))
-			//	{
-			//		if (!v->IsObject())
-			//		{
-			//			ec << "value 'tab' is not object";
-			//			return false;
-			//		}
-			//		std::string tab_str(settings.tabChar, 1);
-			//		if (!getValueOptional(*v, "char", tab_str, ec))
-			//			return false;
-
-			//		if (tab_str.length() != 1)
-			//		{
-			//			ec << "invalid char definition: '" + tab_str + "'";
-			//			return false;
-			//		}
-			//		settings.tabChar = tab_str[0];
-
-			//		long long ll_tmp = settings.tabLength;
-			//		if (getValue(*v, "length", ll_tmp, ec))
-			//			return false;
-			//		settings.tabLength = (short)ll_tmp;
-			//	}
-
-			//	return true;
-			//}
-
 		};
 
 
@@ -781,7 +887,7 @@ namespace PIDL {
 
                 std::set<JSON_STL_CodeGen::Flag> flags;
                 std::vector<std::string> strl;
-                if(JSONTools::getValue(value, "flags", strl))
+                if(ctx.getExistingValue(value, "flags", strl, ec))
                 {
                     for(auto & str : strl)
                     {
@@ -1356,7 +1462,7 @@ namespace PIDL {
 				}
 
 				std::string text;
-				if (!JSONTools::getValue(r, "message", text))
+                if (!ctx.getExistingValue(r, "message", text, ec))
 				{
 					if (!ctx.getValue(r, "text", text, ec))
 					{
@@ -1391,11 +1497,11 @@ namespace PIDL {
 	}
 
 	//static
-	std::shared_ptr<ObjectFactoryRegistry_JSON> ObjectFactoryRegistry_JSON::build(const std::shared_ptr<ObjectRegistry> & objreg)
+    std::shared_ptr<ObjectFactoryRegistry_JSON> ObjectFactoryRegistry_JSON::build(const std::shared_ptr<ObjectRegistry> & objreg, const std::shared_ptr<ConfigReader> & cr)
 	{
 		auto ret = std::make_shared<ObjectFactoryRegistry_JSON>();
 
-		Factories_JSON::Context ctx(ret, objreg);
+        Factories_JSON::Context ctx(ret, objreg, cr);
 
 		ret->add(std::make_shared<Factories_JSON::CPPWriterFactory>(ctx));
 		ret->add(std::make_shared<Factories_JSON::CSWriterFactory>(ctx));
