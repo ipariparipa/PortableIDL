@@ -168,6 +168,16 @@ namespace PIDL
                 ctx->writeTabs(code_deepness) << "return _getValue(*v, ret, ec);" << std::endl;
                 ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 
+                ctx->writeTabs(code_deepness) << "template<typename T> bool _getValue(const rapidjson::Value & r, const char * name, ptr<T> & ret, _error_collector & ec)" << std::endl;
+                ctx->writeTabs(code_deepness++) << "{" << std::endl;
+                ctx->writeTabs(code_deepness) << "rapidjson::Value * v;" << std::endl;
+                ctx->writeTabs(code_deepness) << "if (!PIDL::JSONTools::getValue(r, name, v))" << std::endl;
+                ctx->writeTabs(code_deepness) << "{ ec << std::string() + \"value '\" + name + \"' is not found or null\"; return false; }" << std::endl;
+                ctx->writeTabs(code_deepness) << "if(v->IsNull())" << std::endl;
+                ctx->writeTabs(code_deepness) << "{ ret.reset(); return true; }" << std::endl;
+                ctx->writeTabs(code_deepness) << "return _getValue(*v, ret, ec);" << std::endl;
+                ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
+
                 ctx->writeTabs(code_deepness) << "template<typename T> bool _getValue(const rapidjson::Value & v, nullable<T> & ret, _error_collector & ec)" << std::endl;
                 ctx->writeTabs(code_deepness++) << "{" << std::endl;
                 ctx->writeTabs(code_deepness) << "if (v.IsNull())" << std::endl;
