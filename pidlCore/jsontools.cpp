@@ -148,6 +148,26 @@ namespace PIDL { namespace JSONTools {
 		return true;
 	}
 
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, const rapidjson::Value *& ret)
+    {
+        if (!r.HasMember(name))
+            return false;
+        ret = &r[name];
+        return true;
+    }
+
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, rapidjson::Value *&ret)
+    {
+        ret = (rapidjson::Value *)&v;
+        return true;
+    }
+
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, const rapidjson::Value *&ret)
+    {
+        ret = &v;
+        return true;
+    }
+
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, std::string & ret)
 	{
 		rapidjson::Value * v;

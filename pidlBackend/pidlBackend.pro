@@ -27,7 +27,8 @@ SOURCES += \
     operation.cpp \
     reader.cpp \
     writer.cpp \
-    xmlreader.cpp
+    xmlreader.cpp \
+    configreader.cpp
 
 HEADERS += \
     include/pidlBackend/codegencontext.h \
@@ -54,6 +55,7 @@ HEADERS += \
     include/pidlBackend/readerfactory_json.h \
     include/pidlBackend/writer.h \
     include/pidlBackend/writerfactory_json.h \
-    include/pidlBackend/xmlreader.h
+    include/pidlBackend/xmlreader.h \
+    include/pidlBackend/configreader.h
 
 

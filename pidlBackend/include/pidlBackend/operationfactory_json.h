@@ -29,15 +29,16 @@ along with pidlBackend.  If not, see <http://www.gnu.org/licenses/>
 namespace PIDL {
 
 	class ErrorCollector;
+    class ConfigReader;
 
 	class PIDL_BACKEND__CLASS OperationFactory_JSON  : public ObjectFactory_JSON
 	{
 	public:
-		virtual ~OperationFactory_JSON() = default;
+        virtual inline ~OperationFactory_JSON() override = default;
 
 		virtual const char * objectType() const override { return PIDL_OBJECT_TYPE__OPERATION; }
 
-		virtual bool build(const rapidjson::Value & value, std::shared_ptr<Operation> & ret, ErrorCollector & ec) = 0;
+        virtual bool build(const rapidjson::Value & value, std::shared_ptr<Operation> & ret, ErrorCollector & ec) = 0;
 	};
 }
 
