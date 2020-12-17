@@ -70,7 +70,8 @@ namespace PIDL {
 			return _errors;
 		}
 
-        Exception throwException()
+        void throwException()
+
 		{
             throw exception();
 		}
