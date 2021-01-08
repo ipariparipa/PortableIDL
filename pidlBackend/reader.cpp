@@ -43,7 +43,7 @@ namespace PIDL
 		}
 		else
 		{
-			ec << "unable to open file";
+            ec.add(-1, "unable to open file '" + filename + "'");
 			return false;
 		}
 
