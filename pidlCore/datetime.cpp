@@ -76,7 +76,7 @@ namespace PIDL {
         if(tmp.tm_mon < 0)
             return false;
 
-        ret += std::chrono::milliseconds(dt.millisecond);
+        ret += std::chrono::nanoseconds(dt.nanosecond);
 
         return true;
     }
@@ -90,16 +90,16 @@ namespace PIDL {
 
     extern PIDL_CORE__FUNCTION tm toTm(const DateTime & dt)
     {
-        tm ret;
-        fromDateTime(dt, ret);
-        return ret;
+        if(tm ret; fromDateTime(dt, ret))
+            return ret;
+        return tm();
     }
 
     extern PIDL_CORE__FUNCTION std::chrono::system_clock::time_point toTimepoint(const DateTime & dt)
     {
-        std::chrono::system_clock::time_point ret;
-        fromDateTime(dt, ret);
-        return ret;
+        if(std::chrono::system_clock::time_point ret; fromDateTime(dt, ret))
+            return ret;
+        return std::chrono::system_clock::time_point();
     }
 
 	extern PIDL_CORE__FUNCTION bool toDateTime(const tm & t, DateTime & ret)
@@ -110,7 +110,7 @@ namespace PIDL {
         ret.hour = static_cast<short>(t.tm_hour);
         ret.minute = static_cast<short>(t.tm_min);
         ret.second = static_cast<short>(t.tm_sec);
-		ret.millisecond = 0;
+        ret.nanosecond = 0;
         if(t.tm_zone && strcmp(t.tm_zone, "UTC") == 0)
             ret.kind = DateTime::UTC;
         else
@@ -126,7 +126,7 @@ namespace PIDL {
         if(!toDateTime(*tmp, ret))
             return false;
 
-        ret.millisecond = static_cast<short>(std::chrono::duration_cast<std::chrono::milliseconds>(t.time_since_epoch()).count() - tt * 1000);
+        ret.nanosecond = static_cast<int>(std::chrono::duration_cast<std::chrono::nanoseconds>(t.time_since_epoch() - std::chrono::seconds(tt)).count());
 
         return true;
     }

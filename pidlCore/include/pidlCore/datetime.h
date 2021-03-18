@@ -16,13 +16,13 @@ namespace PIDL {
 			None, UTC, Local
 		};
 
-		short year = 0;
-		short month = 1;
-		short day = 0;
-		short hour = 0;
-		short minute = 0;
-		short second = 0;
-		short millisecond = 0;
+        short year = 0;
+        short month = 1;
+        short day = 0;
+        short hour = 0;
+        short minute = 0;
+        short second = 0;
+        int nanosecond = 0;
 
 		Kind kind = None;
 	};
@@ -43,6 +43,32 @@ namespace PIDL {
         return ret;
     }
 
+    template<typename T>
+    struct FromDateTime
+    {
+        FromDateTime() = default;
+        T operator() (const DateTime & dt) = delete;
+    };
+
+    template<>
+    struct FromDateTime<tm>
+    {
+        FromDateTime() = default;
+        tm operator() (const DateTime & dt)
+        {
+            return toTm(dt);
+        }
+    };
+
+    template<>
+    struct FromDateTime<std::chrono::system_clock::time_point>
+    {
+        FromDateTime() = default;
+        std::chrono::system_clock::time_point operator() (const DateTime & dt)
+        {
+            return toTimepoint(dt);
+        }
+    };
 }
 
 #endif // pidlCore__datetime_h
