@@ -250,7 +250,7 @@ namespace PIDL { namespace JSONTools {
 		if (r.IsNull() || !r.IsObject())
 			return false;
 
-		long long year, month, day, hour, minute, second, millisecond;
+        long long year, month, day, hour, minute, second, nanosecond;
 		if (!getValue(r, "year", year) ||
 			!getValue(r, "month", month) ||
 			!getValue(r, "day", day) ||
@@ -259,17 +259,22 @@ namespace PIDL { namespace JSONTools {
 			!getValue(r, "second", second))
 			return false;
 
-		millisecond = 0;
-		getValue(r, "millisecond", millisecond);
+        nanosecond = 0;
+        if(!getValue(r, "nanosecond", nanosecond))
+        {
+            long long millisecond;
+            if(getValue(r, "millisecond", millisecond))
+                nanosecond = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(millisecond)).count();
+        }
 
 		memset(&t, 0, sizeof(tm));
-		t.tm_year = year - 1900;
-		t.tm_mon = month - 1;
-		t.tm_mday = day - 1;
-		t.tm_hour = hour;
-		t.tm_min = minute;
-		t.tm_sec = second;
-		ret_millisecond = (int)millisecond;
+        t.tm_year = static_cast<int>(year - 1900);
+        t.tm_mon = static_cast<int>(month - 1);
+        t.tm_mday = static_cast<int>(day - 1);
+        t.tm_hour = static_cast<int>(hour);
+        t.tm_min = static_cast<int>(minute);
+        t.tm_sec = static_cast<int>(second);
+        ret_millisecond = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::nanoseconds(nanosecond)).count());
 
 		return true;
 	}
@@ -285,7 +290,7 @@ namespace PIDL { namespace JSONTools {
 		if (r.IsNull() || !r.IsObject())
 			return false;
 
-		long long year, month, day, hour, minute, second, millisecond;
+        long long year, month, day, hour, minute, second, nanosecond;
 		if (!getValue(r, "year", year) ||
 			!getValue(r, "month", month) ||
 			!getValue(r, "day", day) ||
@@ -294,8 +299,13 @@ namespace PIDL { namespace JSONTools {
 			!getValue(r, "second", second))
 			return false;
 
-		millisecond = 0;
-		getValue(r, "millisecond", millisecond);
+        nanosecond = 0;
+        if(!getValue(r, "nanosecond", nanosecond))
+        {
+            long long millisecond;
+            if(getValue(r, "millisecond", millisecond))
+                nanosecond = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(millisecond)).count();
+        }
 
         ret.year = static_cast<short>(year);
         ret.month = static_cast<short>(month);
@@ -303,7 +313,7 @@ namespace PIDL { namespace JSONTools {
         ret.hour = static_cast<short>(hour);
         ret.minute = static_cast<short>(minute);
         ret.second = static_cast<short>(second);
-        ret.millisecond = static_cast<short>(millisecond);
+        ret.nanosecond = static_cast<int>(nanosecond);
 
 		std::string kind_str;
 		if (getValue(r, "kind", kind_str))
@@ -441,8 +451,11 @@ namespace PIDL { namespace JSONTools {
         addValue(doc, v, "hour", static_cast<long long>(dt.hour));
         addValue(doc, v, "minute", static_cast<long long>(dt.minute));
         addValue(doc, v, "second", static_cast<long long>(dt.second));
-		if (dt.millisecond > 0)
-            addValue(doc, v, "millisecond", static_cast<long long>(dt.millisecond));
+        if (dt.nanosecond > 0)
+        {
+            addValue(doc, v, "nanosecond", static_cast<long long>(dt.nanosecond));
+            addValue(doc, v, "millisecond", static_cast<long long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::nanoseconds(dt.nanosecond)).count()));
+        }
 
 		switch (dt.kind)
 		{
