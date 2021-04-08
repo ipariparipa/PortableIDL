@@ -202,8 +202,9 @@ namespace PIDL { namespace JSONTools {
             ret = v.GetUint();
         else if(v.IsInt() || v.GetDouble() < 0)
             return false;
+        else
+            ret = static_cast<unsigned int>(v.GetDouble());
 
-        ret = static_cast<unsigned int>(v.GetDouble());
         return true;
     }
 
@@ -224,8 +225,9 @@ namespace PIDL { namespace JSONTools {
             ret = v.GetUint64();
         else if(v.IsInt64() || v.GetDouble() < 0)
             return false;
+        else
+            ret = static_cast<unsigned long long>(v.GetDouble());
 
-        ret = static_cast<unsigned int>(v.GetDouble());
         return true;
     }
 
