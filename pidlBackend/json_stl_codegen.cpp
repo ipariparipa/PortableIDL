@@ -474,6 +474,8 @@ namespace PIDL
 						ctx->writeTabs(code_deepness++) << "_functions[\"" << function->name() << "\"].data[\"" << function->variantId() << "\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
                         write_privs(dynamic_cast<Language::MethodVariant*>(d.get()) != nullptr);
 
+
+
                         if(helper->logging())
                         {
                             auto starter = helper->logging()->loggingStart("_logger");
@@ -513,7 +515,9 @@ namespace PIDL
 							}
 							ctx->writeTabs(--code_deepness) << ")" << std::endl;
 							ctx->writeTabs(code_deepness + 1) << "return _invoke_status::MarshallingError;" << std::endl;
-						}
+                        } else {
+                            ctx->writeTabs(code_deepness) << "(void)r;" << std::endl;
+                        }
 
 						auto ret_type = function->returnType().get();
 						if (dynamic_cast<Language::Void*>(function->returnType().get()))
@@ -557,6 +561,10 @@ namespace PIDL
 							ctx->writeTabs(code_deepness) << "PIDL::JSONTools::addValue(ret, ret, \"output\", out_v);" << std::endl;
 						}
 
+                        if(!in_args.size() && !ret_type && !out_args.size()) {
+                            ctx->writeTabs(code_deepness) << "(void)_intf_p;" << std::endl;
+                        }
+
 						ctx->writeTabs(code_deepness) << "return _invoke_status::Ok;" << std::endl;
 						ctx->writeTabs(--code_deepness) << "};" << std::endl << std::endl;
 					}
@@ -567,6 +575,8 @@ namespace PIDL
 					//getter
 						ctx->writeTabs(code_deepness++) << "_functions[\"" << property->name() << "\"].data[\"get\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
                         write_privs(true);
+
+                        ctx->writeTabs(code_deepness) << "(void)r;" << std::endl;
 
                         if(helper->logging())
                         {
@@ -604,6 +614,8 @@ namespace PIDL
 							ctx->writeTabs(code_deepness++) << "_functions[\"" << property->name() << "\"].data[\"set\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
                             write_privs(true);
 
+                            ctx->writeTabs(code_deepness) << "(void)ret;" << std::endl;
+
                             if(helper->logging())
                             {
                                 auto starter = helper->logging()->loggingStart("_logger");
@@ -632,6 +644,8 @@ namespace PIDL
 				{
 					ctx->writeTabs(code_deepness++) << "_functions[\"_dispose_object\"].data[std::string()] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
                     write_privs(false);
+
+                    ctx->writeTabs(code_deepness) << "(void)ret;" << std::endl;
 
                     if(helper->logging())
                     {
