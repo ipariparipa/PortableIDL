@@ -200,7 +200,9 @@ namespace PIDL
 		template<class Class_T>
 		bool writeMembers(Language::Interface * intf, short code_deepness, Context * ctx, Class_T * cl, ErrorCollector & ec)
 		{
-			switch (ctx->role())
+            (void)intf;
+            (void)ec;
+            switch (ctx->role())
 			{
 			case Role::Server:
 				ctx->writeTabs(code_deepness) << "struct _FunctionRet { public _InvokeStatus status; public XElement ret; };" << std::endl;
@@ -577,7 +579,8 @@ namespace PIDL
 
 		bool writePropertySetterBody(Language::Interface * intf, Language::Property * prop, short code_deepness, Context * ctx, ErrorCollector & ec)
 		{
-			switch (ctx->role())
+            (void)ec;
+            switch (ctx->role())
 			{
 			case Role::Client:
 			{
@@ -636,7 +639,8 @@ namespace PIDL
 
 	bool JSON_CSCodeGen::writeUsings(short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		ctx->writeTabs(code_deepness) << "using System;" << std::endl;
+        (void)ec;
+        ctx->writeTabs(code_deepness) << "using System;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using System.Collections.Generic;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using System.Linq;" << std::endl;
 		ctx->writeTabs(code_deepness) << "using System.Text;" << std::endl;
@@ -1196,6 +1200,7 @@ namespace PIDL
 
 	bool JSON_CSCodeGen::writeInvoke(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
+        (void)ec;
         ctx->writeTabs(code_deepness) << "public enum _InvokeStatus {Ok, NotImplemented, Error, MarshallingError, NotSupportedMarshallingVersion, FatalError};" << std::endl;
 		switch (ctx->role())
 		{
@@ -1318,7 +1323,10 @@ namespace PIDL
 
 	bool JSON_CSCodeGen::writeDestructorBody(Language::Interface * intf, Language::Object * obj, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		switch (ctx->role())
+        (void)intf;
+        (void)obj;
+        (void)ec;
+        switch (ctx->role())
 		{
 		case Role::Client:
 			ctx->writeTabs(code_deepness) << "if (_intf != null)" << std::endl;
@@ -1332,7 +1340,10 @@ namespace PIDL
 
 	bool JSON_CSCodeGen::writeInvoke(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
 	{
-		switch (ctx->role())
+        (void)intf;
+        (void)obj;
+        (void)ec;
+        switch (ctx->role())
 		{
 		case Role::Server:
 			ctx->writeTabs(code_deepness) << "public _InvokeStatus _invoke(XElement root, out XElement ret, PIDL.IPIDLErrorCollector ec)" << std::endl;

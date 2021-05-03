@@ -63,16 +63,16 @@ namespace PIDL
 	CPPVoidLogging::~CPPVoidLogging() = default;
 
     std::vector<Include> CPPVoidLogging::includes() const { return std::vector<Include>(); }
-    std::string CPPVoidLogging::initLogger(const std::string & scope) const { return std::string(); }
+    std::string CPPVoidLogging::initLogger(const std::string & scope) const { (void)scope; return std::string(); }
 	std::string CPPVoidLogging::loggerType() const { return std::string(); }
-	std::string CPPVoidLogging::loggingStart(const std::string & logger) const { return std::string(); }
-	std::string CPPVoidLogging::loggingAssert(const std::string & logger, const std::string & expression, const std::string & message) const { return std::string(); }
-	std::string CPPVoidLogging::loggingTrace(const std::string & logger, const std::string & message) const { return std::string(); }
-	std::string CPPVoidLogging::loggingDebug(const std::string & logger, const std::string & message) const { return std::string(); }
-	std::string CPPVoidLogging::loggingInfo(const std::string & logger, const std::string & message) const { return std::string(); }
-	std::string CPPVoidLogging::loggingWarning(const std::string & logger, const std::string & message) const { return std::string(); }
-	std::string CPPVoidLogging::loggingError(const std::string & logger, const std::string & message) const { return std::string(); }
-	std::string CPPVoidLogging::loggingFatal(const std::string & logger, const std::string & message) const { return std::string(); }
+    std::string CPPVoidLogging::loggingStart(const std::string & logger) const { (void)logger; return std::string(); }
+    std::string CPPVoidLogging::loggingAssert(const std::string & logger, const std::string & expression, const std::string & message) const { (void)logger; (void)expression; (void)message; return std::string(); }
+    std::string CPPVoidLogging::loggingTrace(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
+    std::string CPPVoidLogging::loggingDebug(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
+    std::string CPPVoidLogging::loggingInfo(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
+    std::string CPPVoidLogging::loggingWarning(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
+    std::string CPPVoidLogging::loggingError(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
+    std::string CPPVoidLogging::loggingFatal(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
 
 
 	CPPCodeGenHelper::CPPCodeGenHelper() : priv(nullptr)
@@ -255,7 +255,8 @@ namespace PIDL
 
 		bool addNative(CPPCodeGenContext * ctx, Language::NativeType * native, ErrorCollector & ec)
 		{
-			auto & o = ctx->stream();
+            (void)ec;
+            auto & o = ctx->stream();
 			if (dynamic_cast<Language::Integer*>(native))
 				o << "long long";
 			else if (dynamic_cast<Language::Float*>(native))
@@ -267,7 +268,8 @@ namespace PIDL
 
 		bool addEmbedded(CPPCodeGenContext * ctx, Language::EmbeddedType * embedded, ErrorCollector & ec)
 		{
-			auto & o = ctx->stream();
+            (void)ec;
+            auto & o = ctx->stream();
 			if (dynamic_cast<Language::String*>(embedded))
 				o << "string";
 			else if (dynamic_cast<Language::DateTime*>(embedded))
@@ -280,6 +282,7 @@ namespace PIDL
 
 		bool addObject(CPPCodeGenContext * ctx, Language::Object * obj, ErrorCollector & ec)
 		{
+            (void)ec;
             *ctx << "ptr<" << getScope(obj) << obj->name() << ">";
 			return true;
 		}
@@ -482,7 +485,7 @@ namespace PIDL
 			case Mode::Declaration:
 				if (!writeDocumentation(code_deepness, ctx, CStyleDocumentation::After, function, ec))
 					return false;
-				//no break
+                // fall through
 			case Mode::Implementatinon:
 				**ctx << std::endl;
 			}
@@ -569,7 +572,7 @@ namespace PIDL
 			case Mode::Declaration:
 				if (!writeDocumentation(code_deepness, ctx, CStyleDocumentation::After, property, ec))
 					return false;
-				//no break
+                // fall through
 			case Mode::Implementatinon:
 				**ctx << std::endl;
 				break;
@@ -651,10 +654,11 @@ namespace PIDL
 				switch (ctx->mode())
 				{
 				case Mode::AllInOne:
+                    // fall through
 				case Mode::Declaration:
 					if (!writeDocumentation(code_deepness, ctx, CStyleDocumentation::After, property, ec))
 						return false;
-					//no break
+                    // fall through
 				case Mode::Implementatinon:
 					**ctx << std::endl;
 					break;
@@ -978,7 +982,8 @@ namespace PIDL
 
 		bool writeLongString(short code_deepness, CPPCodeGenContext * ctx, const std::string & str, ErrorCollector & ec)
 		{
-			if (!str.length())
+            (void)ec;
+            if (!str.length())
 			{
 				*ctx << "\"\"";
 				return true;
@@ -1346,7 +1351,8 @@ namespace PIDL
 
     bool CPPCodeGen::writeInclude(short code_deepness, CPPCodeGenContext * ctx, const Include & include, ErrorCollector & ec)
 	{
-		auto & o = ctx->writeTabs(code_deepness) << "#include ";
+        (void)ec;
+        auto & o = ctx->writeTabs(code_deepness) << "#include ";
 		switch (include.first)
 		{
         case IncludeType::GLobal:
@@ -1395,12 +1401,21 @@ namespace PIDL
 
 	bool CPPCodeGen::writeDestructorBody(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
+        (void)intf;
+        (void)code_deepness;
+        (void)ctx;
+        (void)ec;
 		return true;
 	}
 
 	bool CPPCodeGen::writeDestructorBody(Language::Interface * intf, Language::Object * obj, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		return true;
+        (void)intf;
+        (void)obj;
+        (void)code_deepness;
+        (void)ctx;
+        (void)ec;
+        return true;
 	}
 
 	bool CPPCodeGen::writeType(Language::Type * type, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)

@@ -44,16 +44,16 @@ namespace PIDL {
 
 	CSVoidLogging::~CSVoidLogging() = default;
 
-	std::string CSVoidLogging::initLogger(const std::string & scope) const { return std::string(); }
+    std::string CSVoidLogging::initLogger(const std::string & scope) const { (void)scope; return std::string(); }
 	std::string CSVoidLogging::loggerType() const { return std::string(); }
-	std::string CSVoidLogging::loggingStart(const std::string & logger) const { return std::string(); }
-	std::string CSVoidLogging::loggingAssert(const std::string & logger, const std::string & expression, const std::string & message) const { return std::string(); }
-	std::string CSVoidLogging::loggingTrace(const std::string & logger, const std::string & message) const { return std::string(); }
-	std::string CSVoidLogging::loggingDebug(const std::string & logger, const std::string & message) const { return std::string(); }
-	std::string CSVoidLogging::loggingInfo(const std::string & logger, const std::string & message) const { return std::string(); }
-	std::string CSVoidLogging::loggingWarning(const std::string & logger, const std::string & message) const { return std::string(); }
-	std::string CSVoidLogging::loggingError(const std::string & logger, const std::string & message) const { return std::string(); }
-	std::string CSVoidLogging::loggingFatal(const std::string & logger, const std::string & message) const { return std::string(); }
+    std::string CSVoidLogging::loggingStart(const std::string & logger) const { (void) logger; return std::string(); }
+    std::string CSVoidLogging::loggingAssert(const std::string & logger, const std::string & expression, const std::string & message) const { (void)logger; (void)expression; (void)message; return std::string(); }
+    std::string CSVoidLogging::loggingTrace(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
+    std::string CSVoidLogging::loggingDebug(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
+    std::string CSVoidLogging::loggingInfo(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
+    std::string CSVoidLogging::loggingWarning(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
+    std::string CSVoidLogging::loggingError(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
+    std::string CSVoidLogging::loggingFatal(const std::string & logger, const std::string & message) const { (void)logger; (void)message; return std::string(); }
 
 
 	CSCodeGenHelper::CSCodeGenHelper() : priv(nullptr)
@@ -224,7 +224,8 @@ namespace PIDL {
 
 		bool addNative(CSCodeGenContext * ctx, Language::NativeType * native, ErrorCollector & ec)
 		{
-			auto & o = ctx->stream();
+            (void)ec;
+            auto & o = ctx->stream();
 			if (dynamic_cast<Language::Integer*>(native))
 				o << "long";
 			else if (dynamic_cast<Language::Float*>(native))
@@ -236,7 +237,8 @@ namespace PIDL {
 
 		bool addEmbedded(CSCodeGenContext * ctx, Language::EmbeddedType * embedded, ErrorCollector & ec)
 		{
-			auto & o = ctx->stream();
+            (void)ec;
+            auto & o = ctx->stream();
 			if (dynamic_cast<Language::String*>(embedded))
 				o << "string";
 			else if (dynamic_cast<Language::DateTime*>(embedded))
@@ -512,7 +514,8 @@ namespace PIDL {
 
 		bool writeDefinition(Language::Interface * intf, short code_deepness, CSCodeGenContext * ctx, Language::Object * obj, Language::Definition * definition, ErrorCollector & ec)
 		{
-			if (dynamic_cast<Language::Method*>(definition))
+            (void)obj;
+            if (dynamic_cast<Language::Method*>(definition))
 			{
 				for (auto & v : dynamic_cast<Language::Method*>(definition)->variants())
 					if (!writeFunction(intf, code_deepness, ctx, v.second.get(), ec))
@@ -579,7 +582,7 @@ namespace PIDL {
 						return false;
 				}
 
-				return true;
+            return true;
 		}
 
 		bool writeInterface(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
@@ -618,7 +621,8 @@ namespace PIDL {
 
 		bool writeLongString(short code_deepness, CSCodeGenContext * ctx, const std::string & str, ErrorCollector & ec)
 		{
-			if (!str.length())
+            (void)ec;
+            if (!str.length())
 			{
 				*ctx << "\"\"";
 				return true;
@@ -743,7 +747,11 @@ namespace PIDL {
 
 	bool CSCodeGen::writeMembers(short code_deepness, CSCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		return true;
+        (void)code_deepness;
+        (void)ctx;
+        (void)intf;
+        (void)ec;
+        return true;
 	}
 
 	bool CSCodeGen::writeType(Language::Type * type, short code_deepness, CSCodeGenContext * ctx, ErrorCollector & ec)

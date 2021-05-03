@@ -70,7 +70,9 @@ namespace PIDL
 	//virtual 
 	bool CodeGenContext::prebuild(Language::TopLevel *tl, ErrorCollector & ec)
 	{
-		return true;
+        (void)tl;
+        (void)ec;
+        return true;
 	}
 
 }

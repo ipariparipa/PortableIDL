@@ -46,6 +46,7 @@ ConfigReader::Status ConfigReader::get(const std::string & name, long long & ret
     case Status::Error:
         return Status::Error;
     }
+    return Status::Error;
 }
 
 //virtual
@@ -68,6 +69,7 @@ ConfigReader::Status ConfigReader::get(const std::string & name, double & ret, E
     case Status::Error:
         return Status::Error;
     }
+    return Status::Error;
 }
 
 //virtual
@@ -95,6 +97,7 @@ ConfigReader::Status ConfigReader::get(const std::string & name, bool & ret, Err
     case Status::Error:
         return Status::Error;
     }
+    return Status::Error;
 }
 
 }
