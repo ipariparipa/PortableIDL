@@ -68,7 +68,8 @@ namespace PIDL
 		template<class Class_T>
 		bool writePrivateMembers(short code_deepness, CPPCodeGenContext * ctx, Class_T * cl, ErrorCollector & ec)
 		{
-			ctx->writeTabs(code_deepness) << "//private members" << std::endl << std::endl;
+            (void)ec;
+            ctx->writeTabs(code_deepness) << "//private members" << std::endl << std::endl;
 
 			switch (ctx->role())
 			{
@@ -473,6 +474,8 @@ namespace PIDL
 						ctx->writeTabs(code_deepness++) << "_functions[\"" << function->name() << "\"].data[\"" << function->variantId() << "\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
                         write_privs(dynamic_cast<Language::MethodVariant*>(d.get()) != nullptr);
 
+
+
                         if(helper->logging())
                         {
                             auto starter = helper->logging()->loggingStart("_logger");
@@ -512,7 +515,9 @@ namespace PIDL
 							}
 							ctx->writeTabs(--code_deepness) << ")" << std::endl;
 							ctx->writeTabs(code_deepness + 1) << "return _invoke_status::MarshallingError;" << std::endl;
-						}
+                        } else {
+                            ctx->writeTabs(code_deepness) << "(void)r;" << std::endl;
+                        }
 
 						auto ret_type = function->returnType().get();
 						if (dynamic_cast<Language::Void*>(function->returnType().get()))
@@ -556,6 +561,10 @@ namespace PIDL
 							ctx->writeTabs(code_deepness) << "PIDL::JSONTools::addValue(ret, ret, \"output\", out_v);" << std::endl;
 						}
 
+                        if(!in_args.size() && !ret_type && !out_args.size()) {
+                            ctx->writeTabs(code_deepness) << "(void)_intf_p;" << std::endl;
+                        }
+
 						ctx->writeTabs(code_deepness) << "return _invoke_status::Ok;" << std::endl;
 						ctx->writeTabs(--code_deepness) << "};" << std::endl << std::endl;
 					}
@@ -566,6 +575,8 @@ namespace PIDL
 					//getter
 						ctx->writeTabs(code_deepness++) << "_functions[\"" << property->name() << "\"].data[\"get\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
                         write_privs(true);
+
+                        ctx->writeTabs(code_deepness) << "(void)r;" << std::endl;
 
                         if(helper->logging())
                         {
@@ -603,6 +614,8 @@ namespace PIDL
 							ctx->writeTabs(code_deepness++) << "_functions[\"" << property->name() << "\"].data[\"set\"] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
                             write_privs(true);
 
+                            ctx->writeTabs(code_deepness) << "(void)ret;" << std::endl;
+
                             if(helper->logging())
                             {
                                 auto starter = helper->logging()->loggingStart("_logger");
@@ -631,6 +644,8 @@ namespace PIDL
 				{
 					ctx->writeTabs(code_deepness++) << "_functions[\"_dispose_object\"].data[std::string()] = [&](const rapidjson::Value & r, rapidjson::Document & ret, _error_collector & ec)->_invoke_status {" << std::endl;
                     write_privs(false);
+
+                    ctx->writeTabs(code_deepness) << "(void)ret;" << std::endl;
 
                     if(helper->logging())
                     {
@@ -742,7 +757,8 @@ namespace PIDL
 
 	bool JSON_STL_CodeGen::writeInvoke(short code_deepness, CPPCodeGenContext * ctx, Language::Interface * intf, ErrorCollector & ec)
 	{
-		if (ctx->role() == Role::Client && ctx->mode() == Mode::Implementatinon)
+        (void)ec;
+        if (ctx->role() == Role::Client && ctx->mode() == Mode::Implementatinon)
 			return true;
 
 		switch (ctx->role())
@@ -834,7 +850,8 @@ namespace PIDL
 
 	bool JSON_STL_CodeGen::writeFunctionBody(Language::Interface * intf, Language::FunctionVariant * function, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		switch (ctx->role())
+        (void)intf;
+        switch (ctx->role())
 		{
 		case Role::Client:
 			if (dynamic_cast<Language::MethodVariant*>(function))
@@ -989,7 +1006,9 @@ namespace PIDL
 
 	bool JSON_STL_CodeGen::writeInvoke(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec)
 	{
-		if (ctx->role() == Role::Client && ctx->mode() == Mode::Implementatinon)
+        (void)intf;
+        (void)ec;
+        if (ctx->role() == Role::Client && ctx->mode() == Mode::Implementatinon)
 			return true;
 
 		switch (ctx->role())
@@ -1083,12 +1102,14 @@ namespace PIDL
 
 	bool JSON_STL_CodeGen::writePrivateMembers(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, Language::Object * object, ErrorCollector & ec)
 	{
-		return priv->writePrivateMembers(code_deepness, ctx, object, ec);
+        (void)intf;
+        return priv->writePrivateMembers(code_deepness, ctx, object, ec);
 	}
 
 	bool JSON_STL_CodeGen::writePropertyGetterBody(Language::Interface * intf, Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		switch (ctx->mode())
+        (void)intf;
+        switch (ctx->mode())
 		{
 		case Mode::AllInOne:
 			ctx->writeTabs(code_deepness) << "auto _p = this;" << std::endl;
@@ -1158,7 +1179,9 @@ namespace PIDL
 
 	bool JSON_STL_CodeGen::writePropertySetterBody(Language::Interface * intf, Language::Property * property, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		switch (ctx->mode())
+        (void)intf;
+        (void)ec;
+        switch (ctx->mode())
 		{
 		case Mode::AllInOne:
 			ctx->writeTabs(code_deepness) << "auto _p = this;" << std::endl;
@@ -1218,12 +1241,14 @@ namespace PIDL
 
 	bool JSON_STL_CodeGen::writeConstructorBody(Language::Interface * intf, Language::Object * object, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		return priv->writeConstructorBody(object, code_deepness, ctx, ec);
+        (void)intf;
+        return priv->writeConstructorBody(object, code_deepness, ctx, ec);
 	}
 
 	bool JSON_STL_CodeGen::writeObjectBase(Language::Interface * intf, short code_deepness, CPPCodeGenContext * ctx, ErrorCollector & ec)
 	{
-		if (priv->hasObjects(intf))
+        (void)ec;
+        if (priv->hasObjects(intf))
 		{
 			ctx->writeTabs(code_deepness) << "class _Object" << std::endl;
 			ctx->writeTabs(code_deepness++) << "{" << std::endl;
