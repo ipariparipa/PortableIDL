@@ -3,6 +3,7 @@
 #define pidlCore__datetime_h
 
 #include "config.h"
+#include "exception.h"
 
 #include <time.h>
 #include <chrono>
@@ -39,7 +40,8 @@ namespace PIDL {
     DateTime toDateTime(const T & t)
     {
         DateTime ret;
-        toDateTime(t, ret);
+        if(!toDateTime(t, ret))
+            throw Exception(-1, "value cannot be converted to DateTime");
         return ret;
     }
 

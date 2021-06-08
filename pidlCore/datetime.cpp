@@ -83,23 +83,26 @@ namespace PIDL {
 
 	extern PIDL_CORE__FUNCTION tm fromDateTime(const DateTime & dt)
 	{
-		tm ret;
-		fromDateTime(dt, ret);
-		return ret;
+        if(tm ret; fromDateTime(dt, ret))
+            return ret;
+
+        throw Exception(-1, "value cannot be converted from DateTime to tm");
 	}
 
     extern PIDL_CORE__FUNCTION tm toTm(const DateTime & dt)
     {
         if(tm ret; fromDateTime(dt, ret))
             return ret;
-        return tm();
+
+        throw Exception(-1, "value cannot be converted from DateTime to tm");
     }
 
     extern PIDL_CORE__FUNCTION std::chrono::system_clock::time_point toTimepoint(const DateTime & dt)
     {
         if(std::chrono::system_clock::time_point ret; fromDateTime(dt, ret))
             return ret;
-        return std::chrono::system_clock::time_point();
+
+        throw Exception(-1, "value cannot be converted from DateTime to time_point");
     }
 
 	extern PIDL_CORE__FUNCTION bool toDateTime(const tm & t, DateTime & ret)
