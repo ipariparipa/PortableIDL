@@ -68,9 +68,13 @@ namespace PIDL { namespace JSONTools {
 
     extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, const rapidjson::Value *& ret);
 
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, std::reference_wrapper<rapidjson::Document> & ret);
+
     extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, rapidjson::Value *& ret);
 
     extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, const rapidjson::Value *& ret);
+
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, std::reference_wrapper<rapidjson::Document> & ret);
 
 	extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, std::string & ret);
 
@@ -176,12 +180,16 @@ namespace PIDL { namespace JSONTools {
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value setString(rapidjson::Document & doc, const char * str);
 
-	extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, rapidjson::Value & v);
+    extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, rapidjson::Value & v);
+
+    extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::reference_wrapper<rapidjson::Document> & v);
 
 	extern PIDL_CORE__FUNCTION void addNull(rapidjson::Document & doc, rapidjson::Value & r, const char * name);
 	extern PIDL_CORE__FUNCTION rapidjson::Value createNull(rapidjson::Document & doc, rapidjson::Value & r);
 
-	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const char * str);
+    extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const char * str);
+
+    extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const std::reference_wrapper<rapidjson::Document> & value);
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const std::string & str);
 
@@ -240,18 +248,18 @@ namespace PIDL { namespace JSONTools {
     void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::optional<T> & v)
     {
         if (v)
-            addNull(doc, r, name);
-        else
             addValue(doc, r, name, *v);
+        else
+            addNull(doc, r, name);
     }
 
     template<typename T>
     void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::optional<const T &> & v)
     {
-        if (v.isNull())
-            addNull(doc, r, name);
-        else
+        if (v)
             addValue(doc, r, name, *v);
+        else
+            addNull(doc, r, name);
     }
 #endif
 

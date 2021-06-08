@@ -156,6 +156,14 @@ namespace PIDL { namespace JSONTools {
         return true;
     }
 
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & r, const char * name, std::reference_wrapper<rapidjson::Document> &ret)
+    {
+        if (!r.HasMember(name))
+            return false;
+        ret.get().CopyFrom(r[name], ret.get().GetAllocator());
+        return true;
+    }
+
     extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, rapidjson::Value *&ret)
     {
         ret = (rapidjson::Value *)&v;
@@ -165,6 +173,12 @@ namespace PIDL { namespace JSONTools {
     extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, const rapidjson::Value *&ret)
     {
         ret = &v;
+        return true;
+    }
+
+    extern PIDL_CORE__FUNCTION bool getValue(const rapidjson::Value & v, std::reference_wrapper<rapidjson::Document> &ret)
+    {
+        ret.get().CopyFrom(v, ret.get().GetAllocator());
         return true;
     }
 
@@ -348,10 +362,22 @@ namespace PIDL { namespace JSONTools {
 		return v;
 	}
 
+    extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, const std::reference_wrapper<rapidjson::Document> & v)
+    {
+        r.AddMember(setString(doc, name), createValue(doc, v), doc.GetAllocator());
+    }
+
 	extern PIDL_CORE__FUNCTION void addValue(rapidjson::Document & doc, rapidjson::Value & r, const char * name, rapidjson::Value & v)
 	{
 		r.AddMember(setString(doc, name), v, doc.GetAllocator());
 	}
+
+    extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const std::reference_wrapper<rapidjson::Document> & value)
+    {
+        rapidjson::Value ret;
+        ret.CopyFrom(value.get(), doc.GetAllocator());
+        return ret;
+    }
 
 	extern PIDL_CORE__FUNCTION rapidjson::Value createValue(rapidjson::Document & doc, const char * str)
 	{
