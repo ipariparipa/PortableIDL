@@ -19,6 +19,7 @@
 #define pidlBackend__CONFIGREADER_H
 
 #include "config.h"
+
 #include <string>
 
 namespace PIDL {

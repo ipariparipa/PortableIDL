@@ -242,7 +242,6 @@ namespace PIDL
 		public static bool getValue<T>(XElement r, string name, out T[] ret)
 		{
 			XElement v;
-			PIDL.JSONTools.Type t;
 			if (!PIDL.JSONTools.getValue(r, name, out v))
 			{
 				ret = null;

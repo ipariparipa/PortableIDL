@@ -82,19 +82,19 @@ namespace PIDL {
         if(tmp.tm_mon < 0)
             return false;
 
-        ret += std::chrono::system_clock::duration(dt.nanosecond);
+        ret += std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::nanoseconds(dt.nanosecond));
 
         return true;
     }
 
-	extern PIDL_CORE__FUNCTION tm fromDateTime(const DateTime & dt)
-	{
+    extern PIDL_CORE__FUNCTION tm fromDateTime(const DateTime & dt)
+    {
         tm ret;
         if(fromDateTime(dt, ret))
             return ret;
 
-        throw Exception(-1, "value cannot be converted from DateTime to tm");
-	}
+       throw Exception(-1, "value cannot be converted from DateTime to tm");
+    }
 
     extern PIDL_CORE__FUNCTION tm toTm(const DateTime & dt)
     {
@@ -115,7 +115,7 @@ namespace PIDL {
     }
 
     extern PIDL_CORE__FUNCTION bool toDateTime(const tm& t, bool asUTC, DateTime& ret)
-	{
+    {
         ret.year = static_cast<short>(t.tm_year + 1900);
         ret.month = static_cast<short>(t.tm_mon + 1);
         ret.day = static_cast<short>(t.tm_mday);
@@ -128,7 +128,7 @@ namespace PIDL {
         else
             ret.kind = DateTime::Local;
 		return ret.month <= 12;
-	}
+    }
 
     extern PIDL_CORE__FUNCTION bool toDateTime(const tm& t, DateTime& ret)
     {
