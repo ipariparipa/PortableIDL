@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="BuildAll" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+  </PropertyGroup>
+
+  <Import Project="../default.props" />
+
+  <PropertyGroup Label="UserMacros" Condition="!Exists('$(WorkspaceDir)')">
+
+    <WorkspaceDir>$(MSBuildThisFileDirectory)</WorkspaceDir>
+    
+    <Include_cppunit></Include_cppunit>
+    <Lib_cppunit></Lib_cppunit>
+    <Bin_cppunit></Bin_cppunit>
+
+    <Include_log4cxx></Include_log4cxx>
+    <Lib_log4cxx></Lib_log4cxx>
+    <Bin_log4cxx></Bin_log4cxx>
+
+    <Include_rapidjson></Include_rapidjson>
+
+  </PropertyGroup>
+</Project>

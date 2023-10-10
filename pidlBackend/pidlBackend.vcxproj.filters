@@ -69,6 +69,9 @@
     <ClCompile Include="job_json.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="configreader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\pidlBackend\config.h">
@@ -144,6 +147,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\pidlBackend\job_json.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\pidlBackend\configreader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
