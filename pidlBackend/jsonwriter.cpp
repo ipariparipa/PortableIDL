@@ -25,6 +25,8 @@
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
 
+#include <iostream>
+
 namespace PIDL
 {
 

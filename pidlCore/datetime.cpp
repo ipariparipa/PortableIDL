@@ -41,7 +41,11 @@ namespace PIDL {
             return false;
 
         time_t t = std::chrono::duration_cast<std::chrono::seconds>(tmp.time_since_epoch()).count();
+#if PIDL_OS == PIDL_OS_WINDOWS
+        localtime_s(&ret, &t);
+#else
         localtime_r(&t, &ret);
+#endif
         if(ret.tm_mon < 0)
             return false;
 
@@ -64,7 +68,9 @@ namespace PIDL {
         switch(dt.kind)
         {
         case DateTime::UTC:
+#if PIDL_OS != PIDL_OS_WINDOWS
             tmp.tm_zone = "UTC";
+#endif
             ret = std::chrono::system_clock::time_point(std::chrono::seconds(timeutc(&tmp)));
             break;
         case DateTime::None:
@@ -76,7 +82,7 @@ namespace PIDL {
         if(tmp.tm_mon < 0)
             return false;
 
-        ret += std::chrono::nanoseconds(dt.nanosecond);
+        ret += std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::nanoseconds(dt.nanosecond));
 
         return true;
     }
@@ -114,10 +120,14 @@ namespace PIDL {
         ret.minute = static_cast<short>(t.tm_min);
         ret.second = static_cast<short>(t.tm_sec);
         ret.nanosecond = 0;
+#if PIDL_OS != PIDL_OS_WINDOWS
         if(t.tm_zone && strcmp(t.tm_zone, "UTC") == 0)
             ret.kind = DateTime::UTC;
         else
             ret.kind = DateTime::Local;
+#else
+        ret.kind = DateTime::UTC;
+#endif
 		return ret.month <= 12;
 	}
 
