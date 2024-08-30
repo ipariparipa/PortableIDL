@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("PIDL.Core")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Continental AG")]
+[assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("PIDL.Core")]
-[assembly: AssemblyCopyright("Copyright © Continental AG 2018")]
+[assembly: AssemblyCopyright("Copyright © 2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

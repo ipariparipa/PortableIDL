@@ -23,6 +23,8 @@
 #include <sstream>
 #include <algorithm>
 
+#include <assert.h>
+
 namespace PIDL {
 
 	//struct CSCodeGenContext::Priv { };
@@ -192,7 +194,7 @@ namespace PIDL {
 					dynamic_cast<Language::DateTime*>(fn_type) ||
 					dynamic_cast<Language::Structure*>(fn_type))
 				{
-					*ctx << "Nullable<";
+					*ctx << "System.Nullable<";
 					if (!addType(code_deepness, ctx, generic->types().front().get(), ec))
 						return false;
 					*ctx << ">";
@@ -251,29 +253,20 @@ namespace PIDL {
 
 		bool addType(short code_deepness, CSCodeGenContext * ctx, Language::Type * type_, ErrorCollector & ec)
 		{
-			if (dynamic_cast<Language::Generic*>(type_))
-				return addGeneric(code_deepness, ctx, dynamic_cast<Language::Generic*>(type_), ec);
+			if (auto t = dynamic_cast<Language::Generic*>(type_))
+				return addGeneric(code_deepness, ctx, t, ec);
 
-			Language::Type * type = dynamic_cast<Language::Structure*>(type_->finalType().get()) ? type_ : type_->finalType().get();
-			if (dynamic_cast<Language::NativeType*>(type))
-			{
-				if (!addNative(ctx, dynamic_cast<Language::NativeType*>(type), ec))
-					return false;
-			}
-			else if (dynamic_cast<Language::EmbeddedType*>(type))
-			{
-				if (!addEmbedded(ctx, dynamic_cast<Language::EmbeddedType*>(type), ec))
-					return false;
-			}
-			else if (dynamic_cast<Language::Structure*>(type))
-			{
-				if (!addStructure(code_deepness, ctx, dynamic_cast<Language::Structure*>(type), ec))
-					return false;
-			}
+			if (Language::Type* type = dynamic_cast<Language::Structure*>(type_->finalType().get()) ? type_ : type_->finalType().get();
+			    auto t = dynamic_cast<Language::NativeType*>(type))
+				return addNative(ctx, t, ec);
+			else if (auto t = dynamic_cast<Language::EmbeddedType*>(type))
+				return addEmbedded(ctx, t, ec);
+			else if (auto t = dynamic_cast<Language::Structure*>(type))
+				return addStructure(code_deepness, ctx, t, ec);
+			else if (auto t = dynamic_cast<Language::Generic*>(type))
+				return addGeneric(code_deepness, ctx, t, ec);
 			else
-			{
 				*ctx << type->name();
-			}
 
 			return true;
 		}
@@ -758,5 +751,4 @@ namespace PIDL {
 	{
 		return priv->addType(code_deepness, ctx, type, ec);
 	}
-
 }
