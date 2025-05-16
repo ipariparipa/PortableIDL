@@ -480,7 +480,7 @@ namespace PIDL
 						if (!that->writeType(ret_type, code_deepness, ctx, ec))
 							return false;
 						*ctx << " _retval;" << std::endl;
-						ctx->writeTabs(code_deepness) << "if (!_intf._getValue(_ret, \"retval\", out _retval, _ec))" << std::endl;
+						ctx->writeTabs(code_deepness) << "if (!_intf." << ctx->getValue_str(intf, ret_type) << "(_ret, \"retval\", out _retval, _ec))" << std::endl;
 						ctx->writeTabs(code_deepness + 1) << "_ec.ThrowException();" << std::endl;
 					}
 
@@ -488,7 +488,7 @@ namespace PIDL
 					if (out_args.size())
 					{
 						ctx->writeTabs(code_deepness) << "XElement _out_v;" << std::endl;
-						ctx->writeTabs(code_deepness) << "if (!_intf._getValue(_ret, \"output\", PIDL.JSONTools.Type.Object, out _out_v, _ec))" << std::endl;
+						ctx->writeTabs(code_deepness) << "if (!_intf." << ctx->getValue_str(intf, ret_type) << "(_ret, \"output\", PIDL.JSONTools.Type.Object, out _out_v, _ec))" << std::endl;
 						ctx->writeTabs(code_deepness + 1) << "_ec.ThrowException();" << std::endl;
 
 						bool has_error = false;
@@ -1127,7 +1127,7 @@ namespace PIDL
 				ctx->writeTabs(code_deepness) << "if (val == null)" << std::endl;
 				ctx->writeTabs(code_deepness + 1) << "PIDL.JSONTools.addValue(r, name, PIDL.JSONTools.Type.Null);" << std::endl;
 				ctx->writeTabs(code_deepness) << "else" << std::endl;
-				ctx->writeTabs(code_deepness + 1) << ctx->addValue_str(intf, nt->types().front().get()) << "(r, name, val);" << std::endl;
+				ctx->writeTabs(code_deepness + 1) << ctx->addValue_str(intf, nt->types().front().get()) << "(r, name, val.Value);" << std::endl;
 				ctx->writeTabs(--code_deepness) << "}" << std::endl << std::endl;
 			}
 			else if (dynamic_cast<Language::Array*>(ct.second))

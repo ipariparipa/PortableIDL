@@ -53,6 +53,9 @@
     <ClInclude Include="include\pidlCore\datetime.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\pidlCore\basictypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="include\pidlCore\_platform_win.h_" />

@@ -34,6 +34,7 @@ namespace PIDL {
     extern PIDL_CORE__FUNCTION tm toTm(const DateTime & dt);
     extern PIDL_CORE__FUNCTION std::chrono::system_clock::time_point toTimepoint(const DateTime & dt);
     extern PIDL_CORE__FUNCTION bool toDateTime(const tm & t, DateTime & ret);
+    extern PIDL_CORE__FUNCTION bool toDateTime(const tm& t, bool asUTC, DateTime& ret);
     extern PIDL_CORE__FUNCTION bool toDateTime(std::chrono::system_clock::time_point t, DateTime & ret);
 
     template<typename T>
