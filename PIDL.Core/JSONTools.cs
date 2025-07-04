@@ -85,7 +85,7 @@ namespace PIDL
 				return true;
 			}
 			bool isOk;
-			dynamic _ret = getValueX<T>(v, out isOk);
+			var _ret = getValueX<T>(v, out isOk);
 			if (!isOk)
 			{
 				ret = default(T);
