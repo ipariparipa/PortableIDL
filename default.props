@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="BuildAll" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Import Condition="Exists('user.props')" Project="user.props" />
+  <Import Condition="Exists('../default.props')" Project="../default.props" />
+
+  <PropertyGroup Label="UserMacros">
+	<!--<DotNetVersion Condition="'$(DotNetVersion)'==''">4.0</DotNetVersion>-->
+  </PropertyGroup>
+
+  <PropertyGroup Label="UserMacros" Condition="'$(WorkspaceDir)'==''">
+    <WorkspaceDir>$(MSBuildThisFileDirectory)</WorkspaceDir>
+	<OutDir>$(SolutionDir)out\$(Configuration)-$(PlatformSuffix)\</OutDir>
+	<IntDir>$(SolutionDir).obj\$(ProjectName)\$(Configuration)-$(PlatformSuffix)\</IntDir>
+
+    <Include_PIDLCore>$(WorkspaceDir)pidlCore\include\</Include_PIDLCore>
+    <Include_PIDLBackend>$(WorkspaceDir)pidlBackend\include\</Include_PIDLBackend>
+
+    <Bin_PIDL>$(OutDir)</Bin_PIDL>
+    <Lib_PIDL>$(OutDir)</Lib_PIDL>
+  </PropertyGroup>
+
+</Project>

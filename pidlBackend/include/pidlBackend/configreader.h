@@ -18,13 +18,15 @@
 #ifndef pidlBackend__CONFIGREADER_H
 #define pidlBackend__CONFIGREADER_H
 
+#include "config.h"
+
 #include <string>
 
 namespace PIDL {
 
     class ErrorCollector;
 
-    class ConfigReader
+    class PIDL_BACKEND__CLASS ConfigReader
     {
     public:
         inline virtual ~ConfigReader() = default;

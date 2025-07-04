@@ -22,7 +22,11 @@ void DateTime_Test::tm_test()
     tm tm_1;
     time_t t;
     time(&t);
+#if PIDL_OS == PIDL_OS_WINDOWS
+    localtime_s(&tm_1 , &t);
+#else
     localtime_r(&t, &tm_1);
+#endif
     PIDL::DateTime dt;
     CPPUNIT_ASSERT(PIDL::toDateTime(tm_1, dt));
     tm tm_2;
@@ -53,7 +57,9 @@ void DateTime_Test::local_test()
         {
             tm tmp;
             PIDL::fromDateTime(dt, tmp);
+#if PIDL_OS != PIDL_OS_WINDOWS
             CPPUNIT_ASSERT_EQUAL(std::chrono::duration_cast<std::chrono::hours>(std::chrono::hours(10 /*GMT*/) + std::chrono::seconds(tmp.tm_gmtoff)).count(), std::chrono::hours(tmp.tm_hour).count());
+#endif
         }
 
         CPPUNIT_ASSERT_EQUAL(tp.time_since_epoch().count(), PIDL::toTimepoint(dt).time_since_epoch().count());
@@ -68,7 +74,9 @@ void DateTime_Test::local_test()
         {
             tm tmp;
             PIDL::fromDateTime(dt, tmp);
+#if PIDL_OS != PIDL_OS_WINDOWS
             CPPUNIT_ASSERT_EQUAL(std::chrono::duration_cast<std::chrono::hours>(std::chrono::hours(11 /*GMT*/) + std::chrono::seconds(tmp.tm_gmtoff)).count(), std::chrono::hours(tmp.tm_hour).count());
+#endif
         }
 
         CPPUNIT_ASSERT_EQUAL(static_cast<short>(12), dt.hour);
